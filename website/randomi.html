@@ -1,0 +1,1099 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CerebroBand  Random Health Data Visualization</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+    rel="stylesheet" />
+  <style>
+    :root {
+      --primary-gradient: linear-gradient(135deg,
+          #667eea 0%,
+          #764ba2 50%,
+          #f093fb 100%);
+      --card-bg: rgba(20, 20, 35, 0.85);
+      --border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Outfit", sans-serif;
+      background: linear-gradient(135deg,
+          #0a0a0f 0%,
+          #1a1a2e 50%,
+          #0a0a0f 100%);
+      min-height: 100vh;
+      color: #fff;
+      overflow-x: hidden;
+    }
+
+    
+    .bg-animation {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .bg-animation::before {
+      content: "";
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background:
+        radial-gradient(ellipse 40% 30% at 20% 30%,
+          rgba(102, 126, 234, 0.15),
+          transparent),
+        radial-gradient(ellipse 35% 25% at 80% 70%,
+          rgba(240, 147, 251, 0.12),
+          transparent),
+        radial-gradient(ellipse 30% 20% at 50% 50%,
+          rgba(118, 75, 162, 0.1),
+          transparent);
+      animation: bgRotate 30s linear infinite;
+    }
+
+    @keyframes bgRotate {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    
+    .particles {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .particle {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: linear-gradient(135deg, #667eea, #f093fb);
+      border-radius: 50%;
+      animation: float 15s infinite;
+      opacity: 0.6;
+    }
+
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translateY(100vh) scale(0);
+        opacity: 0;
+      }
+
+      10% {
+        opacity: 0.6;
+      }
+
+      90% {
+        opacity: 0.6;
+      }
+
+      100% {
+        transform: translateY(-10vh) scale(1);
+        opacity: 0;
+      }
+    }
+
+    
+    .header {
+      position: relative;
+      z-index: 10;
+      padding: 40px;
+      text-align: center;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .logo svg {
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.05);
+      }
+    }
+
+    .header h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 800;
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+      text-shadow: 0 0 60px rgba(102, 126, 234, 0.5);
+    }
+
+    .header p {
+      font-size: 1.2rem;
+      opacity: 0.7;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    
+    .live-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 24px;
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      border-radius: 100px;
+      margin-bottom: 24px;
+    }
+
+    .live-dot {
+      width: 10px;
+      height: 10px;
+      background: #22c55e;
+      border-radius: 50%;
+      animation: livePulse 1.5s infinite;
+    }
+
+    @keyframes livePulse {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5);
+      }
+
+      50% {
+        box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
+      }
+    }
+
+    
+    .container {
+      position: relative;
+      z-index: 10;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 24px 60px;
+    }
+
+    
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 24px;
+    }
+
+    @media (max-width: 500px) {
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    
+    .chart-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(40px);
+      border: 1px solid var(--border-color);
+      border-radius: 28px;
+      padding: 28px;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .chart-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--primary-gradient);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .chart-card:hover {
+      transform: translateY(-8px);
+      border-color: rgba(102, 126, 234, 0.3);
+      box-shadow:
+        0 30px 60px -20px rgba(102, 126, 234, 0.3),
+        0 0 0 1px rgba(102, 126, 234, 0.1);
+    }
+
+    .chart-card:hover::before {
+      opacity: 1;
+    }
+
+    .chart-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .chart-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .chart-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+
+    .chart-icon.heart {
+      background: linear-gradient(135deg,
+          rgba(239, 68, 68, 0.2),
+          rgba(244, 114, 182, 0.2));
+    }
+
+    .chart-icon.oxygen {
+      background: linear-gradient(135deg,
+          rgba(59, 130, 246, 0.2),
+          rgba(96, 165, 250, 0.2));
+    }
+
+    .chart-icon.activity {
+      background: linear-gradient(135deg,
+          rgba(34, 197, 94, 0.2),
+          rgba(74, 222, 128, 0.2));
+    }
+
+    .chart-title h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .chart-title span {
+      font-size: 0.85rem;
+      opacity: 0.5;
+    }
+
+    .chart-value {
+      text-align: right;
+    }
+
+    .chart-value .value {
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 2rem;
+      font-weight: 700;
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .chart-value .unit {
+      font-size: 0.9rem;
+      opacity: 0.5;
+    }
+
+    .chart-container {
+      height: 200px;
+      position: relative;
+    }
+
+    
+    .stats-row {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .stat-item {
+      text-align: center;
+    }
+
+    .stat-item .label {
+      font-size: 0.8rem;
+      opacity: 0.5;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .stat-item .value {
+      font-family: "Space Grotesk", sans-serif;
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+
+    .stat-item .value.min {
+      color: #60a5fa;
+    }
+
+    .stat-item .value.max {
+      color: #f472b6;
+    }
+
+    .stat-item .value.avg {
+      color: #a78bfa;
+    }
+
+    
+    .cvd-card {
+      background: linear-gradient(145deg, rgba(20, 20, 35, 0.9), rgba(30, 15, 40, 0.95));
+    }
+
+    .cvd-gauge-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px 0 0;
+    }
+
+    .cvd-gauge-svg {
+      width: 260px;
+      height: 150px;
+      overflow: visible;
+    }
+
+    .gauge-track {
+      fill: none;
+      stroke: rgba(255, 255, 255, 0.06);
+      stroke-width: 18;
+      stroke-linecap: round;
+    }
+
+    .gauge-fill {
+      fill: none;
+      stroke-width: 18;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.5s ease;
+      filter: drop-shadow(0 0 8px var(--gauge-glow, rgba(74, 222, 128, 0.5)));
+    }
+
+    .gauge-center-value {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 42px;
+      font-weight: 700;
+      fill: #fff;
+      text-anchor: middle;
+      dominant-baseline: middle;
+    }
+
+    .gauge-center-unit {
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      fill: rgba(255, 255, 255, 0.5);
+      text-anchor: middle;
+    }
+
+    .gauge-label-low {
+      font-size: 11px;
+      fill: #4ade80;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .gauge-label-high {
+      font-size: 11px;
+      fill: #f87171;
+      font-family: 'Outfit', sans-serif;
+      text-anchor: end;
+    }
+
+    .cvd-risk-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 20px;
+      border-radius: 100px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-top: 12px;
+      transition: all 0.5s ease;
+      letter-spacing: 0.03em;
+    }
+
+    .cvd-risk-badge.low {
+      background: rgba(74, 222, 128, 0.12);
+      color: #4ade80;
+      border: 1px solid rgba(74, 222, 128, 0.25);
+    }
+
+    .cvd-risk-badge.moderate {
+      background: rgba(251, 191, 36, 0.12);
+      color: #fbbf24;
+      border: 1px solid rgba(251, 191, 36, 0.25);
+    }
+
+    .cvd-risk-badge.high {
+      background: rgba(248, 113, 113, 0.12);
+      color: #f87171;
+      border: 1px solid rgba(248, 113, 113, 0.25);
+    }
+
+    .cvd-risk-badge .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      animation: livePulse 1.5s infinite;
+    }
+
+    .cvd-risk-badge.low .badge-dot {
+      background: #4ade80;
+    }
+
+    .cvd-risk-badge.moderate .badge-dot {
+      background: #fbbf24;
+    }
+
+    .cvd-risk-badge.high .badge-dot {
+      background: #f87171;
+    }
+
+    .cvd-factors {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .cvd-factor {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all 0.3s ease;
+    }
+
+    .cvd-factor:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .cvd-factor-icon {
+      font-size: 18px;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      flex-shrink: 0;
+    }
+
+    .cvd-factor-info .factor-label {
+      font-size: 0.72rem;
+      opacity: 0.45;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .cvd-factor-info .factor-value {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .factor-value.good {
+      color: #4ade80;
+    }
+
+    .factor-value.warn {
+      color: #fbbf24;
+    }
+
+    .factor-value.bad {
+      color: #f87171;
+    }
+
+    @keyframes gaugeAppear {
+      from {
+        stroke-dashoffset: 283;
+      }
+    }
+
+    
+    .refresh-btn {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: var(--primary-gradient);
+      border: none;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      z-index: 100;
+      transition: all 0.3s ease;
+      box-shadow: 0 10px 40px rgba(102, 126, 234, 0.4);
+    }
+
+    .refresh-btn:hover {
+      transform: scale(1.1) rotate(180deg);
+      box-shadow: 0 15px 50px rgba(102, 126, 234, 0.6);
+    }
+
+    
+    .timestamp {
+      text-align: center;
+      margin-top: 40px;
+      padding: 16px;
+      opacity: 0.5;
+      font-size: 0.9rem;
+    }
+
+    .timestamp span {
+      color: #4ade80;
+    }
+  </style>
+</head>
+
+<body>
+  
+  <div class="bg-animation"></div>
+
+  
+  <div class="particles" id="particles"></div>
+
+  
+  <header class="header">
+    <div class="logo">
+      <svg width="60" height="60" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color: #667eea" />
+            <stop offset="50%" style="stop-color: #764ba2" />
+            <stop offset="100%" style="stop-color: #f093fb" />
+          </linearGradient>
+        </defs>
+        <circle cx="60" cy="60" r="50" stroke="url(#logoGrad)" stroke-width="3" />
+        <path d="M40 60 L50 70 L80 40" stroke="url(#logoGrad)" stroke-width="4" stroke-linecap="round"
+          stroke-linejoin="round" />
+        <circle cx="60" cy="60" r="10" fill="url(#logoGrad)" />
+      </svg>
+    </div>
+    <div class="live-indicator">
+      <div class="live-dot"></div>
+      <span>Live Health Data Simulation</span>
+    </div>
+    <h1>Random Health Metrics</h1>
+    <p>
+      Beautiful real-time visualization of randomized cardiovascular and
+      health data
+    </p>
+  </header>
+
+  
+  <div class="container">
+    <div class="charts-grid">
+      
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">
+            <div class="chart-icon heart">❤️</div>
+            <div>
+              <h3>Heart Rate</h3>
+              <span>Last 24 Hours</span>
+            </div>
+          </div>
+          <div class="chart-value">
+            <div class="value" id="hr-value">--</div>
+            <div class="unit">BPM</div>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="heartRateChart"></canvas>
+        </div>
+        <div class="stats-row">
+          <div class="stat-item">
+            <div class="label">Min</div>
+            <div class="value min" id="hr-min">--</div>
+          </div>
+          <div class="stat-item">
+            <div class="label">Max</div>
+            <div class="value max" id="hr-max">--</div>
+          </div>
+          <div class="stat-item">
+            <div class="label">Average</div>
+            <div class="value avg" id="hr-avg">--</div>
+          </div>
+        </div>
+      </div>
+
+      
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">
+            <div class="chart-icon oxygen">🫁</div>
+            <div>
+              <h3>Blood Oxygen (SpO2)</h3>
+              <span>Saturation Level</span>
+            </div>
+          </div>
+          <div class="chart-value">
+            <div class="value" id="spo2-value">--</div>
+            <div class="unit">%</div>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="spo2Chart"></canvas>
+        </div>
+        <div class="stats-row">
+          <div class="stat-item">
+            <div class="label">Min</div>
+            <div class="value min" id="spo2-min">--</div>
+          </div>
+          <div class="stat-item">
+            <div class="label">Max</div>
+            <div class="value max" id="spo2-max">--</div>
+          </div>
+          <div class="stat-item">
+            <div class="label">Average</div>
+            <div class="value avg" id="spo2-avg">--</div>
+          </div>
+        </div>
+      </div>
+
+      
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">
+            <div class="chart-icon activity">🏃</div>
+            <div>
+              <h3>Physical Activity</h3>
+              <span>Movement Tracking</span>
+            </div>
+          </div>
+          <div class="chart-value">
+            <div class="value" id="activity-value">--</div>
+            <div class="unit">steps</div>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="activityChart"></canvas>
+        </div>
+      </div>
+
+      
+      <div class="chart-card cvd-card">
+        <div class="chart-header">
+          <div class="chart-title">
+            <div class="chart-icon heart">🩺</div>
+            <div>
+              <h3>CVD Risk Assessment</h3>
+              <span>AI Prediction</span>
+            </div>
+          </div>
+        </div>
+        <div class="cvd-gauge-wrapper">
+          <svg class="cvd-gauge-svg" viewBox="0 0 260 150">
+            <defs>
+              <linearGradient id="gaugeGradLow" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#4ade80" />
+                <stop offset="100%" stop-color="#22d3ee" />
+              </linearGradient>
+              <linearGradient id="gaugeGradMed" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#fbbf24" />
+                <stop offset="100%" stop-color="#f97316" />
+              </linearGradient>
+              <linearGradient id="gaugeGradHigh" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#f87171" />
+                <stop offset="100%" stop-color="#ef4444" />
+              </linearGradient>
+              <filter id="gaugeGlow">
+                <feGaussianBlur stdDeviation="4" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+            
+            <path class="gauge-track" d="M 30 130 A 100 100 0 0 1 230 130" />
+            
+            <path id="gaugeFill" class="gauge-fill" d="M 30 130 A 100 100 0 0 1 230 130" stroke="url(#gaugeGradLow)"
+              stroke-dasharray="314" stroke-dashoffset="314" filter="url(#gaugeGlow)" />
+            
+            <text id="gaugeValue" class="gauge-center-value" x="130" y="110">--</text>
+            <text class="gauge-center-unit" x="130" y="132">% risk</text>
+            
+            <text class="gauge-label-low" x="25" y="148">Low</text>
+            <text class="gauge-label-high" x="235" y="148">High</text>
+          </svg>
+          <div class="cvd-risk-badge low" id="cvdBadge">
+            <div class="badge-dot"></div>
+            <span id="cvdBadgeText">Low Risk</span>
+          </div>
+        </div>
+        <div class="cvd-factors">
+          <div class="cvd-factor">
+            <div class="cvd-factor-icon">❤️</div>
+            <div class="cvd-factor-info">
+              <div class="factor-label">Heart Rate</div>
+              <div class="factor-value good" id="cvd-hr-factor">-- bpm</div>
+            </div>
+          </div>
+          <div class="cvd-factor">
+            <div class="cvd-factor-icon">🫁</div>
+            <div class="cvd-factor-info">
+              <div class="factor-label">SpO2</div>
+              <div class="factor-value good" id="cvd-spo2-factor">-- %</div>
+            </div>
+          </div>
+          <div class="cvd-factor">
+            <div class="cvd-factor-icon">🏃</div>
+            <div class="cvd-factor-info">
+              <div class="factor-label">Activity</div>
+              <div class="factor-value good" id="cvd-activity-factor">--</div>
+            </div>
+          </div>
+          <div class="cvd-factor">
+            <div class="cvd-factor-icon">💓</div>
+            <div class="cvd-factor-info">
+              <div class="factor-label">HRV Score</div>
+              <div class="factor-value good" id="cvd-hrv-factor">-- ms</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="timestamp">Last updated: <span id="timestamp">--</span></div>
+  </div>
+
+  
+  <button class="refresh-btn" onclick="refreshAllData()" title="Refresh Data">
+    🔄
+  </button>
+
+  <script>
+    
+    Chart.defaults.color = "rgba(255, 255, 255, 0.7)";
+    Chart.defaults.borderColor = "rgba(255, 255, 255, 0.1)";
+    Chart.defaults.font.family = "Outfit";
+
+    
+    function randomInRange(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function generateTimeLabels(count) {
+      const labels = [];
+      const now = new Date();
+      for (let i = count - 1; i >= 0; i--) {
+        const time = new Date(now - i * 3600000);
+        labels.push(time.getHours() + ":00");
+      }
+      return labels;
+    }
+
+    function createGradient(ctx, color1, color2) {
+      const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+      gradient.addColorStop(0, color1);
+      gradient.addColorStop(1, color2);
+      return gradient;
+    }
+
+    
+    let charts = {};
+
+    
+    function initCharts() {
+      
+      const hrCtx = document
+        .getElementById("heartRateChart")
+        .getContext("2d");
+      charts.heartRate = new Chart(hrCtx, {
+        type: "line",
+        data: {
+          labels: generateTimeLabels(24),
+          datasets: [
+            {
+              label: "Heart Rate",
+              data: [],
+              borderColor: "#f472b6",
+              backgroundColor: createGradient(
+                hrCtx,
+                "rgba(244, 114, 182, 0.3)",
+                "rgba(244, 114, 182, 0)",
+              ),
+              fill: true,
+              tension: 0.4,
+              pointRadius: 0,
+              borderWidth: 3,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false } },
+            y: {
+              min: 50,
+              max: 120,
+              grid: { color: "rgba(255,255,255,0.05)" },
+            },
+          },
+        },
+      });
+
+      
+      const spo2Ctx = document.getElementById("spo2Chart").getContext("2d");
+      charts.spo2 = new Chart(spo2Ctx, {
+        type: "line",
+        data: {
+          labels: generateTimeLabels(24),
+          datasets: [
+            {
+              label: "SpO2",
+              data: [],
+              borderColor: "#60a5fa",
+              backgroundColor: createGradient(
+                spo2Ctx,
+                "rgba(96, 165, 250, 0.3)",
+                "rgba(96, 165, 250, 0)",
+              ),
+              fill: true,
+              tension: 0.4,
+              pointRadius: 0,
+              borderWidth: 3,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false } },
+            y: {
+              min: 90,
+              max: 100,
+              grid: { color: "rgba(255,255,255,0.05)" },
+            },
+          },
+        },
+      });
+
+      
+      const activityCtx = document
+        .getElementById("activityChart")
+        .getContext("2d");
+      charts.activity = new Chart(activityCtx, {
+        type: "bar",
+        data: {
+          labels: generateTimeLabels(12),
+          datasets: [
+            {
+              label: "Steps",
+              data: [],
+              backgroundColor: createGradient(
+                activityCtx,
+                "rgba(74, 222, 128, 0.8)",
+                "rgba(34, 197, 94, 0.4)",
+              ),
+              borderRadius: 8,
+              borderSkipped: false,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false } },
+            y: { grid: { color: "rgba(255,255,255,0.05)" } },
+          },
+        },
+      });
+
+      
+    }
+
+    
+    function generateRandomData() {
+      
+      const hrData = Array.from({ length: 24 }, () => randomInRange(60, 100));
+      charts.heartRate.data.datasets[0].data = hrData;
+      charts.heartRate.update("none");
+      document.getElementById("hr-value").textContent =
+        hrData[hrData.length - 1];
+      document.getElementById("hr-min").textContent = Math.min(...hrData);
+      document.getElementById("hr-max").textContent = Math.max(...hrData);
+      document.getElementById("hr-avg").textContent = Math.round(
+        hrData.reduce((a, b) => a + b) / hrData.length,
+      );
+
+      
+      const spo2Data = Array.from({ length: 24 }, () =>
+        randomInRange(95, 99),
+      );
+      charts.spo2.data.datasets[0].data = spo2Data;
+      charts.spo2.update("none");
+      document.getElementById("spo2-value").textContent =
+        spo2Data[spo2Data.length - 1];
+      document.getElementById("spo2-min").textContent = Math.min(...spo2Data);
+      document.getElementById("spo2-max").textContent = Math.max(...spo2Data);
+      document.getElementById("spo2-avg").textContent = (
+        spo2Data.reduce((a, b) => a + b) / spo2Data.length
+      ).toFixed(1);
+
+      
+      const activityData = Array.from({ length: 12 }, () =>
+        randomInRange(200, 2000),
+      );
+      charts.activity.data.datasets[0].data = activityData;
+      charts.activity.update("none");
+      document.getElementById("activity-value").textContent = activityData
+        .reduce((a, b) => a + b)
+        .toLocaleString();
+
+      
+      const cvdRisk = randomInRange(5, 35);
+      updateCvdGauge(cvdRisk, hrData, spo2Data, activityData);
+
+      
+      document.getElementById("timestamp").textContent =
+        new Date().toLocaleString();
+    }
+
+    
+    function updateCvdGauge(risk, hrData, spo2Data, activityData) {
+      const gaugeFill = document.getElementById('gaugeFill');
+      const gaugeValue = document.getElementById('gaugeValue');
+      const badge = document.getElementById('cvdBadge');
+      const badgeText = document.getElementById('cvdBadgeText');
+
+      
+      const totalArc = 314;
+      const offset = totalArc - (risk / 100) * totalArc;
+      gaugeFill.style.strokeDashoffset = offset;
+
+      
+      let gradId, badgeClass, badgeLabel;
+      if (risk <= 15) {
+        gradId = 'url(#gaugeGradLow)';
+        badgeClass = 'low';
+        badgeLabel = 'Low Risk';
+        gaugeFill.style.setProperty('--gauge-glow', 'rgba(74, 222, 128, 0.5)');
+      } else if (risk <= 25) {
+        gradId = 'url(#gaugeGradMed)';
+        badgeClass = 'moderate';
+        badgeLabel = 'Moderate Risk';
+        gaugeFill.style.setProperty('--gauge-glow', 'rgba(251, 191, 36, 0.5)');
+      } else {
+        gradId = 'url(#gaugeGradHigh)';
+        badgeClass = 'high';
+        badgeLabel = 'High Risk';
+        gaugeFill.style.setProperty('--gauge-glow', 'rgba(248, 113, 113, 0.5)');
+      }
+      gaugeFill.setAttribute('stroke', gradId);
+      gaugeValue.textContent = risk;
+
+      badge.className = 'cvd-risk-badge ' + badgeClass;
+      badgeText.textContent = badgeLabel;
+
+      
+      const lastHr = hrData[hrData.length - 1];
+      const lastSpo2 = spo2Data[spo2Data.length - 1];
+      const totalSteps = activityData.reduce((a, b) => a + b);
+      const hrv = randomInRange(25, 80);
+
+      const hrEl = document.getElementById('cvd-hr-factor');
+      hrEl.textContent = lastHr + ' bpm';
+      hrEl.className = 'factor-value ' + (lastHr > 90 ? 'warn' : 'good');
+
+      const spo2El = document.getElementById('cvd-spo2-factor');
+      spo2El.textContent = lastSpo2 + ' %';
+      spo2El.className = 'factor-value ' + (lastSpo2 < 96 ? 'warn' : 'good');
+
+      const actEl = document.getElementById('cvd-activity-factor');
+      actEl.textContent = totalSteps.toLocaleString() + ' steps';
+      actEl.className = 'factor-value ' + (totalSteps < 5000 ? 'warn' : 'good');
+
+      const hrvEl = document.getElementById('cvd-hrv-factor');
+      hrvEl.textContent = hrv + ' ms';
+      hrvEl.className = 'factor-value ' + (hrv < 40 ? 'bad' : hrv < 55 ? 'warn' : 'good');
+    }
+
+    
+    function refreshAllData() {
+      generateRandomData();
+    }
+
+    
+    function createParticles() {
+      const container = document.getElementById("particles");
+      for (let i = 0; i < 30; i++) {
+        const particle = document.createElement("div");
+        particle.className = "particle";
+        particle.style.left = Math.random() * 100 + "%";
+        particle.style.animationDelay = Math.random() * 15 + "s";
+        particle.style.animationDuration = 15 + Math.random() * 10 + "s";
+        container.appendChild(particle);
+      }
+    }
+
+    
+    document.addEventListener("DOMContentLoaded", () => {
+      createParticles();
+      initCharts();
+      generateRandomData();
+
+      
+      setInterval(generateRandomData, 5000);
+    });
+  </script>
+</body>
+
+</html>
