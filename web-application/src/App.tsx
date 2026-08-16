@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { motion, useScroll, useTransform, useSpring, useMotionValue, useMotionTemplate } from 'framer-motion';
 import './App.css';
 import './extreme.css';
-import { Language, translations } from './translations';
+import { type Language, translations } from './translations';
 
 const RevealText = ({ text, className = "" }: { text: string, className?: string }) => {
   const words = text.split(" ");
