@@ -7,26 +7,26 @@ import { type Language, translations } from './translations';
 const RevealText = ({ text, className = "" }: { text: string, className?: string }) => {
   const words = text.split(" ");
   return (
-    <motion.div
+    <motion.span
+      key={text}
       initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, margin: "-50px" }}
+      animate="visible"
       variants={{
-        visible: { transition: { staggerChildren: 0.08 } },
+        visible: { transition: { staggerChildren: 0.05 } },
         hidden: {}
       }}
       className={className}
-      style={{ display: "inline-block" }}
+      style={{ display: "inline" }}
     >
       {words.map((word, i) => (
-        <span key={i} style={{ display: "inline-block", overflow: "hidden", paddingRight: "0.25em" }}>
+        <span key={i} style={{ display: "inline-block", overflow: "hidden", paddingRight: "0.22em", verticalAlign: "top" }}>
           <motion.span
             variants={{
               hidden: { y: "100%", opacity: 0 },
               visible: {
                 y: "0%",
                 opacity: 1,
-                transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] }
+                transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] }
               }
             }}
             style={{ display: "inline-block" }}
@@ -35,7 +35,7 @@ const RevealText = ({ text, className = "" }: { text: string, className?: string
           </motion.span>
         </span>
       ))}
-    </motion.div>
+    </motion.span>
   );
 };
 
