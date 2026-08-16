@@ -2,105 +2,7 @@ import { useState, useRef } from 'react';
 import { motion, useScroll, useTransform, useSpring, useMotionValue, useMotionTemplate } from 'framer-motion';
 import './App.css';
 import './extreme.css';
-
-const NAV_LINKS = [
-  { label: 'Ecosystem', href: '#ecosystem' },
-  { label: 'Achievements', href: '#achievements' },
-  { label: 'Experts', href: '#experts' },
-  { label: 'Partners', href: '#partners' },
-  { label: 'Features', href: '#features' },
-  { label: 'App', href: '#app' },
-  { label: 'Pricing', href: '#pricing' },
-  { label: 'FAQ', href: '#faq' },
-];
-
-const FEATURES = [
-  {
-    icon: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-      </svg>
-    ),
-    title: 'Glucose Monitoring',
-    desc: 'Non-invasive blood glucose measurement via the wearable device with real-time data sync to your phone.',
-  },
-  {
-    icon: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <path d="M12 6v6l4 2" />
-      </svg>
-    ),
-    title: 'Diabetes Risk',
-    desc: 'Algorithm-driven risk scoring based on glucose, SpO2, pulse, and historical data. Actionable insights for prevention.',
-  },
-  {
-    icon: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M18 8h1a4 4 0 010 8h-1" />
-        <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" />
-        <line x1="6" y1="1" x2="6" y2="4" />
-        <line x1="10" y1="1" x2="10" y2="4" />
-        <line x1="14" y1="1" x2="14" y2="4" />
-      </svg>
-    ),
-    title: 'Nutrition Tracking',
-    desc: 'Log meals by photo or manually. Automatic macro breakdown: calories, protein, fat, and carbohydrates per day.',
-  },
-  {
-    icon: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
-      </svg>
-    ),
-    title: 'SpO2 & Pulse',
-    desc: 'Continuous oxygen saturation and heart rate monitoring via built-in sensors. Early detection of cardiovascular anomalies.',
-  },
-  {
-    icon: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-      </svg>
-    ),
-    title: 'AI Consultant',
-    desc: 'Intelligent assistant trained on your health data. Answers questions about glucose trends, nutrition, and risk factors.',
-  },
-  {
-    icon: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
-        <line x1="12" y1="18" x2="12.01" y2="18" />
-      </svg>
-    ),
-    title: 'Instant Cloud Sync',
-    desc: 'The wearable device connects to the mobile app via Bluetooth. All readings are synced automatically to your dashboard.',
-  },
-];
-
-const FAQS = [
-  {
-    q: 'What is SuGuard?',
-    a: 'SuGuard is a health monitoring ecosystem consisting of a wearable device and a companion mobile application. The device measures glucose, SpO2, and pulse non-invasively, while the app provides analytics, risk assessment, nutrition tracking, and a personalized health consultant.',
-  },
-  {
-    q: 'How does the wearable device work?',
-    a: 'The SuGuard wearable is worn on the wrist and uses optical sensors to measure blood glucose, oxygen saturation (SpO2), and pulse rate. Data is transmitted to the mobile app via Bluetooth in real-time and stored securely in the cloud.',
-  },
-  {
-    q: 'How does the diabetes risk assessment work?',
-    a: 'The risk assessment algorithm analyzes your average glucose level, resting pulse rate, SpO2 levels, and historical health data to calculate a percentage-based risk score. Each contributing factor is displayed with a progress indicator so you can understand which areas need attention.',
-  },
-  {
-    q: 'Can I track my meals and nutrition?',
-    a: 'Yes. SuGuard offers two methods for logging meals: photograph your food for automatic recognition and nutritional breakdown, or enter meals manually. The app calculates calories, protein, fat, and carbohydrates for each entry and displays daily totals.',
-  },
-  {
-    q: 'Is my health data secure?',
-    a: 'All data is stored securely using Firebase with encryption. Your health information is linked exclusively to your authenticated account and is never shared with third parties.',
-  },
-];
-
-
+import { Language, translations } from './translations';
 
 const RevealText = ({ text, className = "" }: { text: string, className?: string }) => {
   const words = text.split(" ");
@@ -110,7 +12,7 @@ const RevealText = ({ text, className = "" }: { text: string, className?: string
       whileInView="visible"
       viewport={{ once: true, margin: "-50px" }}
       variants={{
-        visible: { transition: { staggerChildren: 0.1 } },
+        visible: { transition: { staggerChildren: 0.08 } },
         hidden: {}
       }}
       className={className}
@@ -124,7 +26,7 @@ const RevealText = ({ text, className = "" }: { text: string, className?: string
               visible: {
                 y: "0%",
                 opacity: 1,
-                transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] }
+                transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] }
               }
             }}
             style={{ display: "inline-block" }}
@@ -169,7 +71,6 @@ const SpotlightCard = ({ children, className = "" }: any) => {
   );
 };
 
-
 const TiltCard = ({ children, className = "" }: any) => {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -205,36 +106,42 @@ const TiltCard = ({ children, className = "" }: any) => {
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       style={{
-        rotateX,
         rotateY,
+        rotateX,
         transformStyle: "preserve-3d",
       }}
-      whileHover={{ scale: 1.05 }}
-      transition={{ type: "spring", stiffness: 400, damping: 30 }}
       className={`tilt-card ${className}`}
     >
-      <div style={{ transform: "translateZ(50px)" }}>
-        {children}
-      </div>
+      {children}
     </motion.div>
   );
 };
 
-
-const FadeIn = ({ children, delay = 0, className = "", direction = "up" }: any) => {
-  const offsets = {
-    up: { y: 60, x: 0 },
-    down: { y: -60, x: 0 },
-    left: { x: 60, y: 0 },
-    right: { x: -60, y: 0 }
+const FadeIn = ({ children, direction = "up", delay = 0, className = "" }: any) => {
+  const directions: any = {
+    up: { y: 40, x: 0 },
+    down: { y: -40, x: 0 },
+    left: { x: 40, y: 0 },
+    right: { x: -40, y: 0 },
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, ...offsets[direction as keyof typeof offsets] }}
-      whileInView={{ opacity: 1, x: 0, y: 0 }}
-      viewport={{ once: true, margin: "-100px" }}
-      transition={{ duration: 1, delay, ease: [0.16, 1, 0.3, 1] }}
+      initial={{
+        opacity: 0,
+        ...directions[direction]
+      }}
+      whileInView={{
+        opacity: 1,
+        x: 0,
+        y: 0
+      }}
+      viewport={{ once: true, margin: "-80px" }}
+      transition={{
+        duration: 0.8,
+        delay,
+        ease: [0.16, 1, 0.3, 1]
+      }}
       className={className}
     >
       {children}
@@ -246,7 +153,7 @@ const StaggerContainer = ({ children, className = "" }: any) => (
   <motion.div
     initial="hidden"
     whileInView="visible"
-    viewport={{ once: true, margin: "-100px" }}
+    viewport={{ once: true, margin: "-80px" }}
     variants={{
       visible: { transition: { staggerChildren: 0.15 } },
       hidden: {}
@@ -269,8 +176,10 @@ const StaggerItem = ({ children, className = "" }: any) => (
   </motion.div>
 );
 
-
 function App() {
+  const [lang, setLang] = useState<Language>('ru');
+  const t = translations[lang];
+
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
@@ -296,6 +205,88 @@ function App() {
   };
   const closeMobile = () => setMobileOpen(false);
 
+  const navLinks = [
+    { label: t.nav.ecosystem, href: '#ecosystem' },
+    { label: t.nav.achievements, href: '#achievements' },
+    { label: t.nav.experts, href: '#experts' },
+    { label: t.nav.partners, href: '#partners' },
+    { label: t.nav.features, href: '#features' },
+    { label: t.nav.app, href: '#app' },
+    { label: t.nav.pricing, href: '#pricing' },
+    { label: t.nav.faq, href: '#faq' },
+  ];
+
+  const featuresList = [
+    {
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+        </svg>
+      ),
+      title: t.features.f1Title,
+      desc: t.features.f1Desc,
+    },
+    {
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 6v6l4 2" />
+        </svg>
+      ),
+      title: t.features.f2Title,
+      desc: t.features.f2Desc,
+    },
+    {
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 8h1a4 4 0 010 8h-1" />
+          <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" />
+          <line x1="6" y1="1" x2="6" y2="4" />
+          <line x1="10" y1="1" x2="10" y2="4" />
+          <line x1="14" y1="1" x2="14" y2="4" />
+        </svg>
+      ),
+      title: t.features.f3Title,
+      desc: t.features.f3Desc,
+    },
+    {
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+        </svg>
+      ),
+      title: t.features.f4Title,
+      desc: t.features.f4Desc,
+    },
+    {
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+        </svg>
+      ),
+      title: t.features.f5Title,
+      desc: t.features.f5Desc,
+    },
+    {
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+          <line x1="12" y1="18" x2="12.01" y2="18" />
+        </svg>
+      ),
+      title: t.features.f6Title,
+      desc: t.features.f6Desc,
+    },
+  ];
+
+  const faqsList = [
+    { q: t.faq.q1, a: t.faq.a1 },
+    { q: t.faq.q2, a: t.faq.a2 },
+    { q: t.faq.q3, a: t.faq.a3 },
+    { q: t.faq.q4, a: t.faq.a4 },
+    { q: t.faq.q5, a: t.faq.a5 },
+  ];
+
   return (
     <div className="app-container">
       <motion.div className="progress-bar" style={{ scaleX }} />
@@ -312,20 +303,31 @@ function App() {
           <span className="gradient-text-subtle">SuGuard</span>
         </a>
         <div className="navbar-links">
-          {NAV_LINKS.map((link) => (
+          {navLinks.map((link) => (
             <a key={link.href} href={link.href} className="nav-link-hover magnetic-btn">
               {link.label}
             </a>
           ))}
         </div>
         <div className="navbar-right">
+          <div className="lang-switcher">
+            {(['ru', 'en', 'kk'] as Language[]).map((l) => (
+              <button
+                key={l}
+                className={`lang-btn ${lang === l ? 'active' : ''}`}
+                onClick={() => setLang(l)}
+              >
+                {l.toUpperCase()}
+              </button>
+            ))}
+          </div>
           <motion.a
             whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(0, 212, 170, 0.4)" }}
             whileTap={{ scale: 0.95 }}
             href="#contact"
             className="navbar-cta glow-button"
           >
-            Contact Us
+            {t.nav.contactUs}
           </motion.a>
         </div>
         <button
@@ -340,14 +342,28 @@ function App() {
       </nav>
 
       <div className={`mobile-menu${mobileOpen ? ' open' : ''}`}>
-        {NAV_LINKS.map((link) => (
+        {navLinks.map((link) => (
           <a key={link.href} href={link.href} onClick={closeMobile}>{link.label}</a>
         ))}
+        <div className="mobile-lang-wrapper">
+          <div className="lang-switcher">
+            {(['ru', 'en', 'kk'] as Language[]).map((l) => (
+              <button
+                key={l}
+                className={`lang-btn ${lang === l ? 'active' : ''}`}
+                onClick={() => { setLang(l); closeMobile(); }}
+              >
+                {l.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
         <a href="#contact" onClick={closeMobile} className="btn-primary glow-button" style={{ textAlign: 'center' }}>
-          Contact Us
+          {t.nav.contactUs}
         </a>
       </div>
 
+      {/* Hero Section */}
       <section className="hero" id="hero" ref={heroRef}>
         <div className="hero-cyber-bg">
           <div className="cyber-grid" />
@@ -367,18 +383,15 @@ function App() {
             className="hero-badge glitch-badge"
           >
             <span className="hero-badge-dot" />
-            Wearable Device + Mobile Application
+            {t.hero.badge}
           </motion.div>
 
           <h1 className="hero-title">
-            <RevealText text="The complete ecosystem" />
-            <br />
-            <RevealText text="for health monitoring" className="accent gradient-text" />
+            <RevealText text={t.hero.title} className="accent gradient-text" />
           </h1>
 
           <FadeIn delay={0.4} direction="up" className="hero-subtitle">
-            A wearable device that measures glucose, SpO2, and pulse non-invasively,
-            paired with an intelligent mobile app for analytics, risk assessment, and nutrition tracking.
+            {t.hero.subtitle}
           </FadeIn>
 
           <FadeIn delay={0.6} direction="up" className="hero-actions">
@@ -406,7 +419,7 @@ function App() {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ color: "var(--accent)" }}>
                 <path d="M8 5v14l11-7z" />
               </svg>
-              Watch Demo Video
+              {t.hero.watchDemo}
             </motion.button>
             <motion.a
               whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.05)" }}
@@ -414,7 +427,7 @@ function App() {
               href="#ecosystem"
               className="btn-secondary magnetic-btn"
             >
-              Explore Ecosystem
+              {t.hero.orderDevice}
             </motion.a>
           </FadeIn>
 
@@ -448,17 +461,15 @@ function App() {
         </motion.div>
       </section>
 
-
-
+      {/* Ecosystem Section */}
       <section className="section ecosystem-section relative-section" id="ecosystem">
         <div className="section-glow" />
         <div className="container">
           <FadeIn className="section-header">
-            <span className="section-label neon-label">Ecosystem</span>
-            <h2 className="section-title"><RevealText text="Two components, one mission" /></h2>
+            <span className="section-label neon-label">{t.ecosystem.badge}</span>
+            <h2 className="section-title"><RevealText text={t.ecosystem.title} /></h2>
             <p className="section-desc">
-              SuGuard combines hardware and software into a unified health monitoring system
-              designed for proactive diabetes prevention and daily wellness management.
+              {t.ecosystem.subtitle}
             </p>
           </FadeIn>
 
@@ -474,17 +485,13 @@ function App() {
                   />
                 </div>
                 <div className="ecosystem-card-content">
-                  <div className="ecosystem-card-label">Hardware</div>
-                  <h3>SuGuard Wearable</h3>
-                  <p>
-                    A compact wrist-worn device with built-in optical sensors for non-invasive
-                    measurement of blood glucose, SpO2 saturation, and pulse rate. Connects to
-                    your phone via Bluetooth for continuous data synchronization.
-                  </p>
+                  <div className="ecosystem-card-label">{t.ecosystem.hardwareBadge}</div>
+                  <h3>{t.ecosystem.hardwareTitle}</h3>
+                  <p>{t.ecosystem.hardwareDesc}</p>
                   <ul className="ecosystem-specs">
-                    <li><span className="spec-name">Sensors</span><span className="spec-value gradient-text-subtle">Glucose, SpO2, Pulse</span></li>
-                    <li><span className="spec-name">Connectivity</span><span className="spec-value">Bluetooth 5.0</span></li>
-                    <li><span className="spec-name">Platform</span><span className="spec-value">ESP32 Engine</span></li>
+                    <li><span className="spec-name">{t.ecosystem.hardwareFeat1Title}</span><span className="spec-value gradient-text-subtle">{t.ecosystem.hardwareFeat1Desc}</span></li>
+                    <li><span className="spec-name">{t.ecosystem.hardwareFeat2Title}</span><span className="spec-value">{t.ecosystem.hardwareFeat2Desc}</span></li>
+                    <li><span className="spec-name">{t.ecosystem.hardwareFeat3Title}</span><span className="spec-value">{t.ecosystem.hardwareFeat3Desc}</span></li>
                   </ul>
                 </div>
               </SpotlightCard>
@@ -504,17 +511,13 @@ function App() {
                   </TiltCard>
                 </div>
                 <div className="ecosystem-card-content">
-                  <div className="ecosystem-card-label">Software</div>
-                  <h3>SuGuard App</h3>
-                  <p>
-                    A feature-rich mobile application that receives data from the wearable device
-                    and transforms it into actionable health insights. Includes risk assessment,
-                    nutrition tracking, analytics charts, and an intelligent health consultant.
-                  </p>
+                  <div className="ecosystem-card-label">{t.ecosystem.appBadge}</div>
+                  <h3>{t.ecosystem.appTitle}</h3>
+                  <p>{t.ecosystem.appDesc}</p>
                   <ul className="ecosystem-specs">
-                    <li><span className="spec-name">Platform</span><span className="spec-value gradient-text-subtle">Android (Flutter)</span></li>
-                    <li><span className="spec-name">Backend</span><span className="spec-value">Firebase Sync</span></li>
-                    <li><span className="spec-name">Analytics</span><span className="spec-value">Groq LLM AI</span></li>
+                    <li><span className="spec-name">{t.ecosystem.appFeat1Title}</span><span className="spec-value gradient-text-subtle">{t.ecosystem.appFeat1Desc}</span></li>
+                    <li><span className="spec-name">{t.ecosystem.appFeat2Title}</span><span className="spec-value">{t.ecosystem.appFeat2Desc}</span></li>
+                    <li><span className="spec-name">{t.ecosystem.appFeat3Title}</span><span className="spec-value">{t.ecosystem.appFeat3Desc}</span></li>
                   </ul>
                 </div>
               </SpotlightCard>
@@ -523,49 +526,48 @@ function App() {
         </div>
       </section>
 
-
       {/* Achievements & Impact Section */}
       <section className="section relative-section" id="achievements">
         <div className="section-glow" />
         <div className="container">
           <FadeIn className="section-header">
-            <span className="section-label neon-label">Achievements & Impact</span>
-            <h2 className="section-title"><RevealText text="Наши достижения и результаты" /></h2>
+            <span className="section-label neon-label">{t.achievements.badge}</span>
+            <h2 className="section-title"><RevealText text={t.achievements.title} /></h2>
             <p className="section-desc">
-              Ключевые показатели эффективности, привлеченные грантовые инвестиции, проверенная точность устройства и клиника CustDev.
+              {t.achievements.subtitle}
             </p>
           </FadeIn>
 
           <StaggerContainer className="achievements-grid">
             <StaggerItem>
               <SpotlightCard className="achievement-card glass-panel premium-border">
-                <div className="achievement-val gradient-text">$13,000</div>
-                <div className="achievement-title">Привлеченные инвестиции</div>
-                <div className="achievement-desc">Привлечено в проект через грантовые программы и профильные конкурсы.</div>
+                <div className="achievement-val gradient-text">{t.hero.statInvestment}</div>
+                <div className="achievement-title">{t.achievements.invTitle}</div>
+                <div className="achievement-desc">{t.achievements.invDesc}</div>
               </SpotlightCard>
             </StaggerItem>
 
             <StaggerItem>
               <SpotlightCard className="achievement-card glass-panel premium-border">
-                <div className="achievement-val gradient-text">94%</div>
-                <div className="achievement-title">Точность измерения</div>
-                <div className="achievement-desc">Подтвержденная точность работы неинвазивного глюкометра на базе нейросетей.</div>
+                <div className="achievement-val gradient-text">{t.hero.statAccuracy}</div>
+                <div className="achievement-title">{t.achievements.accTitle}</div>
+                <div className="achievement-desc">{t.achievements.accDesc}</div>
               </SpotlightCard>
             </StaggerItem>
 
             <StaggerItem>
               <SpotlightCard className="achievement-card glass-panel premium-border">
-                <div className="achievement-val gradient-text">50+</div>
-                <div className="achievement-title">Пользовательских тестов</div>
-                <div className="achievement-desc">Успешно проведенных реальных исследований и тестирований в рамках CustDev.</div>
+                <div className="achievement-val gradient-text">{t.hero.statTests}</div>
+                <div className="achievement-title">{t.achievements.testsTitle}</div>
+                <div className="achievement-desc">{t.achievements.testsDesc}</div>
               </SpotlightCard>
             </StaggerItem>
 
             <StaggerItem>
               <SpotlightCard className="achievement-card glass-panel premium-border">
                 <div className="achievement-val gradient-text">4+</div>
-                <div className="achievement-title">Официальных партнера</div>
-                <div className="achievement-desc">Сотрудничество с клиниками, медицинскими центрами и общественными институтами.</div>
+                <div className="achievement-title">{t.achievements.partnersTitle}</div>
+                <div className="achievement-desc">{t.achievements.partnersDesc}</div>
               </SpotlightCard>
             </StaggerItem>
           </StaggerContainer>
@@ -577,10 +579,10 @@ function App() {
         <div className="section-glow" />
         <div className="container">
           <FadeIn className="section-header">
-            <span className="section-label neon-label">CustDev & Scientific Advisory Board</span>
-            <h2 className="section-title"><RevealText text="Экспертный совет и CustDev" /></h2>
+            <span className="section-label neon-label">{t.experts.badge}</span>
+            <h2 className="section-title"><RevealText text={t.experts.title} /></h2>
             <p className="section-desc">
-              Ведущие международные и национальные эксперты, оказавшие профессиональную поддержку в рамках CustDev, повышении точности прибора и создании прототипа.
+              {t.experts.subtitle}
             </p>
           </FadeIn>
 
@@ -590,12 +592,10 @@ function App() {
                 <div className="expert-avatar-box">
                   <img src="/jerryloeb.jpeg" alt="Jerry Loeb" className="expert-avatar-img" />
                 </div>
-                <div className="expert-tag">Scientific Advisor</div>
+                <div className="expert-tag">{t.experts.jerryRole}</div>
                 <h3 className="expert-name">Jerry Loeb</h3>
-                <div className="expert-affiliation">University of Southern California</div>
-                <p className="expert-desc">
-                  AI-driven recommendations developed by bio-engineers and PhD researchers at University of Southern California. Консультации по алгоритмам ИИ и биоинженерным решениям.
-                </p>
+                <div className="expert-affiliation">{t.experts.jerryAff}</div>
+                <p className="expert-desc">{t.experts.jerryDesc}</p>
               </SpotlightCard>
             </StaggerItem>
 
@@ -604,12 +604,10 @@ function App() {
                 <div className="expert-avatar-box">
                   <img src="/aidaralimbayev.jpeg" alt="Aidar Alimbayev" className="expert-avatar-img" />
                 </div>
-                <div className="expert-tag">AI & Accuracy Expert</div>
+                <div className="expert-tag">{t.experts.aidarRole}</div>
                 <h3 className="expert-name">Aidar Alimbayev</h3>
-                <div className="expert-affiliation">PhD Student at MBZUAI • AI Researcher</div>
-                <p className="expert-desc">
-                  Provided recommendations on improving device accuracy and implementing AI for glucose data analysis. Исследователь в сфере ИИ, помог достигнуть точности 94%.
-                </p>
+                <div className="expert-affiliation">{t.experts.aidarAff}</div>
+                <p className="expert-desc">{t.experts.aidarDesc}</p>
               </SpotlightCard>
             </StaggerItem>
 
@@ -618,12 +616,10 @@ function App() {
                 <div className="expert-avatar-box">
                   <img src="/rustam_askaruly.jpeg" alt="Askaruly Rustam" className="expert-avatar-img" />
                 </div>
-                <div className="expert-tag">Hardware Prototyping Specialist</div>
+                <div className="expert-tag">{t.experts.rustamRole}</div>
                 <h3 className="expert-name">Askaruly Rustam</h3>
-                <div className="expert-affiliation">Fab Lab NURIS Digital Prototyping Engineer</div>
-                <p className="expert-desc">
-                  Prototyping specialist. Participated in the development of the first device prototype. Специалист по цифровому прототипированию, созданию первого образца устройства.
-                </p>
+                <div className="expert-affiliation">{t.experts.rustamAff}</div>
+                <p className="expert-desc">{t.experts.rustamDesc}</p>
               </SpotlightCard>
             </StaggerItem>
           </StaggerContainer>
@@ -635,10 +631,10 @@ function App() {
         <div className="section-glow-blue parallax-glow" />
         <div className="container">
           <FadeIn className="section-header">
-            <span className="section-label neon-label">Partnerships & Collaborations</span>
-            <h2 className="section-title"><RevealText text="Официальное сотрудничество" /></h2>
+            <span className="section-label neon-label">{t.partners.badge}</span>
+            <h2 className="section-title"><RevealText text={t.partners.title} /></h2>
             <p className="section-desc">
-              Мы активно сотрудничаем с ведущими медицинскими центрами, больницами и общественными организациями.
+              {t.partners.subtitle}
             </p>
           </FadeIn>
 
@@ -646,8 +642,8 @@ function App() {
             <StaggerItem>
               <SpotlightCard className="partner-card glass-panel premium-border">
                 <div className="partner-info">
-                  <h3>ГКП на ПХВ «БРБ»</h3>
-                  <p>Городская клиническая больница (Аксайская больница) - практическое сотрудничество и экспертная апробация устройства.</p>
+                  <h3>{t.partners.brbTitle}</h3>
+                  <p>{t.partners.brbDesc}</p>
                 </div>
               </SpotlightCard>
             </StaggerItem>
@@ -655,8 +651,8 @@ function App() {
             <StaggerItem>
               <SpotlightCard className="partner-card glass-panel premium-border">
                 <div className="partner-info">
-                  <h3>Медицинский центр «Авиценна»</h3>
-                  <p>Партнерство в сфере клинических консультаций, сбора данных и тестирования методологии мониторинга.</p>
+                  <h3>{t.partners.avicennaTitle}</h3>
+                  <p>{t.partners.avicennaDesc}</p>
                 </div>
               </SpotlightCard>
             </StaggerItem>
@@ -664,8 +660,8 @@ function App() {
             <StaggerItem>
               <SpotlightCard className="partner-card glass-panel premium-border">
                 <div className="partner-info">
-                  <h3>Медцентр Управления делами Президента РК</h3>
-                  <p>Консультационное взаимодействие и экспертная оценка технологий SuGuard от квалифицированных врачей.</p>
+                  <h3>{t.partners.presidentialTitle}</h3>
+                  <p>{t.partners.presidentialDesc}</p>
                 </div>
               </SpotlightCard>
             </StaggerItem>
@@ -673,8 +669,8 @@ function App() {
             <StaggerItem>
               <SpotlightCard className="partner-card glass-panel premium-border">
                 <div className="partner-info">
-                  <h3>Партия «Аманат»</h3>
-                  <p>Социально-инновационная поддержка проекта и взаимодействие по программам укрепления здоровья населения.</p>
+                  <h3>{t.partners.amanatTitle}</h3>
+                  <p>{t.partners.amanatDesc}</p>
                 </div>
               </SpotlightCard>
             </StaggerItem>
@@ -682,40 +678,40 @@ function App() {
 
           <FadeIn className="academic-wrapper">
             <div className="academic-title">
-              <span>Научные инициативы & Предложения по сотрудничеству</span>
+              <span>{t.partners.academicTitle}</span>
             </div>
 
             <div className="academic-grid">
               <div className="academic-card">
-                <h4>ННЦРЗ им. Салидат Каирбековой</h4>
-                <p>Национальный научный центр развития здравоохранения - инициативные предложения по интеграции технологических решений.</p>
+                <h4>{t.partners.nncrzTitle}</h4>
+                <p>{t.partners.nncrzDesc}</p>
               </div>
               <div className="academic-card">
-                <h4>Назарбаев Университет</h4>
-                <p>Nazarbayev University - научно-технологический CustDev, исследования и прототипирование на базе Fab Lab NURIS.</p>
+                <h4>{t.partners.nuTitle}</h4>
+                <p>{t.partners.nuDesc}</p>
               </div>
               <div className="academic-card">
-                <h4>Медицинский Университет Астаны</h4>
-                <p>Академические консультации с экспертами профильных кафедр и диабетологами университета.</p>
+                <h4>{t.partners.amuTitle}</h4>
+                <p>{t.partners.amuDesc}</p>
               </div>
             </div>
           </FadeIn>
         </div>
       </section>
 
+      {/* Features Section */}
       <section className="section features" id="features">
         <div className="container">
           <FadeIn className="section-header">
-            <span className="section-label neon-label">Features</span>
-            <h2 className="section-title"><RevealText text="Everything you need to manage your health" /></h2>
+            <span className="section-label neon-label">{t.features.badge}</span>
+            <h2 className="section-title"><RevealText text={t.features.title} /></h2>
             <p className="section-desc">
-              A comprehensive suite of tools combining hardware sensors and software intelligence
-              for proactive diabetes prevention and daily health optimization.
+              {t.features.subtitle}
             </p>
           </FadeIn>
 
           <StaggerContainer className="features-grid">
-            {FEATURES.map((f, i) => (
+            {featuresList.map((f, i) => (
               <StaggerItem key={i}>
                 <SpotlightCard className="feature-card interactive-hover">
                   <motion.div
@@ -734,13 +730,14 @@ function App() {
         </div>
       </section>
 
+      {/* App Preview Section */}
       <div className="showcase showcase-app" id="app">
         <div className="container">
           <FadeIn className="section-header">
-            <span className="section-label neon-label">Mobile Application</span>
-            <h2 className="section-title"><RevealText text="Your health data, visualized" /></h2>
+            <span className="section-label neon-label">{t.appSection.badge}</span>
+            <h2 className="section-title"><RevealText text={t.appSection.title} /></h2>
             <p className="section-desc">
-              The companion app transforms raw sensor data into clear, actionable health insights.
+              {t.appSection.subtitle}
             </p>
           </FadeIn>
         </div>
@@ -748,11 +745,8 @@ function App() {
         <div className="showcase-row">
           <FadeIn direction="left" className="showcase-content">
             <span className="showcase-label">Dashboard</span>
-            <h2>Your health at a glance</h2>
-            <p>
-              The main dashboard aggregates all your vital signs into a single, intuitive interface.
-              Monitor diabetes risk score, glucose levels, SpO2 saturation, and pulse rate without navigating between screens.
-            </p>
+            <h2>{t.appSection.screen1Title}</h2>
+            <p>{t.appSection.screen1Desc}</p>
             <ul className="showcase-features-list">
               <li><span className="showcase-check check-glow"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg></span>Real-time diabetes risk gauge with percentage score</li>
               <li><span className="showcase-check check-glow"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg></span>Live glucose, SpO2, and pulse monitoring cards</li>
@@ -771,11 +765,8 @@ function App() {
         <div className="showcase-row reverse">
           <FadeIn direction="right" className="showcase-content">
             <span className="showcase-label">Analytics</span>
-            <h2>Deep dive into your glucose data</h2>
-            <p>
-              Interactive charts with day, week, and month views provide granular insight into your blood glucose behavior.
-              Statistical summaries highlight averages, minimums, and maximums to track progress over time.
-            </p>
+            <h2>{t.appSection.screen2Title}</h2>
+            <p>{t.appSection.screen2Desc}</p>
             <ul className="showcase-features-list">
               <li><span className="showcase-check check-glow"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg></span>Time-series charts with configurable intervals</li>
               <li><span className="showcase-check check-glow"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg></span>Statistical breakdown: average, min, max values</li>
@@ -790,98 +781,24 @@ function App() {
             </TiltCard>
           </FadeIn>
         </div>
-
-        <div className="showcase-row">
-          <FadeIn direction="left" className="showcase-content">
-            <span className="showcase-label">Risk Assessment</span>
-            <h2>Understand your risk factor</h2>
-            <p>
-              A detailed breakdown of the factors contributing to your diabetes risk score.
-              Each metric is visualized with progress indicators and contextual values so you know exactly what to improve.
-            </p>
-            <ul className="showcase-features-list">
-              <li><span className="showcase-check check-glow"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg></span>Multi-factor risk calculation with visual gauge</li>
-              <li><span className="showcase-check check-glow"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg></span>Individual progress bars for glucose, pulse, SpO2</li>
-              <li><span className="showcase-check check-glow"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg></span>Glucose trend chart integrated into risk overview</li>
-            </ul>
-          </FadeIn>
-          <FadeIn direction="right" className="showcase-image" delay={0.2}>
-            <TiltCard>
-              <div className="showcase-phone glass-phone advanced-glass float-slow delay-2">
-                <img src="/suguard4.jpeg" alt="SuGuard risk assessment" />
-              </div>
-            </TiltCard>
-          </FadeIn>
-        </div>
       </div>
 
-      <section className="section metrics relative-section">
-        <div className="section-glow-blue parallax-glow" />
-        <div className="container">
-          <StaggerContainer className="metrics-grid">
-            <StaggerItem className="metric-item glass-metric">
-              <motion.div
-                initial={{ scale: 0 }}
-                whileInView={{ scale: 1, rotate: [0, 10, -10, 0] }}
-                transition={{ type: "spring", delay: 0.1, duration: 1 }}
-                className="metric-value counter gradient-text"
-              >
-                3
-              </motion.div>
-              <div className="metric-label">Sensors: glucose, SpO2, pulse</div>
-            </StaggerItem>
-            <StaggerItem className="metric-item glass-metric">
-              <motion.div
-                initial={{ scale: 0 }}
-                whileInView={{ scale: 1, rotate: [0, -10, 10, 0] }}
-                transition={{ type: "spring", delay: 0.2, duration: 1 }}
-                className="metric-value gradient-text"
-              >
-                24/7
-              </motion.div>
-              <div className="metric-label">Continuous health monitoring</div>
-            </StaggerItem>
-            <StaggerItem className="metric-item glass-metric">
-              <motion.div
-                initial={{ scale: 0 }}
-                whileInView={{ scale: 1, rotate: [0, 10, -10, 0] }}
-                transition={{ type: "spring", delay: 0.3, duration: 1 }}
-                className="metric-value counter gradient-text"
-              >
-                5+
-              </motion.div>
-              <div className="metric-label">App modules: dashboard, charts, risk</div>
-            </StaggerItem>
-            <StaggerItem className="metric-item glass-metric">
-              <motion.div
-                initial={{ scale: 0 }}
-                whileInView={{ scale: 1, rotate: [0, -10, 10, 0] }}
-                transition={{ type: "spring", delay: 0.4, duration: 1 }}
-                className="metric-value gradient-text"
-              >
-                &lt;1s
-              </motion.div>
-              <div className="metric-label">Bluetooth sync latency</div>
-            </StaggerItem>
-          </StaggerContainer>
-        </div>
-      </section>
-
+      {/* Pricing Section */}
       <section className="section pricing-section relative-section" id="pricing">
         <div className="pricing-grid-bg" />
         <div className="container">
           <FadeIn className="section-header">
-            <span className="section-label neon-label">Pricing</span>
-            <h2 className="section-title"><RevealText text="One price, full ecosystem" /></h2>
+            <span className="section-label neon-label">{t.pricing.badge}</span>
+            <h2 className="section-title"><RevealText text={t.pricing.title} /></h2>
             <p className="section-desc">
-              Get the SuGuard wearable device and a full app subscription - everything you need for proactive health monitoring.
+              {t.pricing.subtitle}
             </p>
           </FadeIn>
           <div className="pricing-card-wrapper perspective-container">
             <FadeIn>
               <SpotlightCard className="pricing-card advanced-glass ultra-premium-border floating-anim">
                 <div className="pricing-card-glow orb-pulse" />
-                <div className="pricing-badge pulse-glow">Full Ecosystem</div>
+                <div className="pricing-badge pulse-glow">{t.pricing.popularBadge}</div>
                 <div className="pricing-price">
                   <span className="pricing-currency">₸</span>
                   <span className="pricing-amount counter">35,000</span>
@@ -901,7 +818,7 @@ function App() {
                   href="#contact"
                   className="btn-primary pricing-cta glow-button"
                 >
-                  Get SuGuard Now
+                  {t.hero.orderDevice}
                 </motion.a>
               </SpotlightCard>
             </FadeIn>
@@ -909,14 +826,16 @@ function App() {
         </div>
       </section>
 
+      {/* FAQ Section */}
       <section className="section" id="faq">
         <div className="container">
           <FadeIn className="section-header">
-            <span className="section-label neon-label">FAQ</span>
-            <h2 className="section-title"><RevealText text="Frequently asked questions" /></h2>
+            <span className="section-label neon-label">{t.faq.badge}</span>
+            <h2 className="section-title"><RevealText text={t.faq.title} /></h2>
+            <p className="section-desc">{t.faq.subtitle}</p>
           </FadeIn>
           <div className="faq-list">
-            {FAQS.map((faq, i) => (
+            {faqsList.map((faq, i) => (
               <FadeIn className={`faq-item glass-panel ${activeFaq === i ? ' active' : ''}`} key={i} delay={i * 0.1}>
                 <button className="faq-question" onClick={() => toggleFaq(i)}>
                   {faq.q}
@@ -944,12 +863,13 @@ function App() {
         </div>
       </section>
 
+      {/* CTA / Contact Section */}
       <section className="cta-section relative-section" id="contact">
         <div className="section-glow orb-pulse" />
         <FadeIn direction="up">
-          <h2 className="hero-title"><RevealText text="Start monitoring your health today" /></h2>
+          <h2 className="hero-title"><RevealText text={t.contact.title} /></h2>
           <p className="section-desc mb-10">
-            Download the SuGuard app, pair your wearable device, and take control of your health data.
+            {t.contact.subtitle}
           </p>
           <div className="cta-actions">
             <motion.a
@@ -972,12 +892,13 @@ function App() {
               href="mailto:alihanmurzakmetov15@gmail.com"
               className="btn-secondary"
             >
-              Contact Us
+              {t.nav.contactUs}
             </motion.a>
           </div>
         </FadeIn>
       </section>
 
+      {/* Footer */}
       <footer className="footer" id="footer">
         <div className="footer-content">
           <div className="footer-brand">
@@ -985,19 +906,15 @@ function App() {
               <span className="navbar-logo-icon">SG</span>
               SuGuard
             </div>
-            <p>
-              An integrated health monitoring ecosystem combining a wearable sensor device
-              with an intelligent mobile application. Built in Kazakhstan.
-            </p>
+            <p>{t.footer.desc}</p>
           </div>
           <div className="footer-column">
             <h4>Product</h4>
             <ul>
-              <li><a href="#ecosystem">Ecosystem</a></li>
-              <li><a href="#features">Features</a></li>
-              <li><a href="#device">Device</a></li>
-              <li><a href="#app">App</a></li>
-              <li><a href="#faq">FAQ</a></li>
+              <li><a href="#ecosystem">{t.nav.ecosystem}</a></li>
+              <li><a href="#features">{t.nav.features}</a></li>
+              <li><a href="#app">{t.nav.app}</a></li>
+              <li><a href="#faq">{t.nav.faq}</a></li>
             </ul>
           </div>
           <div className="footer-column">
@@ -1017,7 +934,7 @@ function App() {
           </div>
         </div>
         <div className="footer-bottom">
-          <p>© 2026 SuGuard. All rights reserved. Made in Kazakhstan.</p>
+          <p>© 2026 SuGuard. {t.footer.rights} Made in Kazakhstan.</p>
           <span className="footer-version">v1.2.0-ULTRA</span>
         </div>
       </footer>
