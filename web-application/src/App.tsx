@@ -5,9 +5,10 @@ import './extreme.css';
 
 const NAV_LINKS = [
   { label: 'Ecosystem', href: '#ecosystem' },
-  { label: 'Demo', href: '#demo' },
+  { label: 'Achievements', href: '#achievements' },
+  { label: 'Experts', href: '#experts' },
+  { label: 'Partners', href: '#partners' },
   { label: 'Features', href: '#features' },
-  { label: 'Device', href: '#device' },
   { label: 'App', href: '#app' },
   { label: 'Pricing', href: '#pricing' },
   { label: 'FAQ', href: '#faq' },
@@ -522,78 +523,182 @@ function App() {
         </div>
       </section>
 
-      <section className="section relative-section" id="demo">
+
+      {/* Achievements & Impact Section */}
+      <section className="section relative-section" id="achievements">
         <div className="section-glow" />
-        <div className="container demo-container">
+        <div className="container">
           <FadeIn className="section-header">
-            <span className="section-label neon-label">Demo Video</span>
-            <h2 className="section-title"><RevealText text="SuGuard Ecosystem in Action" /></h2>
+            <span className="section-label neon-label">Achievements & Impact</span>
+            <h2 className="section-title"><RevealText text="Наши достижения и результаты" /></h2>
             <p className="section-desc">
-              Watch our live demonstration showing the SuGuard wearable sensor syncing real-time health metrics to the mobile app interface.
+              Ключевые показатели эффективности, привлеченные грантовые инвестиции, проверенная точность устройства и клиника CustDev.
             </p>
           </FadeIn>
 
-          <FadeIn direction="up" delay={0.2}>
-            <SpotlightCard className="demo-card glass-panel premium-border">
-              <div className="demo-video-header">
-                <div className="demo-header-badge">
-                  <span className="demo-live-dot" />
-                  FULL DEMONSTRATION • HD 1080P
+          <StaggerContainer className="achievements-grid">
+            <StaggerItem>
+              <SpotlightCard className="achievement-card glass-panel premium-border">
+                <div className="achievement-val gradient-text">$13,000</div>
+                <div className="achievement-title">Привлеченные инвестиции</div>
+                <div className="achievement-desc">Привлечено в проект через грантовые программы и профильные конкурсы.</div>
+              </SpotlightCard>
+            </StaggerItem>
+
+            <StaggerItem>
+              <SpotlightCard className="achievement-card glass-panel premium-border">
+                <div className="achievement-val gradient-text">94%</div>
+                <div className="achievement-title">Точность измерения</div>
+                <div className="achievement-desc">Подтвержденная точность работы неинвазивного глюкометра на базе нейросетей.</div>
+              </SpotlightCard>
+            </StaggerItem>
+
+            <StaggerItem>
+              <SpotlightCard className="achievement-card glass-panel premium-border">
+                <div className="achievement-val gradient-text">50+</div>
+                <div className="achievement-title">Пользовательских тестов</div>
+                <div className="achievement-desc">Успешно проведенных реальных исследований и тестирований в рамках CustDev.</div>
+              </SpotlightCard>
+            </StaggerItem>
+
+            <StaggerItem>
+              <SpotlightCard className="achievement-card glass-panel premium-border">
+                <div className="achievement-val gradient-text">4+</div>
+                <div className="achievement-title">Официальных партнера</div>
+                <div className="achievement-desc">Сотрудничество с клиниками, медицинскими центрами и общественными институтами.</div>
+              </SpotlightCard>
+            </StaggerItem>
+          </StaggerContainer>
+        </div>
+      </section>
+
+      {/* Expert Advisory Board & CustDev Section */}
+      <section className="section relative-section" id="experts">
+        <div className="section-glow" />
+        <div className="container">
+          <FadeIn className="section-header">
+            <span className="section-label neon-label">CustDev & Scientific Advisory Board</span>
+            <h2 className="section-title"><RevealText text="Экспертный совет и CustDev" /></h2>
+            <p className="section-desc">
+              Ведущие международные и национальные эксперты, оказавшие профессиональную поддержку в рамках CustDev, повышении точности прибора и создании прототипа.
+            </p>
+          </FadeIn>
+
+          <StaggerContainer className="experts-grid">
+            <StaggerItem>
+              <SpotlightCard className="expert-card glass-panel premium-border">
+                <div className="expert-avatar-box">
+                  <img src="/jerryloeb.jpeg" alt="Jerry Loeb" className="expert-avatar-img" />
                 </div>
-                <div className="demo-header-info">
-                  SuGuard Wearable & Mobile App Sync
+                <div className="expert-tag">Scientific Advisor</div>
+                <h3 className="expert-name">Jerry Loeb</h3>
+                <div className="expert-affiliation">University of Southern California</div>
+                <p className="expert-desc">
+                  AI-driven recommendations developed by bio-engineers and PhD researchers at University of Southern California. Консультации по алгоритмам ИИ и биоинженерным решениям.
+                </p>
+              </SpotlightCard>
+            </StaggerItem>
+
+            <StaggerItem>
+              <SpotlightCard className="expert-card glass-panel premium-border">
+                <div className="expert-avatar-box">
+                  <img src="/aidaralimbayev.jpeg" alt="Aidar Alimbayev" className="expert-avatar-img" />
                 </div>
+                <div className="expert-tag">AI & Accuracy Expert</div>
+                <h3 className="expert-name">Aidar Alimbayev</h3>
+                <div className="expert-affiliation">PhD Student at MBZUAI • AI Researcher</div>
+                <p className="expert-desc">
+                  Provided recommendations on improving device accuracy and implementing AI for glucose data analysis. Исследователь в сфере ИИ, помог достигнуть точности 94%.
+                </p>
+              </SpotlightCard>
+            </StaggerItem>
+
+            <StaggerItem>
+              <SpotlightCard className="expert-card glass-panel premium-border">
+                <div className="expert-avatar-box">
+                  <img src="/rustam_askaruly.jpeg" alt="Askaruly Rustam" className="expert-avatar-img" />
+                </div>
+                <div className="expert-tag">Hardware Prototyping Specialist</div>
+                <h3 className="expert-name">Askaruly Rustam</h3>
+                <div className="expert-affiliation">Fab Lab NURIS Digital Prototyping Engineer</div>
+                <p className="expert-desc">
+                  Prototyping specialist. Participated in the development of the first device prototype. Специалист по цифровому прототипированию, созданию первого образца устройства.
+                </p>
+              </SpotlightCard>
+            </StaggerItem>
+          </StaggerContainer>
+        </div>
+      </section>
+
+      {/* Partners & Institutional Collaborations Section */}
+      <section className="section partners-section relative-section" id="partners">
+        <div className="section-glow-blue parallax-glow" />
+        <div className="container">
+          <FadeIn className="section-header">
+            <span className="section-label neon-label">Partnerships & Collaborations</span>
+            <h2 className="section-title"><RevealText text="Официальное сотрудничество" /></h2>
+            <p className="section-desc">
+              Мы активно сотрудничаем с ведущими медицинскими центрами, больницами и общественными организациями.
+            </p>
+          </FadeIn>
+
+          <StaggerContainer className="partners-grid">
+            <StaggerItem>
+              <SpotlightCard className="partner-card glass-panel premium-border">
+                <div className="partner-info">
+                  <h3>ГКП на ПХВ «БРБ»</h3>
+                  <p>Городская клиническая больница (Аксайская больница) - практическое сотрудничество и экспертная апробация устройства.</p>
+                </div>
+              </SpotlightCard>
+            </StaggerItem>
+
+            <StaggerItem>
+              <SpotlightCard className="partner-card glass-panel premium-border">
+                <div className="partner-info">
+                  <h3>Медицинский центр «Авиценна»</h3>
+                  <p>Партнерство в сфере клинических консультаций, сбора данных и тестирования методологии мониторинга.</p>
+                </div>
+              </SpotlightCard>
+            </StaggerItem>
+
+            <StaggerItem>
+              <SpotlightCard className="partner-card glass-panel premium-border">
+                <div className="partner-info">
+                  <h3>Медцентр Управления делами Президента РК</h3>
+                  <p>Консультационное взаимодействие и экспертная оценка технологий SuGuard от квалифицированных врачей.</p>
+                </div>
+              </SpotlightCard>
+            </StaggerItem>
+
+            <StaggerItem>
+              <SpotlightCard className="partner-card glass-panel premium-border">
+                <div className="partner-info">
+                  <h3>Партия «Аманат»</h3>
+                  <p>Социально-инновационная поддержка проекта и взаимодействие по программам укрепления здоровья населения.</p>
+                </div>
+              </SpotlightCard>
+            </StaggerItem>
+          </StaggerContainer>
+
+          <FadeIn className="academic-wrapper">
+            <div className="academic-title">
+              <span>Научные инициативы & Предложения по сотрудничеству</span>
+            </div>
+
+            <div className="academic-grid">
+              <div className="academic-card">
+                <h4>ННЦРЗ им. Салидат Каирбековой</h4>
+                <p>Национальный научный центр развития здравоохранения - инициативные предложения по интеграции технологических решений.</p>
               </div>
-
-              <div className="demo-video-box">
-                <video
-                  src="/demo.mp4"
-                  controls
-                  playsInline
-                  preload="metadata"
-                  className="demo-video-element"
-                />
+              <div className="academic-card">
+                <h4>Назарбаев Университет</h4>
+                <p>Nazarbayev University - научно-технологический CustDev, исследования и прототипирование на базе Fab Lab NURIS.</p>
               </div>
-
-              <div className="demo-highlights-grid">
-                <div className="demo-highlight-card">
-                  <div className="demo-highlight-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-                    </svg>
-                  </div>
-                  <div className="demo-highlight-text">
-                    <h4>Non-Invasive Sensing</h4>
-                    <p>Optical PPG sensors measure glucose & SpO2 painlessly on wrist.</p>
-                  </div>
-                </div>
-
-                <div className="demo-highlight-card">
-                  <div className="demo-highlight-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
-                      <line x1="12" y1="18" x2="12.01" y2="18" />
-                    </svg>
-                  </div>
-                  <div className="demo-highlight-text">
-                    <h4>Real-Time Sync</h4>
-                    <p>Instant Bluetooth connectivity streams vital signs directly to your phone.</p>
-                  </div>
-                </div>
-
-                <div className="demo-highlight-card">
-                  <div className="demo-highlight-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-                    </svg>
-                  </div>
-                  <div className="demo-highlight-text">
-                    <h4>AI Risk Insights</h4>
-                    <p>Calculates instant risk percentage and offers intelligent health recommendations.</p>
-                  </div>
-                </div>
+              <div className="academic-card">
+                <h4>Медицинский Университет Астаны</h4>
+                <p>Академические консультации с экспертами профильных кафедр и диабетологами университета.</p>
               </div>
-            </SpotlightCard>
+            </div>
           </FadeIn>
         </div>
       </section>
@@ -944,7 +1049,7 @@ function App() {
               </svg>
             </button>
             <video
-              src="/demo.mp4"
+              src="/video.mp4"
               controls
               autoPlay
               playsInline
