@@ -9,6 +9,7 @@ import 'package:my_app/models/food_entry.dart';
 import 'package:my_app/services/app_settings.dart';
 import 'package:my_app/services/firebase_service.dart';
 import 'package:my_app/services/groq_service.dart';
+import 'package:my_app/services/gemini_food_service.dart';
 
 class FoodTrackerScreen extends StatefulWidget {
   const FoodTrackerScreen({super.key});
@@ -157,7 +158,7 @@ class _FoodTrackerScreenState extends State<FoodTrackerScreen>
       final bytes = await File(picked.path).readAsBytes();
       final base64Img = base64Encode(bytes);
 
-      final result = await GroqService.analyzeFoodPhoto(base64Img);
+      final result = await GeminiFoodService.analyzeFoodPhoto(base64Img);
 
       if (result != null && mounted) {
         final entry = FoodEntry(

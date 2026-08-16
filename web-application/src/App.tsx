@@ -5,6 +5,7 @@ import './extreme.css';
 
 const NAV_LINKS = [
   { label: 'Ecosystem', href: '#ecosystem' },
+  { label: 'Demo', href: '#demo' },
   { label: 'Features', href: '#features' },
   { label: 'Device', href: '#device' },
   { label: 'App', href: '#app' },
@@ -271,6 +272,7 @@ const StaggerItem = ({ children, className = "" }: any) => (
 function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, {
@@ -393,6 +395,18 @@ function App() {
               </svg>
               Download App
             </motion.a>
+            <motion.button
+              whileHover={{ scale: 1.05, boxShadow: "0 0 25px rgba(0, 212, 170, 0.4)", backgroundColor: "rgba(0, 212, 170, 0.15)" }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setIsVideoModalOpen(true)}
+              className="btn-secondary glow-button"
+              style={{ cursor: "pointer", borderColor: "rgba(0, 212, 170, 0.5)" }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ color: "var(--accent)" }}>
+                <path d="M8 5v14l11-7z" />
+              </svg>
+              Watch Demo Video
+            </motion.button>
             <motion.a
               whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.05)" }}
               whileTap={{ scale: 0.95 }}
@@ -505,6 +519,82 @@ function App() {
               </SpotlightCard>
             </StaggerItem>
           </StaggerContainer>
+        </div>
+      </section>
+
+      <section className="section relative-section" id="demo">
+        <div className="section-glow" />
+        <div className="container demo-container">
+          <FadeIn className="section-header">
+            <span className="section-label neon-label">Demo Video</span>
+            <h2 className="section-title"><RevealText text="SuGuard Ecosystem in Action" /></h2>
+            <p className="section-desc">
+              Watch our live demonstration showing the SuGuard wearable sensor syncing real-time health metrics to the mobile app interface.
+            </p>
+          </FadeIn>
+
+          <FadeIn direction="up" delay={0.2}>
+            <SpotlightCard className="demo-card glass-panel premium-border">
+              <div className="demo-video-header">
+                <div className="demo-header-badge">
+                  <span className="demo-live-dot" />
+                  FULL DEMONSTRATION • HD 1080P
+                </div>
+                <div className="demo-header-info">
+                  SuGuard Wearable & Mobile App Sync
+                </div>
+              </div>
+
+              <div className="demo-video-box">
+                <video
+                  src="/demo.mp4"
+                  controls
+                  playsInline
+                  preload="metadata"
+                  className="demo-video-element"
+                />
+              </div>
+
+              <div className="demo-highlights-grid">
+                <div className="demo-highlight-card">
+                  <div className="demo-highlight-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                    </svg>
+                  </div>
+                  <div className="demo-highlight-text">
+                    <h4>Non-Invasive Sensing</h4>
+                    <p>Optical PPG sensors measure glucose & SpO2 painlessly on wrist.</p>
+                  </div>
+                </div>
+
+                <div className="demo-highlight-card">
+                  <div className="demo-highlight-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                      <line x1="12" y1="18" x2="12.01" y2="18" />
+                    </svg>
+                  </div>
+                  <div className="demo-highlight-text">
+                    <h4>Real-Time Sync</h4>
+                    <p>Instant Bluetooth connectivity streams vital signs directly to your phone.</p>
+                  </div>
+                </div>
+
+                <div className="demo-highlight-card">
+                  <div className="demo-highlight-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                    </svg>
+                  </div>
+                  <div className="demo-highlight-text">
+                    <h4>AI Risk Insights</h4>
+                    <p>Calculates instant risk percentage and offers intelligent health recommendations.</p>
+                  </div>
+                </div>
+              </div>
+            </SpotlightCard>
+          </FadeIn>
         </div>
       </section>
 
@@ -822,10 +912,47 @@ function App() {
           </div>
         </div>
         <div className="footer-bottom">
-          <p>2026 SuGuard. All rights reserved. Made in Kazakhstan.</p>
+          <p>© 2026 SuGuard. All rights reserved. Made in Kazakhstan.</p>
           <span className="footer-version">v1.2.0-ULTRA</span>
         </div>
       </footer>
+
+      {/* Lightbox Modal Video Player */}
+      {isVideoModalOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="video-modal-backdrop"
+          onClick={() => setIsVideoModalOpen(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className="video-modal-container"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="video-modal-close"
+              onClick={() => setIsVideoModalOpen(false)}
+              aria-label="Close Video"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+            <video
+              src="/demo.mp4"
+              controls
+              autoPlay
+              playsInline
+              className="video-modal-element"
+            />
+          </motion.div>
+        </motion.div>
+      )}
     </div>
   );
 }

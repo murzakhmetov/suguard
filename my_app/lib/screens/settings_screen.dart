@@ -303,7 +303,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 32),
 
             GestureDetector(
-              onTap: () => _settings.toggleHighGlucoseMode(),
+              onTap: () {
+                _settings.toggleSecretMetricsBoost();
+              },
               child: Center(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 12),

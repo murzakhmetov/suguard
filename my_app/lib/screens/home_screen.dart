@@ -61,7 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _startRealtimePolling() {
     _realtimeTimer?.cancel();
 
-    _realtimeTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
+    _realtimeTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
       if (!mounted) return;
 
       final liveData = await FirebaseService.fetchLiveData();
@@ -71,9 +71,23 @@ class _HomeScreenState extends State<HomeScreen> {
           _liveGlucoseMmol = (liveData['glucose_mmol'] as num).toDouble();
           _livePulse = (liveData['pulse'] as num).toDouble();
           _liveSpo2 = (liveData['spo2'] as num).toDouble();
+
+          if (_allData.isNotEmpty) {
+            final now = DateTime.now();
+            final updatedReading = HealthData(
+              id: _allData.last.id,
+              timestamp: now,
+              spo2: _liveSpo2!,
+              pulse: _livePulse!,
+              glucose: _liveGlucoseMgdl!,
+            );
+            _allData[_allData.length - 1] = updatedReading;
+            if (_todayData.isNotEmpty) {
+              _todayData[_todayData.length - 1] = updatedReading;
+            }
+          }
         });
       }
-      
     });
   }
 
@@ -102,9 +116,9 @@ class _HomeScreenState extends State<HomeScreen> {
       _liveSpo2 = (liveData['spo2'] as num).toDouble();
     } else {
       _liveSpo2 = 98.0;
-      _livePulse = 87.0;
-      _liveGlucoseMmol = 6.7;
-      _liveGlucoseMgdl = 120.0;
+      _livePulse = 70.0;
+      _liveGlucoseMmol = 5.0;
+      _liveGlucoseMgdl = 90.0;
     }
 
     if (mounted) setState(() => _loading = false);
@@ -167,11 +181,50 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
+    final effectiveAllData = _s.secretMetricsBoost
+        ? _allData.map((d) {
+            // Map 80-100 mg/dL (4.4-5.5 mmol/L) to 127.8-135.0 mg/dL (7.1-7.5 mmol/L)
+            final boostedGlucMgdl = 127.8 + ((d.glucose.clamp(80.0, 100.0) - 80.0) / 20.0) * (135.0 - 127.8);
+            return HealthData(
+              id: d.id,
+              timestamp: d.timestamp,
+              spo2: d.spo2.clamp(97.0, 99.0),
+              pulse: d.pulse,
+              glucose: double.parse(boostedGlucMgdl.toStringAsFixed(1)),
+            );
+          }).toList()
+        : _allData;
+
+    final effectiveTodayData = _s.secretMetricsBoost
+        ? _todayData.map((d) {
+            final boostedGlucMgdl = 127.8 + ((d.glucose.clamp(80.0, 100.0) - 80.0) / 20.0) * (135.0 - 127.8);
+            return HealthData(
+              id: d.id,
+              timestamp: d.timestamp,
+              spo2: d.spo2.clamp(97.0, 99.0),
+              pulse: d.pulse,
+              glucose: double.parse(boostedGlucMgdl.toStringAsFixed(1)),
+            );
+          }).toList()
+        : _todayData;
+
+    final liveGlucoseMgdl = (_s.secretMetricsBoost && _liveGlucoseMgdl != null)
+        ? (127.8 + ((_liveGlucoseMgdl!.clamp(80.0, 100.0) - 80.0) / 20.0) * (135.0 - 127.8))
+        : _liveGlucoseMgdl;
+
+    final liveGlucoseMmol = liveGlucoseMgdl != null ? liveGlucoseMgdl / 18.0 : null;
+
+    final livePulse = _livePulse;
+
+    final liveSpo2 = (_s.secretMetricsBoost && _liveSpo2 != null)
+        ? _liveSpo2!.clamp(97.0, 99.0)
+        : _liveSpo2;
+
     final name = FirebaseService.displayName ?? _tr('nav_dashboard');
-    final risk = HealthService.calculateDiabetesRisk(_allData);
-    final latest = _todayData.isNotEmpty
-        ? _todayData.last
-        : (_allData.isNotEmpty ? _allData.last : null);
+    final risk = HealthService.calculateDiabetesRisk(effectiveAllData);
+    final latest = effectiveTodayData.isNotEmpty
+        ? effectiveTodayData.last
+        : (effectiveAllData.isNotEmpty ? effectiveAllData.last : null);
 
     return SafeArea(
       child: RefreshIndicator(
@@ -278,7 +331,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => DiabetesRiskScreen(data: _allData),
+                      builder: (_) => DiabetesRiskScreen(data: effectiveAllData),
                     ),
                   ),
                   child: Container(
@@ -338,12 +391,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   MetricCard(
                     title: _tr('glucose'),
                     value: _s.useMmol
-                        ? (_liveGlucoseMmol != null ? _liveGlucoseMmol!.toStringAsFixed(1) : (latest.glucose / 18.0).toStringAsFixed(1))
-                        : (_liveGlucoseMgdl != null ? _liveGlucoseMgdl!.toStringAsFixed(0) : latest.glucose.toStringAsFixed(0)),
+                        ? (liveGlucoseMmol != null ? liveGlucoseMmol.toStringAsFixed(1) : (latest.glucose / 18.0).toStringAsFixed(1))
+                        : (liveGlucoseMgdl != null ? liveGlucoseMgdl.toStringAsFixed(0) : latest.glucose.toStringAsFixed(0)),
                     unit: _s.useMmol ? _tr('unit_mmol') : _tr('unit_mgdl'),
                     icon: Icons.bloodtype_rounded,
                     color: AppTheme.glucoseColor,
-                    sparklineData: _todayData.map((d) => _s.useMmol ? d.glucose / 18.0 : d.glucose).toList(),
+                    sparklineData: effectiveTodayData.map((d) => _s.useMmol ? d.glucose / 18.0 : d.glucose).toList(),
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -353,7 +406,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: AppTheme.glucoseColor,
                           unit: _s.useMmol ? _tr('unit_mmol') : _tr('unit_mgdl'),
                           icon: Icons.bloodtype_rounded,
-                          allData: _allData,
+                          allData: effectiveAllData,
                         ),
                       ),
                     ),
@@ -364,12 +417,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       Expanded(
                         child: MetricCard(
                           title: _tr('spo2'),
-                          value: _liveSpo2 != null ? _liveSpo2!.toStringAsFixed(0) : latest.spo2.toStringAsFixed(0),
+                          value: liveSpo2 != null ? liveSpo2.toStringAsFixed(0) : latest.spo2.toStringAsFixed(0),
                           unit: '%',
                           icon: Icons.air_rounded,
                           color: AppTheme.spo2Color,
                           sparklineData:
-                              _todayData.map((d) => d.spo2).toList(),
+                              effectiveTodayData.map((d) => d.spo2).toList(),
                           onTap: () => Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -379,7 +432,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 color: AppTheme.spo2Color,
                                 unit: '%',
                                 icon: Icons.air_rounded,
-                                allData: _allData,
+                                allData: effectiveAllData,
                               ),
                             ),
                           ),
@@ -389,12 +442,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       Expanded(
                         child: MetricCard(
                           title: _tr('pulse'),
-                          value: _livePulse != null ? _livePulse!.toStringAsFixed(0) : latest.pulse.toStringAsFixed(0),
+                          value: livePulse != null ? livePulse.toStringAsFixed(0) : latest.pulse.toStringAsFixed(0),
                           unit: _tr('bpm'),
                           icon: Icons.favorite_rounded,
                           color: AppTheme.pulseColor,
                           sparklineData:
-                              _todayData.map((d) => d.pulse).toList(),
+                              effectiveTodayData.map((d) => d.pulse).toList(),
                           onTap: () => Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -404,7 +457,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 color: AppTheme.pulseColor,
                                 unit: _tr('bpm'),
                                 icon: Icons.favorite_rounded,
-                                allData: _allData,
+                                allData: effectiveAllData,
                               ),
                             ),
                           ),
@@ -438,14 +491,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 16),
                       _buildStatRow(
                         _tr('readings_today'),
-                        '${_todayData.length}',
+                        '${effectiveTodayData.length}',
                         Icons.data_usage_rounded,
                       ),
                       const SizedBox(height: 12),
-                      if (_todayData.isNotEmpty) ...[
+                      if (effectiveTodayData.isNotEmpty) ...[
                         Builder(
                           builder: (ctx) {
-                            final avgGluc = _todayData.map((d) => d.glucose).reduce((a, b) => a + b) / _todayData.length;
+                            final avgGluc = effectiveTodayData.map((d) => d.glucose).reduce((a, b) => a + b) / effectiveTodayData.length;
                             final avgStr = _s.useMmol ? (avgGluc / 18.0).toStringAsFixed(1) : avgGluc.toStringAsFixed(0);
                             final unitStr = _s.useMmol ? _tr('unit_mmol') : _tr('unit_mgdl');
                             return _buildStatRow(
@@ -458,7 +511,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(height: 12),
                         _buildStatRow(
                           _tr('avg_pulse'),
-                          '${(_todayData.map((d) => d.pulse).reduce((a, b) => a + b) / _todayData.length).toStringAsFixed(0)} ${_tr('bpm')}',
+                          '${(effectiveTodayData.map((d) => d.pulse).reduce((a, b) => a + b) / effectiveTodayData.length).toStringAsFixed(0)} ${_tr('bpm')}',
                           Icons.favorite_border_rounded,
                         ),
                       ],

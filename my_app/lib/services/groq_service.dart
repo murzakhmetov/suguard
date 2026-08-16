@@ -7,9 +7,7 @@ class GroqService {
   static const String _baseUrl =
       'https://api.groq.com/openai/v1/chat/completions';
   static const String _model = 'llama-3.3-70b-versatile';
-  static String get _foodApiKey => dotenv.env['GROQ_FOOD_API_KEY'] ?? '';
-  static const String _foodModel =
-      'meta-llama/llama-4-scout-17b-16e-instruct';
+  static const String _foodModel = 'qwen/qwen3.6-27b';
 
   static Future<String> chat({
     required List<Map<String, String>> messages,
@@ -86,7 +84,7 @@ Rules:
         Uri.parse(_baseUrl),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_foodApiKey',
+          'Authorization': 'Bearer $_apiKey',
         },
         body: jsonEncode({
           'model': _foodModel,

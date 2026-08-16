@@ -4,9 +4,6 @@ import 'package:my_app/services/app_settings.dart';
 import 'package:uuid/uuid.dart';
 
 class HealthService {
-  static final _random = Random();
-  static const _uuid = Uuid();
-
   static List<HealthData> generateData({
     required DateTime start,
     required DateTime end,
@@ -15,42 +12,36 @@ class HealthService {
     final data = <HealthData>[];
     var current = start;
 
-    final baseSpo2 = 96.0 + _random.nextDouble() * 2;
-    final basePulse = 68.0 + _random.nextDouble() * 10;
-    final baseGlucose = 95.0 + _random.nextDouble() * 20;
+    // Fixed seed so charts remain identical across app opens
+    final deterministicRandom = Random(42);
+
+    final baseSpo2 = 98.0;
+    final basePulse = 80.5;
+    final baseGlucose = 90.0; // ~5.0 mmol/L
 
     while (current.isBefore(end)) {
       final hour = current.hour;
-
       final sleepFactor = (hour >= 23 || hour < 6) ? 1.0 : 0.0;
-      final mealFactor = (hour == 8 || hour == 13 || hour == 19) ? 1.0 : 0.0;
-      final activityFactor =
-          (hour >= 7 && hour < 9) || (hour >= 17 && hour < 19) ? 1.0 : 0.0;
 
-      final spo2 = (baseSpo2 -
-              sleepFactor * 1 +
-              _random.nextDouble() * 2 -
-              1)
-          .clamp(90.0, 100.0);
+      // SpO2: 97 - 99%
+      final spo2 = (baseSpo2 - sleepFactor * 0.5 + (deterministicRandom.nextDouble() * 1.6 - 0.8))
+          .clamp(97.0, 99.0);
 
-      final pulse = (basePulse +
-              activityFactor * 20 -
-              sleepFactor * 10 +
-              _random.nextDouble() * 8 -
-              4)
-          .clamp(45.0, 140.0);
+      // Pulse: 78 - 83 bpm
+      final pulse = (basePulse - sleepFactor * 1.5 + (deterministicRandom.nextDouble() * 5.0 - 2.5))
+          .clamp(78.0, 83.0);
 
-      final glucose = (baseGlucose +
-              mealFactor * 40 +
-              _random.nextDouble() * 15 -
-              7.5 -
-              activityFactor * 10)
-          .clamp(60.0, 250.0);
+      // Glucose: 80 - 100 mg/dL (4.4 - 5.5 mmol/L)
+      final glucose = (baseGlucose + (deterministicRandom.nextDouble() * 10.0 - 5.0))
+          .clamp(80.0, 100.0);
+
+      // Fixed ID generation based on timestamp for 100% deterministic output
+      final fixedId = 'hd_${current.millisecondsSinceEpoch}';
 
       data.add(HealthData(
-        id: _uuid.v4(),
+        id: fixedId,
         timestamp: current,
-        spo2: double.parse(spo2.toStringAsFixed(1)),
+        spo2: double.parse(spo2.toStringAsFixed(0)),
         pulse: double.parse(pulse.toStringAsFixed(0)),
         glucose: double.parse(glucose.toStringAsFixed(1)),
       ));

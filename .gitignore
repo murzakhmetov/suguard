@@ -12,3 +12,5 @@ dist/
 .packages
 .pub-cache/
 .pub/
+*.zip
+WhatsApp Video*.mp4

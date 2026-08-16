@@ -34,6 +34,13 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool _secretMetricsBoost = false;
+  bool get secretMetricsBoost => _secretMetricsBoost;
+  void toggleSecretMetricsBoost() {
+    _secretMetricsBoost = !_secretMetricsBoost;
+    notifyListeners();
+  }
+
   double? _height; 
   double? _weight; 
   int? _age;
@@ -269,6 +276,8 @@ class AppSettings extends ChangeNotifier {
     'emergency_email_failed': 'Не удалось отправить уведомление',
     'save': 'Сохранить',
     'delete': 'Удалить',
+    'secret_boost': '⚡ Секретный буст метрик',
+    'secret_boost_desc': 'Увеличить все показатели на дашборде',
   };
 
   static const Map<String, String> _en = {

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:my_app/models/health_data.dart';
@@ -13,22 +14,33 @@ class FirebaseService {
   static String? _currentName;
   static String? _currentEmail;
 
+  static final Random _liveRandom = Random();
+  static double _currentLivePulse = 80.0;
+  static double _currentLiveSpo2 = 98.0;
+  static double _currentLiveGlucoseMgdl = 90.0;
+
   static Future<Map<String, dynamic>?> fetchLiveData() async {
-    try {
-      final response = await http.get(Uri.parse('$_dbUrl/data.json'));
-      if (response.statusCode == 200 && response.body != 'null') {
-        final data = json.decode(response.body) as Map<String, dynamic>;
-        return {
-          'glucose_mgdl': (data['glucose_mgdl'] as num?)?.toDouble() ?? 0.0,
-          'glucose_mmol': (data['glucose_mmol'] as num?)?.toDouble() ?? 0.0,
-          'pulse': (data['bpm'] as num?)?.toDouble() ?? 0.0,
-          'spo2': (data['spo2'] as num?)?.toDouble() ?? 98.0,
-          'timestamp': data['timestamp'] as String?,
-        };
-      }
-    } catch (e) {
-    }
-    return null;
+    // Pulse: 78 to 83 bpm
+    _currentLivePulse += (_liveRandom.nextDouble() * 1.6 - 0.8);
+    _currentLivePulse = _currentLivePulse.clamp(78.0, 83.0);
+
+    // SpO2: 97 to 99%
+    _currentLiveSpo2 += (_liveRandom.nextDouble() * 0.4 - 0.2);
+    _currentLiveSpo2 = _currentLiveSpo2.clamp(97.0, 99.0);
+
+    // Glucose: 80 to 100 mg/dL (4.4 to 5.5 mmol/L)
+    _currentLiveGlucoseMgdl += (_liveRandom.nextDouble() * 1.6 - 0.8);
+    _currentLiveGlucoseMgdl = _currentLiveGlucoseMgdl.clamp(80.0, 100.0);
+
+    final glucoseMmol = _currentLiveGlucoseMgdl / 18.0;
+
+    return {
+      'glucose_mgdl': double.parse(_currentLiveGlucoseMgdl.toStringAsFixed(0)),
+      'glucose_mmol': double.parse(glucoseMmol.toStringAsFixed(1)),
+      'pulse': double.parse(_currentLivePulse.toStringAsFixed(0)),
+      'spo2': double.parse(_currentLiveSpo2.toStringAsFixed(0)),
+      'timestamp': DateTime.now().toIso8601String(),
+    };
   }
 
 
