@@ -20,15 +20,15 @@ class FirebaseService {
   static double _currentLiveGlucoseMgdl = 90.0;
 
   static Future<Map<String, dynamic>?> fetchLiveData() async {
-    // Pulse: 78 to 83 bpm
+    
     _currentLivePulse += (_liveRandom.nextDouble() * 1.6 - 0.8);
     _currentLivePulse = _currentLivePulse.clamp(78.0, 83.0);
 
-    // SpO2: 97 to 99%
+    
     _currentLiveSpo2 += (_liveRandom.nextDouble() * 0.4 - 0.2);
     _currentLiveSpo2 = _currentLiveSpo2.clamp(97.0, 99.0);
 
-    // Glucose: 80 to 100 mg/dL (4.4 to 5.5 mmol/L)
+    
     _currentLiveGlucoseMgdl += (_liveRandom.nextDouble() * 1.6 - 0.8);
     _currentLiveGlucoseMgdl = _currentLiveGlucoseMgdl.clamp(80.0, 100.0);
 

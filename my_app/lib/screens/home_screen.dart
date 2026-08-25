@@ -183,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final effectiveAllData = _s.secretMetricsBoost
         ? _allData.map((d) {
-            // Map 80-100 mg/dL (4.4-5.5 mmol/L) to 127.8-135.0 mg/dL (7.1-7.5 mmol/L)
+            
             final boostedGlucMgdl = 127.8 + ((d.glucose.clamp(80.0, 100.0) - 80.0) / 20.0) * (135.0 - 127.8);
             return HealthData(
               id: d.id,
@@ -243,7 +243,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '${_tr('hello')}, $name 👋',
+                          '${_tr('hello')}, $name ',
                           style: const TextStyle(
                             color: AppTheme.textPrimary,
                             fontSize: 24,

@@ -12,30 +12,30 @@ class HealthService {
     final data = <HealthData>[];
     var current = start;
 
-    // Fixed seed so charts remain identical across app opens
+    
     final deterministicRandom = Random(42);
 
     final baseSpo2 = 98.0;
     final basePulse = 80.5;
-    final baseGlucose = 90.0; // ~5.0 mmol/L
+    final baseGlucose = 90.0; 
 
     while (current.isBefore(end)) {
       final hour = current.hour;
       final sleepFactor = (hour >= 23 || hour < 6) ? 1.0 : 0.0;
 
-      // SpO2: 97 - 99%
+      
       final spo2 = (baseSpo2 - sleepFactor * 0.5 + (deterministicRandom.nextDouble() * 1.6 - 0.8))
           .clamp(97.0, 99.0);
 
-      // Pulse: 78 - 83 bpm
+      
       final pulse = (basePulse - sleepFactor * 1.5 + (deterministicRandom.nextDouble() * 5.0 - 2.5))
           .clamp(78.0, 83.0);
 
-      // Glucose: 80 - 100 mg/dL (4.4 - 5.5 mmol/L)
+      
       final glucose = (baseGlucose + (deterministicRandom.nextDouble() * 10.0 - 5.0))
           .clamp(80.0, 100.0);
 
-      // Fixed ID generation based on timestamp for 100% deterministic output
+      
       final fixedId = 'hd_${current.millisecondsSinceEpoch}';
 
       data.add(HealthData(

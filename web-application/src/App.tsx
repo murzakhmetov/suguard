@@ -363,7 +363,7 @@ function App() {
         </a>
       </div>
 
-      {/* Hero Section */}
+      {}
       <section className="hero" id="hero" ref={heroRef}>
         <div className="hero-cyber-bg">
           <div className="cyber-grid" />
@@ -461,7 +461,7 @@ function App() {
         </motion.div>
       </section>
 
-      {/* Ecosystem Section */}
+      {}
       <section className="section ecosystem-section relative-section" id="ecosystem">
         <div className="section-glow" />
         <div className="container">
@@ -526,7 +526,7 @@ function App() {
         </div>
       </section>
 
-      {/* Achievements & Impact Section */}
+      {}
       <section className="section relative-section" id="achievements">
         <div className="section-glow" />
         <div className="container">
@@ -574,7 +574,7 @@ function App() {
         </div>
       </section>
 
-      {/* Expert Advisory Board & CustDev Section */}
+      {}
       <section className="section relative-section" id="experts">
         <div className="section-glow" />
         <div className="container">
@@ -626,7 +626,7 @@ function App() {
         </div>
       </section>
 
-      {/* Partners & Institutional Collaborations Section */}
+      {}
       <section className="section partners-section relative-section" id="partners">
         <div className="section-glow-blue parallax-glow" />
         <div className="container">
@@ -699,7 +699,7 @@ function App() {
         </div>
       </section>
 
-      {/* Features Section */}
+      {}
       <section className="section features" id="features">
         <div className="container">
           <FadeIn className="section-header">
@@ -730,7 +730,7 @@ function App() {
         </div>
       </section>
 
-      {/* App Preview Section */}
+      {}
       <div className="showcase showcase-app" id="app">
         <div className="container">
           <FadeIn className="section-header">
@@ -783,7 +783,7 @@ function App() {
         </div>
       </div>
 
-      {/* Pricing Section */}
+      {}
       <section className="section pricing-section relative-section" id="pricing">
         <div className="pricing-grid-bg" />
         <div className="container">
@@ -826,7 +826,7 @@ function App() {
         </div>
       </section>
 
-      {/* FAQ Section */}
+      {}
       <section className="section" id="faq">
         <div className="container">
           <FadeIn className="section-header">
@@ -863,7 +863,7 @@ function App() {
         </div>
       </section>
 
-      {/* CTA / Contact Section */}
+      {}
       <section className="cta-section relative-section" id="contact">
         <div className="section-glow orb-pulse" />
         <FadeIn direction="up">
@@ -898,7 +898,7 @@ function App() {
         </FadeIn>
       </section>
 
-      {/* Footer */}
+      {}
       <footer className="footer" id="footer">
         <div className="footer-content">
           <div className="footer-brand">
@@ -939,7 +939,7 @@ function App() {
         </div>
       </footer>
 
-      {/* Lightbox Modal Video Player */}
+      {}
       {isVideoModalOpen && (
         <motion.div
           initial={{ opacity: 0 }}
