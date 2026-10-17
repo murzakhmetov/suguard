@@ -1939,3 +1939,477 @@
     display: none;
   }
 }
+
+/* ============================================================================
+   РАСКРЫВАЮЩИЕСЯ КНОПКИ С GSAP-АНИМАЦИЕЙ (GSAP EXPANDING BUTTONS)
+   ============================================================================ */
+.gsap-expanding-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 26px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  text-decoration: none;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+.gsap-expanding-btn.primary {
+  background: var(--text-white);
+  color: var(--bg-obsidian);
+  border: 1px solid transparent;
+}
+
+.gsap-expanding-btn.primary:hover {
+  background: var(--accent);
+  color: #030705;
+  box-shadow: 0 12px 32px rgba(0, 241, 159, 0.22);
+}
+
+.gsap-expanding-btn.glass {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-white);
+  border: 1px solid var(--border-specular);
+}
+
+.gsap-expanding-btn.glass:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.gsap-expanding-btn.outline {
+  background: transparent;
+  color: var(--text-titanium);
+  border: 1px solid var(--border-hairline);
+}
+
+.gsap-expanding-btn.outline:hover {
+  border-color: var(--text-white);
+  color: var(--text-white);
+}
+
+.gsap-btn-drawer {
+  display: inline-flex;
+  align-items: center;
+  width: 0;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.gsap-btn-badge {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.16);
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.gsap-expanding-btn.glass .gsap-btn-badge,
+.gsap-expanding-btn.outline .gsap-btn-badge {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--accent);
+}
+
+.gsap-btn-arrow {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 14px;
+}
+
+/* Чистая витрина в Hero без плавающих виджетов */
+.hero-clean-showcase {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  margin-bottom: 96px;
+}
+
+/* ============================================================================
+   APPLE PRO INTERACTIVE EXPANDING DECK (ВМЕСТО 4 КОРОБОК СО СКРИНШОТА 1)
+   ============================================================================ */
+.apple-interactive-deck {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 48px;
+  align-items: stretch;
+}
+
+.deck-accordion-column {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border-hairline);
+}
+
+.deck-expanding-item {
+  border-bottom: 1px solid var(--border-hairline);
+  padding: 26px 8px;
+  cursor: pointer;
+  transition: background 0.25s ease;
+}
+
+.deck-expanding-item.active {
+  padding: 28px 20px;
+  background: rgba(255, 255, 255, 0.025);
+  border-radius: 20px;
+  border-bottom-color: transparent;
+}
+
+.deck-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.deck-item-left {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+}
+
+.deck-item-num {
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.deck-expanding-item.active .deck-item-num {
+  color: var(--accent);
+}
+
+.deck-item-tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.deck-item-title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-titanium);
+  transition: color 0.25s ease;
+}
+
+.deck-expanding-item.active .deck-item-title,
+.deck-expanding-item:hover .deck-item-title {
+  color: var(--text-white);
+}
+
+.deck-item-toggle {
+  font-size: 20px;
+  color: var(--text-muted);
+}
+
+.deck-expanding-item.active .deck-item-toggle {
+  color: var(--accent);
+}
+
+.deck-item-body {
+  height: 0;
+  opacity: 0;
+  overflow: hidden;
+  padding-left: 34px;
+}
+
+.deck-item-subtitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-white);
+  margin-bottom: 8px;
+}
+
+.deck-item-desc {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--text-titanium);
+  margin-bottom: 20px;
+}
+
+.deck-item-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-hairline);
+}
+
+.deck-mini-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.deck-mini-val {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-white);
+}
+
+.deck-mini-lbl {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-titanium);
+}
+
+.deck-visual-column {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.deck-visual-stage {
+  position: relative;
+  width: 100%;
+  height: 540px;
+  border-radius: 28px;
+  overflow: hidden;
+  background: #07080b;
+  border: 1px solid var(--border-specular);
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.75);
+}
+
+.deck-stage-media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.deck-stage-caption {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  right: 20px;
+  padding: 12px 18px;
+  border-radius: 14px;
+  background: rgba(8, 10, 14, 0.82);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-hairline);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-white);
+}
+
+.caption-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+/* ============================================================================
+   SCROLL-DRIVEN СЕКЦИЯ ПРИЛОЖЕНИЯ С АВТОСМЕНОЙ КАРТОЧЕК (СКРИНШОТ 2)
+   ============================================================================ */
+.app-scrolly-section {
+  position: relative;
+  height: 360vh;
+  border-bottom: 1px solid var(--border-hairline);
+  background: var(--bg-obsidian);
+}
+
+.app-scrolly-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding-top: 84px; /* Защита от наезда на верхний навбар! */
+  padding-bottom: 24px;
+}
+
+.app-scrolly-inner {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+}
+
+.app-scrolly-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 32px;
+  border-bottom: 1px solid var(--border-hairline);
+  padding-bottom: 18px;
+}
+
+.app-scrolly-title {
+  font-size: clamp(26px, 3vw, 38px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text-white);
+}
+
+.app-scrolly-steps-counter {
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+}
+
+.app-scrolly-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 56px;
+  align-items: center;
+}
+
+.app-scrolly-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.scrolly-chapter-item {
+  display: flex;
+  gap: 20px;
+  padding: 18px 22px;
+  border-radius: 20px;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  transition: all 0.35s ease;
+}
+
+.scrolly-chapter-item.active {
+  background: var(--bg-surface);
+  border-color: var(--border-specular);
+  padding: 24px 24px;
+}
+
+.scrolly-rail {
+  width: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.scrolly-rail-fill {
+  width: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: height 0.1s linear;
+}
+
+.scrolly-chapter-content {
+  flex: 1;
+}
+
+.scrolly-chapter-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.scrolly-num {
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.scrolly-tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--text-titanium);
+}
+
+.scrolly-h3 {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-titanium);
+  transition: color 0.25s ease;
+}
+
+.scrolly-chapter-item.active .scrolly-h3 {
+  color: var(--text-white);
+}
+
+.scrolly-expanded-details {
+  margin-top: 10px;
+}
+
+.scrolly-p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-titanium);
+  margin-bottom: 14px;
+}
+
+.scrolly-specs-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.scrolly-spec-chip {
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-hairline);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-white);
+}
+
+.app-scrolly-phone-col {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  perspective: 1000px;
+}
+
+.whoop-faq-a-gsap {
+  height: 0;
+  opacity: 0;
+  overflow: hidden;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text-titanium);
+}
+
+@media (max-width: 1024px) {
+  .apple-interactive-deck,
+  .app-scrolly-grid {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .deck-visual-stage {
+    height: 340px;
+  }
+
+  .app-scrolly-section {
+    height: auto;
+  }
+
+  .app-scrolly-sticky {
+    position: relative;
+    height: auto;
+    padding-top: 96px;
+  }
+}
