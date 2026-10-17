@@ -130,8 +130,30 @@ const GsapButton = ({
 };
 
 function App() {
-  const [lang, setLang] = useState<Language>('ru');
+  const [lang, setLang] = useState<Language>(() => {
+    const saved = typeof window !== 'undefined' ? (localStorage.getItem('suguard_lang') as Language) : 'ru';
+    return saved === 'ru' || saved === 'en' || saved === 'kk' ? saved : 'ru';
+  });
   const t = translations[lang];
+
+  const handleSetLang = (newLang: Language) => {
+    setLang(newLang);
+    try {
+      localStorage.setItem('suguard_lang', newLang);
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    document.title =
+      lang === 'ru'
+        ? 'SuGuard - Умный неинвазивный мониторинг сахара и ИИ анализ здоровья'
+        : lang === 'kk'
+        ? 'SuGuard - Глюкозаны инвазивті емес ақылды бақылау және ИИ талдау'
+        : 'SuGuard - Non-Invasive Glucose Monitoring & AI Risk Analytics';
+  }, [lang]);
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeFeature, setActiveFeature] = useState<number>(0);
@@ -172,9 +194,9 @@ function App() {
   };
 
   const navLinks = [
-    { label: 'Оптический ИИ', href: '#optical-cinema' },
+    { label: t.nav.opticalAi, href: '#optical-cinema' },
     { label: t.nav.ecosystem, href: '#ecosystem' },
-    { label: '3D Инженерия', href: '#hardware-3d' },
+    { label: t.nav.hardware3d, href: '#hardware-3d' },
     { label: t.nav.app, href: '#app' },
     { label: t.nav.experts, href: '#experts' },
     { label: t.nav.partners, href: '#partners' },
@@ -185,67 +207,67 @@ function App() {
   const ecosystemModules = [
     {
       num: '01',
-      tag: 'OPTICAL PPG SPECTROSCOPY',
+      tag: t.deck.mod1Tag,
       title: t.features.f1Title,
-      subtitle: 'Двухволновое лазерное зондирование капилляров 660 / 880 нм',
+      subtitle: t.deck.mod1Sub,
       desc: t.features.f1Desc,
       metrics: [
-        { val: '660 / 880 нм', lbl: 'Длины волн' },
-        { val: '18-bit I2C', lbl: 'АЦП сенсора' },
-        { val: '0 проколов', lbl: 'Неинвазивно' },
+        { val: t.deck.mod1ValWavelengths, lbl: t.deck.mod1Wavelengths },
+        { val: '18-bit I2C', lbl: t.deck.mod1Adc },
+        { val: '0', lbl: t.deck.mod1NonInvasive },
       ],
       mediaType: 'video' as const,
       mediaSrc: '/suguard-wrist.mp4',
       fallbackImg: '/hardwear.jpeg',
-      caption: 'Оптический биосенсор MAX30102 сканирует спектр поглощения крови',
+      caption: t.deck.mod1Caption,
     },
     {
       num: '02',
-      tag: 'PREDICTIVE AI ENGINE',
+      tag: t.deck.mod2Tag,
       title: t.features.f2Title,
-      subtitle: 'Нейросетевой расчёт вероятности диабета в реальном времени',
+      subtitle: t.deck.mod2Sub,
       desc: t.features.f2Desc,
       metrics: [
-        { val: '94.2%', lbl: 'Точность ИИ' },
-        { val: '24 / 7', lbl: 'Непрерывный анализ' },
-        { val: '< 1 сек', lbl: 'Отклик модели' },
+        { val: '94.2%', lbl: t.deck.mod2Accuracy },
+        { val: '24 / 7', lbl: t.deck.mod2Continuous },
+        { val: t.deck.mod2ValLatency, lbl: t.deck.mod2Latency },
       ],
       mediaType: 'image' as const,
       mediaSrc: '/suguard4.jpeg',
       fallbackImg: '/suguard2.jpeg',
-      caption: 'Многофакторная оценка гликемического профиля, пульса покоя и SpO2',
+      caption: t.deck.mod2Caption,
     },
     {
       num: '03',
-      tag: 'WEARABLE HARDWARE',
+      tag: t.deck.mod3Tag,
       title: t.ecosystem.hardwareTitle,
-      subtitle: 'Кастомная плата SuGuard.Health и до 7 дней автономности',
+      subtitle: t.deck.mod3Sub,
       desc: t.ecosystem.hardwareDesc,
       metrics: [
-        { val: '38 грамм', lbl: 'Масса корпуса' },
-        { val: '7 суток', lbl: 'Автономность Li-Po' },
-        { val: 'BLE 5.3', lbl: 'Радиомодуль ESP32' },
+        { val: t.deck.mod3ValWeight, lbl: t.deck.mod3Weight },
+        { val: t.deck.mod3ValBattery, lbl: t.deck.mod3Battery },
+        { val: 'BLE 5.3', lbl: t.deck.mod3Mcu },
       ],
       mediaType: 'video' as const,
       mediaSrc: '/suguard-studio.mp4',
       fallbackImg: '/hardwear.jpeg',
-      caption: 'Ударопрочный матовый корпус на гипоаллергенном ремешке Pin-and-Tuck',
+      caption: t.deck.mod3Caption,
     },
     {
       num: '04',
-      tag: 'COMPUTER VISION & AI DOCTOR',
+      tag: t.deck.mod4Tag,
       title: `${t.features.f3Title} & ${t.features.f5Title}`,
-      subtitle: 'Распознавание блюд по фотографии и персональный ИИ-эндокринолог',
+      subtitle: t.deck.mod4Sub,
       desc: t.features.f3Desc,
       metrics: [
-        { val: 'Фото-ИИ', lbl: 'Расчёт БЖУ и Ккал' },
-        { val: '24 / 7', lbl: 'ИИ-Консультант' },
-        { val: 'PDF Отчёт', lbl: 'Экспорт для врача' },
+        { val: t.deck.mod4ValMacros, lbl: t.deck.mod4Macros },
+        { val: '24 / 7', lbl: t.deck.mod4Consultant },
+        { val: 'PDF', lbl: t.deck.mod4Export },
       ],
       mediaType: 'image' as const,
       mediaSrc: '/suguard1.jpeg',
       fallbackImg: '/suguard3.jpeg',
-      caption: 'Автоматический подсчёт углеводной нагрузки по одному снимку тарелки',
+      caption: t.deck.mod4Caption,
     },
   ];
 
@@ -253,38 +275,38 @@ function App() {
     {
       id: 'dashboard',
       num: '01',
-      tag: 'LIVE HEALTH OVERVIEW',
+      tag: t.appSection.screen1Tag,
       title: t.appSection.screen1Title,
       desc: t.appSection.screen1Desc,
       img: '/suguard2.jpeg',
-      specs: ['Индекс риска диабета в %', 'Текущая глюкоза (ммоль/л)', 'SpO2 и ЧСС в реальном времени'],
+      specs: t.appSection.screen1Specs,
     },
     {
       id: 'risk',
       num: '02',
-      tag: 'BIOMETRIC RISK FACTORS',
+      tag: t.appSection.screen2Tag,
       title: t.appSection.screen2Title,
       desc: t.appSection.screen2Desc,
       img: '/suguard4.jpeg',
-      specs: ['Декомпозиция факторов риска', 'Динамика среднего сахара', 'Раннее предупреждение скачков'],
+      specs: t.appSection.screen2Specs,
     },
     {
       id: 'glucose',
       num: '03',
-      tag: 'CONTINUOUS GLUCOSE CHARTS',
+      tag: t.appSection.screen3Tag,
       title: t.appSection.screen3Title,
       desc: t.appSection.screen3Desc,
       img: '/suguard5.jpeg',
-      specs: ['Суточные, недельные и месячные графики', 'Минимум, максимум и среднее', 'Распознавание еды по фото (БЖУ)'],
+      specs: t.appSection.screen3Specs,
     },
     {
       id: 'consultant',
       num: '04',
-      tag: 'AI ENDOCRINOLOGIST CHAT',
+      tag: t.appSection.screen4Tag,
       title: t.appSection.screen4Title,
       desc: t.appSection.screen4Desc,
       img: '/suguard3.jpeg',
-      specs: ['Анализ ваших графиков и рациона', 'Персональные медицинские советы', 'Мгновенные ответы 24/7'],
+      specs: t.appSection.screen4Specs,
     },
   ];
 
@@ -515,7 +537,7 @@ function App() {
               {(['ru', 'en', 'kk'] as Language[]).map((l) => (
                 <button
                   key={l}
-                  onClick={() => setLang(l)}
+                  onClick={() => handleSetLang(l)}
                   className={`whoop-lang-btn ${lang === l ? 'active' : ''}`}
                 >
                   {l.toUpperCase()}
@@ -524,7 +546,7 @@ function App() {
             </div>
 
             <GsapButton
-              label={t.hero.orderDevice}
+              label={t.nav.orderCta}
               badge="35 000 ₸"
               href="#pricing"
               variant="primary"
@@ -550,13 +572,13 @@ function App() {
           />
           <div className="whoop-mobile-drawer">
             <div className="mobile-drawer-header">
-              <span className="mobile-drawer-brand">НАВИГАЦИЯ</span>
+              <span className="mobile-drawer-brand">{t.nav.menuTitle}</span>
               <div className="whoop-lang-pill">
                 {(['ru', 'en', 'kk'] as Language[]).map((l) => (
                   <button
                     key={l}
                     onClick={() => {
-                      setLang(l);
+                      handleSetLang(l);
                       setMobileOpen(false);
                     }}
                     className={`whoop-lang-btn ${lang === l ? 'active' : ''}`}
@@ -610,7 +632,7 @@ function App() {
               <span className="eyebrow-live-dot" />
               <span>{t.hero.badge}</span>
               <span className="eyebrow-divider">|</span>
-              <span className="eyebrow-mono">OPTICAL PPG 660 / 880 NM</span>
+              <span className="eyebrow-mono">{t.hero.eyebrowTech}</span>
             </div>
 
             <h1 className="whoop-hero-title hero-gsap-fade">{t.hero.title}</h1>
@@ -619,20 +641,20 @@ function App() {
 
             <div className="whoop-hero-buttons hero-gsap-fade">
               <GsapButton
-                label="Download App"
-                badge="Android .APK"
+                label={t.hero.btnDownload}
+                badge={t.hero.btnDownloadBadge}
                 href="#"
                 variant="primary"
               />
               <GsapButton
-                label="Как работает лазер (Видео)"
-                badge="PPG 660 нм"
+                label={t.hero.btnLaser}
+                badge={t.hero.btnLaserBadge}
                 href="#optical-cinema"
                 variant="glass"
               />
               <GsapButton
-                label="3D Инженерия"
-                badge="5 слоёв"
+                label={t.hero.btn3d}
+                badge={t.hero.btn3dBadge}
                 href="#hardware-3d"
                 variant="outline"
               />
@@ -671,8 +693,8 @@ function App() {
             </div>
             <div className="whoop-metric-cell">
               <div className="metric-giant">{t.hero.statSync}</div>
-              <div className="metric-title">{t.hero.statSyncSub}</div>
-              <div className="metric-sub">{t.achievements.partnersDesc}</div>
+              <div className="metric-title">{t.achievements.syncTitle}</div>
+              <div className="metric-sub">{t.achievements.syncDesc}</div>
             </div>
           </div>
         </div>
@@ -682,8 +704,8 @@ function App() {
         <div className="whoop-container">
           <div className="cinema-header-row gsap-section-reveal">
             <div>
-              <span className="whoop-kicker">OPTICAL PPG BIO-SENSING IN ACTION</span>
-              <h2 className="whoop-h2">Точность в каждом импульсе.</h2>
+              <span className="whoop-kicker">{t.cinema.kicker}</span>
+              <h2 className="whoop-h2">{t.cinema.title}</h2>
             </div>
 
             <div className="cinema-tabs">
@@ -692,14 +714,14 @@ function App() {
                 onClick={() => setActiveCinemaTab('wrist')}
                 className={`cinema-tab-btn ${activeCinemaTab === 'wrist' ? 'active' : ''}`}
               >
-                01. Сканирование на руке (Лазер + Пульс)
+                {t.cinema.tabWrist}
               </button>
               <button
                 type="button"
                 onClick={() => setActiveCinemaTab('studio')}
                 className={`cinema-tab-btn ${activeCinemaTab === 'studio' ? 'active' : ''}`}
               >
-                02. Обзор браслета 360° в студии
+                {t.cinema.tabStudio}
               </button>
             </div>
           </div>
@@ -726,8 +748,8 @@ function App() {
                 <span className="eyebrow-live-dot" />
                 <span>
                   {activeCinemaTab === 'wrist'
-                    ? 'MAX30102 LASER SPECTROSCOPY • ACTIVE SCAN'
-                    : 'SUGUARD UNIBODY • 360° STUDIO ORBIT'}
+                    ? t.cinema.badgeWrist
+                    : t.cinema.badgeStudio}
                 </span>
               </div>
 
@@ -736,7 +758,7 @@ function App() {
                 onClick={toggleWristSound}
                 className="cinema-sound-btn"
               >
-                {wristMuted ? '🔇 Включить звук диктора' : '🔊 Звук включен'}
+                {wristMuted ? t.cinema.soundOff : t.cinema.soundOn}
               </button>
             </div>
 
@@ -744,35 +766,35 @@ function App() {
               <div className="cinema-steps-indicator">
                 <div className={`cinema-step-box ${scanPhase === 0 ? 'active' : ''}`}>
                   <span className="step-time">00:00 - 00:03</span>
-                  <h4>Контакт с кожей</h4>
-                  <p>Калибровка базовой линии и отсечение внешнего света</p>
+                  <h4>{t.cinema.step1Title}</h4>
+                  <p>{t.cinema.step1Desc}</p>
                 </div>
 
                 <div className={`cinema-step-box ${scanPhase === 1 ? 'active' : ''}`}>
                   <span className="step-time">00:03 - 00:06</span>
-                  <h4>Импульс 660 / 880 нм</h4>
-                  <p>Красный и ИК-лазер просвечивают капилляры запястья</p>
+                  <h4>{t.cinema.step2Title}</h4>
+                  <p>{t.cinema.step2Desc}</p>
                 </div>
 
                 <div className={`cinema-step-box ${scanPhase === 2 ? 'active' : ''}`}>
                   <span className="step-time">00:06 - 00:09</span>
-                  <h4>ИИ-спектральный анализ</h4>
-                  <p>Расчёт уровня глюкозы, SpO2 и волны пульса в реальном времени</p>
+                  <h4>{t.cinema.step3Title}</h4>
+                  <p>{t.cinema.step3Desc}</p>
                 </div>
               </div>
 
               <div className="cinema-live-readout">
                 <div className="readout-item">
-                  <span className="readout-lbl">ГЛЮКОЗА</span>
-                  <span className="readout-val">5.8 mmol/L</span>
+                  <span className="readout-lbl">{t.cinema.metricGlucose}</span>
+                  <span className="readout-val">{t.cinema.valGlucose}</span>
                 </div>
                 <div className="readout-item">
-                  <span className="readout-lbl">КИСЛОРОД</span>
-                  <span className="readout-val teal">98% SpO2</span>
+                  <span className="readout-lbl">{t.cinema.metricOxygen}</span>
+                  <span className="readout-val teal">{t.cinema.valOxygen}</span>
                 </div>
                 <div className="readout-item">
-                  <span className="readout-lbl">ПУЛЬС</span>
-                  <span className="readout-val">72 BPM</span>
+                  <span className="readout-lbl">{t.cinema.metricPulse}</span>
+                  <span className="readout-val">{t.cinema.valPulse}</span>
                 </div>
               </div>
             </div>
@@ -792,7 +814,7 @@ function App() {
                 <p className="deck-scrolly-lead">{t.ecosystem.subtitle}</p>
               </div>
               <div className="deck-scrolly-counter">
-                МОДУЛЬ 0{activeFeature + 1} / 04
+                {t.deck.counterLabel} 0{activeFeature + 1} / 04
               </div>
             </div>
 
@@ -901,7 +923,7 @@ function App() {
                 <h2 className="app-scrolly-title">{t.appSection.title}</h2>
               </div>
               <div className="app-scrolly-steps-counter">
-                ЭКРАН 0{activeAppScreen + 1} / 04
+                {t.appSection.counterLabel} 0{activeAppScreen + 1} / 04
               </div>
             </div>
 
@@ -987,7 +1009,7 @@ function App() {
                 <img src="/jerryloeb.jpeg" alt="Jerry Loeb" className="expert-photo" />
                 <div>
                   <span className="expert-badge">{t.experts.jerryRole}</span>
-                  <h3 className="expert-title">Prof. Jerry Loeb</h3>
+                  <h3 className="expert-title">{t.experts.jerryName}</h3>
                   <div className="expert-uni">{t.experts.jerryAff}</div>
                 </div>
               </div>
@@ -999,7 +1021,7 @@ function App() {
                 <img src="/aidaralimbayev.jpeg" alt="Aidar Alimbayev" className="expert-photo" />
                 <div>
                   <span className="expert-badge">{t.experts.aidarRole}</span>
-                  <h3 className="expert-title">Aidar Alimbayev</h3>
+                  <h3 className="expert-title">{t.experts.aidarName}</h3>
                   <div className="expert-uni">{t.experts.aidarAff}</div>
                 </div>
               </div>
@@ -1011,7 +1033,7 @@ function App() {
                 <img src="/rustam_askaruly.jpeg" alt="Askaruly Rustam" className="expert-photo" />
                 <div>
                   <span className="expert-badge">{t.experts.rustamRole}</span>
-                  <h3 className="expert-title">Askaruly Rustam</h3>
+                  <h3 className="expert-title">{t.experts.rustamName}</h3>
                   <div className="expert-uni">{t.experts.rustamAff}</div>
                 </div>
               </div>
@@ -1031,22 +1053,22 @@ function App() {
 
           <div className="whoop-partners-table gsap-section-reveal">
             <div className="partner-cell">
-              <span className="partner-index">01 / CLINICAL</span>
+              <span className="partner-index">{t.partners.catClinical}</span>
               <h3>{t.partners.brbTitle}</h3>
               <p>{t.partners.brbDesc}</p>
             </div>
             <div className="partner-cell">
-              <span className="partner-index">02 / MEDICAL CENTER</span>
+              <span className="partner-index">{t.partners.catMedCenter}</span>
               <h3>{t.partners.avicennaTitle}</h3>
               <p>{t.partners.avicennaDesc}</p>
             </div>
             <div className="partner-cell">
-              <span className="partner-index">03 / PRESIDENTIAL CLINIC</span>
+              <span className="partner-index">{t.partners.catPresidential}</span>
               <h3>{t.partners.presidentialTitle}</h3>
               <p>{t.partners.presidentialDesc}</p>
             </div>
             <div className="partner-cell">
-              <span className="partner-index">04 / PUBLIC INITIATIVE</span>
+              <span className="partner-index">{t.partners.catPublic}</span>
               <h3>{t.partners.amanatTitle}</h3>
               <p>{t.partners.amanatDesc}</p>
             </div>
@@ -1077,10 +1099,8 @@ function App() {
           <div className="whoop-flagship-order gsap-section-reveal">
             <div className="order-left-visual">
               <span className="whoop-kicker">{t.pricing.popularBadge}</span>
-              <h2 className="order-title">SuGuard Complete Kit</h2>
-              <p className="order-sub">
-                Носимый оптический биосенсор SuGuard + бессрочный доступ к ИИ-экосистеме мониторинга глюкозы, SpO2 и питания.
-              </p>
+              <h2 className="order-title">{t.order.kitTitle}</h2>
+              <p className="order-sub">{t.order.kitSub}</p>
               <img
                 src="/hardwear.jpeg"
                 alt="SuGuard Kit"
@@ -1091,29 +1111,29 @@ function App() {
             <div className="order-right-specs">
               <div className="order-price-block">
                 <div className="order-price-tag">35 000 ₸</div>
-                <div className="order-price-usd">≈ $70 USD • Единоразовая покупка без скрытых платежей</div>
+                <div className="order-price-usd">{t.order.kitPriceUsd}</div>
               </div>
 
               <ul className="order-included-list">
                 <li>
                   <span className="order-check">✓</span>
-                  <span>Смарт-браслет SuGuard (MAX30102 + SuGuard.Health PCB)</span>
+                  <span>{t.order.bullet1}</span>
                 </li>
                 <li>
                   <span className="order-check">✓</span>
-                  <span>Неинвазивный мониторинг глюкозы, SpO2 и ЧСС 24/7</span>
+                  <span>{t.order.bullet2}</span>
                 </li>
                 <li>
                   <span className="order-check">✓</span>
-                  <span>ИИ-оценка риска диабета и компьютерное зрение для еды</span>
+                  <span>{t.order.bullet3}</span>
                 </li>
                 <li>
                   <span className="order-check">✓</span>
-                  <span>Персональный ИИ-эндокринолог и облачная синхронизация</span>
+                  <span>{t.order.bullet4}</span>
                 </li>
                 <li>
                   <span className="order-check">✓</span>
-                  <span>Кабель быстрой зарядки USB Type-C и гарантия 12 месяцев</span>
+                  <span>{t.order.bullet5}</span>
                 </li>
               </ul>
 
@@ -1125,8 +1145,8 @@ function App() {
                   variant="primary"
                 />
                 <GsapButton
-                  label="Скачать мобильное приложение"
-                  badge="Android .APK"
+                  label={t.order.btnApp}
+                  badge={t.order.btnAppBadge}
                   href="#"
                   variant="outline"
                 />
@@ -1183,15 +1203,15 @@ function App() {
             </div>
 
             <div className="footer-col">
-              <h4>Навигация</h4>
+              <h4>{t.footer.navTitle}</h4>
               <a href="#ecosystem">{t.nav.ecosystem}</a>
-              <a href="#hardware-3d">3D Инженерия</a>
+              <a href="#hardware-3d">{t.nav.hardware3d}</a>
               <a href="#app">{t.nav.app}</a>
               <a href="#experts">{t.nav.experts}</a>
             </div>
 
             <div className="footer-col">
-              <h4>Контакты</h4>
+              <h4>{t.footer.contactsTitle}</h4>
               <a href="mailto:suguard.kz@gmail.com">suguard.kz@gmail.com</a>
               <a href="tel:+77056612373">+7 705 661 2373</a>
               <a href="https://www.instagram.com/suguard_kz" target="_blank" rel="noreferrer">
@@ -1200,7 +1220,7 @@ function App() {
             </div>
 
             <div className="footer-col">
-              <h4>Загрузки</h4>
+              <h4>{t.footer.downloadsTitle}</h4>
               <a
                 href="#"
                 onClick={(e) => {
@@ -1208,15 +1228,15 @@ function App() {
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
               >
-                Android App (.APK)
+                {t.footer.androidApp}
               </a>
-              <a href="#pricing">Предзаказ устройства</a>
+              <a href="#pricing">{t.footer.preorderLink}</a>
             </div>
           </div>
 
           <div className="whoop-footer-bottom">
             <span>© 2026 SuGuard Health Technologies. {t.footer.rights}</span>
-            <span>Designed & Engineered in Kazakhstan</span>
+            <span>{t.footer.designedIn}</span>
           </div>
         </div>
       </footer>

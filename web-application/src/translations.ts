@@ -2,20 +2,29 @@ export type Language = 'ru' | 'en' | 'kk';
 
 export interface TranslationSchema {
   nav: {
+    opticalAi: string;
     ecosystem: string;
-    achievements: string;
+    hardware3d: string;
+    app: string;
     experts: string;
     partners: string;
-    features: string;
-    app: string;
     pricing: string;
     faq: string;
     contactUs: string;
+    orderCta: string;
+    menuTitle: string;
   };
   hero: {
     badge: string;
+    eyebrowTech: string;
     title: string;
     subtitle: string;
+    btnLaser: string;
+    btnLaserBadge: string;
+    btn3d: string;
+    btn3dBadge: string;
+    btnDownload: string;
+    btnDownloadBadge: string;
     watchDemo: string;
     orderDevice: string;
     statAccuracy: string;
@@ -26,6 +35,60 @@ export interface TranslationSchema {
     statInvestmentSub: string;
     statSync: string;
     statSyncSub: string;
+  };
+  cinema: {
+    kicker: string;
+    title: string;
+    tabWrist: string;
+    tabStudio: string;
+    badgeWrist: string;
+    badgeStudio: string;
+    soundOn: string;
+    soundOff: string;
+    step1Title: string;
+    step1Desc: string;
+    step2Title: string;
+    step2Desc: string;
+    step3Title: string;
+    step3Desc: string;
+    metricGlucose: string;
+    valGlucose: string;
+    metricOxygen: string;
+    valOxygen: string;
+    metricPulse: string;
+    valPulse: string;
+  };
+  deck: {
+    counterLabel: string;
+    mod1Tag: string;
+    mod1Sub: string;
+    mod1Wavelengths: string;
+    mod1ValWavelengths: string;
+    mod1Adc: string;
+    mod1NonInvasive: string;
+    mod1Caption: string;
+    mod2Tag: string;
+    mod2Sub: string;
+    mod2Accuracy: string;
+    mod2Continuous: string;
+    mod2Latency: string;
+    mod2ValLatency: string;
+    mod2Caption: string;
+    mod3Tag: string;
+    mod3Sub: string;
+    mod3Weight: string;
+    mod3ValWeight: string;
+    mod3Battery: string;
+    mod3ValBattery: string;
+    mod3Mcu: string;
+    mod3Caption: string;
+    mod4Tag: string;
+    mod4Sub: string;
+    mod4Macros: string;
+    mod4ValMacros: string;
+    mod4Consultant: string;
+    mod4Export: string;
+    mod4Caption: string;
   };
   ecosystem: {
     badge: string;
@@ -62,17 +125,22 @@ export interface TranslationSchema {
     testsDesc: string;
     partnersTitle: string;
     partnersDesc: string;
+    syncTitle: string;
+    syncDesc: string;
   };
   experts: {
     badge: string;
     title: string;
     subtitle: string;
+    jerryName: string;
     jerryRole: string;
     jerryAff: string;
     jerryDesc: string;
+    aidarName: string;
     aidarRole: string;
     aidarAff: string;
     aidarDesc: string;
+    rustamName: string;
     rustamRole: string;
     rustamAff: string;
     rustamDesc: string;
@@ -81,6 +149,10 @@ export interface TranslationSchema {
     badge: string;
     title: string;
     subtitle: string;
+    catClinical: string;
+    catMedCenter: string;
+    catPresidential: string;
+    catPublic: string;
     brbTitle: string;
     brbDesc: string;
     avicennaTitle: string;
@@ -131,14 +203,35 @@ export interface TranslationSchema {
     badge: string;
     title: string;
     subtitle: string;
+    counterLabel: string;
+    screen1Tag: string;
     screen1Title: string;
     screen1Desc: string;
+    screen1Specs: string[];
+    screen2Tag: string;
     screen2Title: string;
     screen2Desc: string;
+    screen2Specs: string[];
+    screen3Tag: string;
     screen3Title: string;
     screen3Desc: string;
+    screen3Specs: string[];
+    screen4Tag: string;
     screen4Title: string;
     screen4Desc: string;
+    screen4Specs: string[];
+  };
+  order: {
+    kitTitle: string;
+    kitSub: string;
+    kitPriceUsd: string;
+    bullet1: string;
+    bullet2: string;
+    bullet3: string;
+    bullet4: string;
+    bullet5: string;
+    btnApp: string;
+    btnAppBadge: string;
   };
   pricing: {
     badge: string;
@@ -201,28 +294,43 @@ export interface TranslationSchema {
     submittedMsg: string;
   };
   footer: {
+    navTitle: string;
+    contactsTitle: string;
+    downloadsTitle: string;
+    preorderLink: string;
+    androidApp: string;
     rights: string;
     desc: string;
+    designedIn: string;
   };
 }
 
 export const translations: Record<Language, TranslationSchema> = {
   ru: {
     nav: {
+      opticalAi: 'Оптический ИИ',
       ecosystem: 'Экосистема',
-      achievements: 'Достижения',
+      hardware3d: '3D Инженерия',
+      app: 'Приложение',
       experts: 'Эксперты',
       partners: 'Партнеры',
-      features: 'Функции',
-      app: 'Приложение',
       pricing: 'Тарифы',
       faq: 'FAQ',
       contactUs: 'Связаться',
+      orderCta: 'Заказать',
+      menuTitle: 'НАВИГАЦИЯ',
     },
     hero: {
       badge: 'ИИ-Экосистема Мониторинга Здоровья',
+      eyebrowTech: 'ОПТИЧЕСКИЙ PPG 660 / 880 НМ',
       title: 'Умный неинвазивный мониторинг сахара и риск-анализ',
       subtitle: 'Инновационный носимый трекер и мобильное приложение для непрерывного отслеживания глюкозы, SpO2, пульса и предотвращения диабета.',
+      btnLaser: 'Как работает лазер (Видео)',
+      btnLaserBadge: 'PPG 660 нм',
+      btn3d: '3D Инженерия',
+      btn3dBadge: '5 слоёв',
+      btnDownload: 'Скачать приложение',
+      btnDownloadBadge: 'Android .APK',
       watchDemo: 'Смотреть демо видео',
       orderDevice: 'Приобрести устройство',
       statAccuracy: '94%',
@@ -234,21 +342,75 @@ export const translations: Record<Language, TranslationSchema> = {
       statSync: '< 1 сек',
       statSyncSub: 'Скорость синхронизации',
     },
+    cinema: {
+      kicker: 'ОПТИЧЕСКАЯ СПЕКТРОСКОПИЯ В ДЕЙСТВИИ',
+      title: 'Точность в каждом импульсе.',
+      tabWrist: '01. Сканирование на руке (Лазер + Пульс)',
+      tabStudio: '02. Обзор браслета 360° в студии',
+      badgeWrist: 'ЛАЗЕРНАЯ СПЕКТРОСКОПИЯ MAX30102 • АКТИВНОЕ СКАНИРОВАНИЕ',
+      badgeStudio: 'КОРПУС SUGUARD • 360° ОБЗОР В СТУДИИ',
+      soundOn: '🔊 Звук включен',
+      soundOff: '🔇 Включить звук диктора',
+      step1Title: 'Контакт с кожей',
+      step1Desc: 'Калибровка базовой линии и отсечение внешнего света',
+      step2Title: 'Импульс 660 / 880 нм',
+      step2Desc: 'Красный и ИК-лазер просвечивают капилляры запястья',
+      step3Title: 'ИИ-спектральный анализ',
+      step3Desc: 'Расчёт уровня глюкозы, SpO2 и волны пульса в реальном времени',
+      metricGlucose: 'ГЛЮКОЗА',
+      valGlucose: '5.8 ммоль/л',
+      metricOxygen: 'КИСЛОРОД',
+      valOxygen: '98% SpO2',
+      metricPulse: 'ПУЛЬС',
+      valPulse: '72 уд/мин',
+    },
+    deck: {
+      counterLabel: 'МОДУЛЬ',
+      mod1Tag: 'ОПТИЧЕСКАЯ PPG СПЕКТРОСКОПИЯ',
+      mod1Sub: 'Двухволновое лазерное зондирование капилляров 660 / 880 нм',
+      mod1Wavelengths: 'Длины волн',
+      mod1ValWavelengths: '660 / 880 нм',
+      mod1Adc: 'АЦП сенсора',
+      mod1NonInvasive: 'Неинвазивно',
+      mod1Caption: 'Оптический биосенсор MAX30102 сканирует спектр поглощения крови',
+      mod2Tag: 'ПРЕДИКТИВНЫЙ ИИ-ДВИЖОК',
+      mod2Sub: 'Нейросетевой расчёт вероятности диабета в реальном времени',
+      mod2Accuracy: 'Точность ИИ',
+      mod2Continuous: 'Непрерывный анализ',
+      mod2Latency: 'Отклик модели',
+      mod2ValLatency: '< 1 сек',
+      mod2Caption: 'Многофакторная оценка гликемического профиля, пульса покоя и SpO2',
+      mod3Tag: 'НОСИМОЕ УСТРОЙСТВО',
+      mod3Sub: 'Кастомная плата SuGuard.Health и до 7 дней автономности',
+      mod3Weight: 'Масса корпуса',
+      mod3ValWeight: '38 г',
+      mod3Battery: 'Автономность Li-Po',
+      mod3ValBattery: '7 дней',
+      mod3Mcu: 'Радиомодуль ESP32',
+      mod3Caption: 'Ударопрочный матовый корпус на гипоаллергенном ремешке Pin-and-Tuck',
+      mod4Tag: 'КОМПЬЮТЕРНОЕ ЗРЕНИЕ И ИИ-ВРАЧ',
+      mod4Sub: 'Распознавание блюд по фотографии и персональный ИИ-эндокринолог',
+      mod4Macros: 'Расчёт БЖУ и Ккал',
+      mod4ValMacros: 'Фото-ИИ',
+      mod4Consultant: 'ИИ-Консультант',
+      mod4Export: 'Экспорт для врача',
+      mod4Caption: 'Автоматический подсчёт углеводной нагрузки по одному снимку тарелки',
+    },
     ecosystem: {
       badge: 'Двухкомпонентная экосистема',
       title: 'Носимое устройство + Мобильное приложение',
       subtitle: 'Забудьте о болезненном проколе пальцев. Получайте точные показания глюкозы на запястье и анализируйте риски в реальном времени.',
       hardwareTitle: 'Носимый сенсор SuGuard',
-      hardwareBadge: 'HARDWARE',
+      hardwareBadge: 'АППАРАТНАЯ ЧАСТЬ',
       hardwareDesc: 'Умный смарт-браслет со встроенными спектроскопическими датчиками для неинвазивного анализа крови.',
       hardwareFeat1Title: 'Оптические PPG-сенсоры',
       hardwareFeat1Desc: 'Измерение сахара и кислорода без иголок и тест-полосок.',
-      hardwareFeat2Title: 'Bluetooth 5.3 Low Energy',
+      hardwareFeat2Title: 'Связь Bluetooth 5.3 Low Energy',
       hardwareFeat2Desc: 'Мгновенная передача данных на смарт-устройство.',
       hardwareFeat3Title: 'Автономность до 7 дней',
       hardwareFeat3Desc: 'Быстрая зарядка и влагозащищенный корпус.',
       appTitle: 'Мобильное приложение SuGuard',
-      appBadge: 'SOFTWARE & AI',
+      appBadge: 'СОФТ И ИИ',
       appDesc: 'Персональный цифровой ассистент с ИИ-моделью оценки риска диабета и трекером питания.',
       appFeat1Title: 'ИИ-оценка риска диабета',
       appFeat1Desc: 'Расчет вероятности в % на базе глюкозы, пульса и SpO2.',
@@ -258,7 +420,7 @@ export const translations: Record<Language, TranslationSchema> = {
       appFeat3Desc: 'Ответы на вопросы и рекомендации по предотвращению скачков сахара.',
     },
     achievements: {
-      badge: 'Achievements & Impact',
+      badge: 'Достижения и результаты',
       title: 'Наши достижения и результаты',
       subtitle: 'Ключевые показатели эффективности, привлеченные грантовые инвестиции, проверенная точность устройства и клиника CustDev.',
       invTitle: 'Привлеченные инвестиции',
@@ -269,25 +431,34 @@ export const translations: Record<Language, TranslationSchema> = {
       testsDesc: 'Успешно проведенных реальных исследований и тестирований в рамках CustDev.',
       partnersTitle: 'Официальных партнера',
       partnersDesc: 'Сотрудничество с клиниками, медицинскими центрами и общественными институтами.',
+      syncTitle: 'Скорость синхронизации',
+      syncDesc: 'Мгновенный обмен данными между трекером и приложением по Bluetooth 5.3.',
     },
     experts: {
-      badge: 'CustDev & Scientific Advisory Board',
+      badge: 'Экспертный совет и CustDev',
       title: 'Экспертный совет и CustDev',
       subtitle: 'Ведущие международные и национальные эксперты, оказавшие профессиональную поддержку в рамках CustDev, повышении точности прибора и создании прототипа.',
-      jerryRole: 'Scientific Advisor',
-      jerryAff: 'University of Southern California',
-      jerryDesc: 'AI-driven recommendations developed by bio-engineers and PhD researchers at University of Southern California. Консультации по алгоритмам ИИ и биоинженерным решениям.',
-      aidarRole: 'AI & Accuracy Expert',
-      aidarAff: 'PhD Student at MBZUAI • AI Researcher',
-      aidarDesc: 'Provided recommendations on improving device accuracy and implementing AI for glucose data analysis. Исследователь в сфере ИИ, помог достигнуть точности 94%.',
-      rustamRole: 'Hardware Prototyping Specialist',
-      rustamAff: 'Fab Lab NURIS Digital Prototyping Engineer',
-      rustamDesc: 'Prototyping specialist. Participated in the development of the first device prototype. Специалист по цифровому прототипированию, созданию первого образца устройства.',
+      jerryName: 'Проф. Джерри Лоеб',
+      jerryRole: 'Научный советник',
+      jerryAff: 'Университет Южной Калифорнии (USC)',
+      jerryDesc: 'Рекомендации по биосенсорике и алгоритмам ИИ от биоинженеров и докторантов Университета Южной Калифорнии.',
+      aidarName: 'Айдар Алимбаев',
+      aidarRole: 'Эксперт по ИИ и точности данных',
+      aidarAff: 'Докторант MBZUAI • Исследователь ИИ',
+      aidarDesc: 'Рекомендации по повышению точности сенсора и внедрению нейросетей для анализа биомаркеров (достигнута точность 94%).',
+      rustamName: 'Рустам Аскарулы',
+      rustamRole: 'Специалист по аппаратному прототипированию',
+      rustamAff: 'Инженер цифрового прототипирования Fab Lab NURIS',
+      rustamDesc: 'Специалист по прототипированию. Руководил разработкой и сборкой первого физического прототипа устройства.',
     },
     partners: {
-      badge: 'Partnerships & Collaborations',
+      badge: 'Партнерство и сотрудничество',
       title: 'Официальное сотрудничество',
       subtitle: 'Мы активно сотрудничаем с ведущими медицинскими центрами, больницами и общественными организациями.',
+      catClinical: '01 / КЛИНИЧЕСКАЯ АПРОБАЦИЯ',
+      catMedCenter: '02 / МЕДИЦИНСКИЙ ЦЕНТР',
+      catPresidential: '03 / ПРЕЗИДЕНТСКАЯ КЛИНИКА',
+      catPublic: '04 / ОБЩЕСТВЕННАЯ ИНИЦИАТИВА',
       brbTitle: 'ГКП на ПХВ «БРБ»',
       brbDesc: 'Городская клиническая больница (Аксайская больница) - практическое сотрудничество и экспертная апробация устройства.',
       avicennaTitle: 'Медицинский центр «Авиценна»',
@@ -298,104 +469,125 @@ export const translations: Record<Language, TranslationSchema> = {
       amanatDesc: 'Социально-инновационная поддержка проекта и взаимодействие по программам укрепления здоровья населения.',
       academicTitle: 'Научные инициативы & Предложения по сотрудничеству',
       nncrzTitle: 'ННЦРЗ им. Салидат Каирбековой',
-      nncrzDesc: 'Национальный научный центр развития здравоохранения - инициативные предложения по интеграции технологических решений.',
+      nncrzDesc: 'Национальный научный центр развития здравоохранения - предложения о внедрении решений.',
       nuTitle: 'Назарбаев Университет',
-      nuDesc: 'Nazarbayev University - научно-технологический CustDev, исследования и прототипирование на базе Fab Lab NURIS.',
-      amuTitle: 'Медицинский Университет Астаны',
-      amuDesc: 'Академические консультации с экспертами профильных кафедр и диабетологами университета.',
+      nuDesc: 'Научно-технический CustDev и аппаратное прототипирование на базе лаборатории Fab Lab NURIS.',
+      amuTitle: 'Медицинский университет Астана',
+      amuDesc: 'Академические консультации с профильными кафедрами и диабетологами.',
     },
     features: {
-      badge: 'Features',
+      badge: 'Возможности',
       title: 'Все необходимое для контроля здоровья',
-      subtitle: 'Комплексный набор инструментов, объединяющий физический сенсор и искусственный интеллект для профилактики диабета.',
+      subtitle: 'Комплексная система, объединяющая носимый датчик и искусственный интеллект для профилактики диабета.',
       f1Title: 'Мониторинг глюкозы',
-      f1Desc: 'Неинвазивный анализ уровня сахара в крови на базе оптических сенсоров с синхронизацией в реальном времени.',
+      f1Desc: 'Неинвазивное оптическое измерение сахара в крови с мгновенной синхронизацией.',
       f2Title: 'Оценка риска диабета',
-      f2Desc: 'Расчет вероятности возникновения диабета по алгоритмам анализа глюкозы, SpO2 и пульса.',
+      f2Desc: 'Расчет вероятности развития диабета на базе непрерывного анализа биомаркеров.',
       f3Title: 'Трекер питания',
-      f3Desc: 'Ведение дневника питания вручную или по фото с авто-расчетом белков, жиров, углеводов и калорий.',
-      f4Title: 'SpO2 и Пульсометр',
-      f4Desc: 'Непрерывное измерение уровня кислорода в крови и частоты сердечных сокращений.',
+      f3Desc: 'Распознавание блюд по фото и автоматический подсчет белков, жиров, углеводов и калорий.',
+      f4Title: 'SpO2 и Пульс',
+      f4Desc: 'Непрерывное отслеживание уровня насыщения крови кислородом и частоты сердечных сокращений.',
       f5Title: 'ИИ-Консультант',
-      f5Desc: 'Персональный ИИ-ассистент, анализирующий ваши данные и отвечающий на любые вопросы о здоровье.',
+      f5Desc: 'Умный ассистент, готовый ответить на любые вопросы о вашем здоровье и показателях 24/7.',
       f6Title: 'Облачная синхронизация',
-      f6Desc: 'Мгновенное сохранение результатов в защищенном облаке через Bluetooth 5.3.',
+      f6Desc: 'Безопасная передача и шифрование данных по Bluetooth 5.3 в облачное хранилище.',
     },
     device: {
-      badge: 'Hardware Specs',
-      title: 'Инженерное превосходство сенсора',
-      subtitle: 'Высокоточные оптические датчики в компактном эргономичном корпусе.',
-      spec1Title: 'PPG Оптический модуль',
-      spec1Desc: 'Двухволновой оптический анализатор высокой точности.',
+      badge: 'Характеристики',
+      title: 'Инженерная точность в каждой детали',
+      subtitle: 'Высокоточные оптические сенсоры в эргономичном алюминиевом корпусе.',
+      spec1Title: 'Оптический модуль PPG',
+      spec1Desc: 'Двухволновой спектроскопический датчик высокой чувствительности.',
       spec2Title: 'Корпус из авиационного алюминия',
-      spec2Desc: 'Легкий, прочный и защищенный по стандарту IP67.',
-      spec3Title: 'Энергоэффективный процессор',
-      spec3Desc: 'Микроконтроллер с низким энергопотреблением и быстрой обработкой сигналов.',
+      spec2Desc: 'Легкий, прочный и влагозащищенный корпус по стандарту IP67.',
+      spec3Title: 'Энергоэффективный микроконтроллер',
+      spec3Desc: 'Процессор с низким энергопотреблением для бесперебойной обработки сигналов.',
       spec4Title: 'Гипоаллергенный ремешок',
-      spec4Desc: 'Комфортное ношение 24/7 без раздражения кожи.',
+      spec4Desc: 'Мягкий силиконовый ремешок для комфортного круглосуточного ношения.',
     },
     appSection: {
-      badge: 'App Interface',
-      title: 'Интуитивный мобильный интерфейс',
-      subtitle: 'Наглядная аналитика, динамические графики и моментальные уведомления.',
-      screen1Title: 'Главный дашборд',
-      screen1Desc: 'Текущий уровень сахара, пульс, SpO2 и статус подключения устройства.',
-      screen2Title: 'Карта риска диабета',
-      screen2Desc: 'Детальный разбор факторов риска и персональные рекомендации.',
-      screen3Title: 'Дневник питания',
-      screen3Desc: 'Распознавание блюд по фото и суточный баланс калорий.',
-      screen4Title: 'Чат с ИИ-Консультантом',
-      screen4Desc: 'Круглосуточная поддержка и ответы на вопросы по вашему здоровью.',
+      badge: 'Интерфейс приложения',
+      title: 'Интуитивный и мощный дашборд',
+      subtitle: 'Наглядная аналитика, графики в реальном времени и мгновенные уведомления о рисках.',
+      counterLabel: 'ЭКРАН',
+      screen1Tag: 'ОБЗОР ЗДОРОВЬЯ В РЕАЛЬНОМ ВРЕМЕНИ',
+      screen1Title: 'Главный экран мониторинга',
+      screen1Desc: 'Текущий уровень глюкозы, пульс, SpO2 и статус подключения датчика в реальном времени.',
+      screen1Specs: ['Индекс риска диабета в %', 'Текущая глюкоза (ммоль/л)', 'SpO2 и ЧСС в реальном времени'],
+      screen2Tag: 'БИОМЕТРИЧЕСКИЕ ФАКТОРЫ РИСКА',
+      screen2Title: 'Оценка факторов риска',
+      screen2Desc: 'Детальный анализ факторов риска развития диабета и персональные рекомендации.',
+      screen2Specs: ['Декомпозиция факторов риска', 'Динамика среднего сахара', 'Раннее предупреждение скачков'],
+      screen3Tag: 'ГРАФИКИ ГЛЮКОЗЫ В РЕАЛЬНОМ ВРЕМЕНИ',
+      screen3Title: 'Дневник питания и калорий',
+      screen3Desc: 'Распознавание еды по фото и автоматический подсчет баланса нутриентов.',
+      screen3Specs: ['Суточные, недельные и месячные графики', 'Минимум, максимум и среднее', 'Распознавание еды по фото (БЖУ)'],
+      screen4Tag: 'ЧАТ С ИИ-ЭНДОКРИНОЛОГОМ',
+      screen4Title: 'ИИ-Консультант в чате',
+      screen4Desc: 'Круглосуточные персональные консультации на основе ваших биометрических показателей.',
+      screen4Specs: ['Анализ ваших графиков и рациона', 'Персональные медицинские советы', 'Мгновенные ответы 24/7'],
+    },
+    order: {
+      kitTitle: 'Комплект SuGuard Complete Kit',
+      kitSub: 'Носимый оптический биосенсор SuGuard + бессрочный доступ к ИИ-экосистеме мониторинга глюкозы, SpO2 и питания.',
+      kitPriceUsd: '≈ $70 USD • Единоразовая покупка без скрытых платежей',
+      bullet1: 'Смарт-браслет SuGuard (MAX30102 + SuGuard.Health PCB)',
+      bullet2: 'Неинвазивный мониторинг глюкозы, SpO2 и ЧСС 24/7',
+      bullet3: 'ИИ-оценка риска диабета и компьютерное зрение для еды',
+      bullet4: 'Персональный ИИ-эндокринолог и облачная синхронизация',
+      bullet5: 'Кабель быстрой зарядки USB Type-C и гарантия 12 месяцев',
+      btnApp: 'Скачать мобильное приложение',
+      btnAppBadge: 'Android .APK',
     },
     pricing: {
-      badge: 'Pricing & Plans',
+      badge: 'Тарифы и планы',
       title: 'Выберите подходящий вариант',
-      subtitle: 'Прозрачные тарифные планы для персонального использования и заботы о близких.',
-      plan1Name: 'Базовый старт',
-      plan1Price: 'Free',
-      plan1Desc: 'Мобильное приложение и базовый трекинг питания.',
+      subtitle: 'Прозрачные условия для индивидуального контроля здоровья и заботы о близких.',
+      plan1Name: 'Базовый',
+      plan1Price: 'Бесплатно',
+      plan1Desc: 'Мобильное приложение и ручной трекинг питания.',
       plan1Feat1: 'Мобильное приложение SuGuard',
       plan1Feat2: 'Ручной дневник питания',
       plan1Feat3: 'Базовая аналитика сахара',
       plan1Feat4: 'Поддержка по email',
       plan1Btn: 'Начать бесплатно',
-      plan2Name: 'Устройство + Приложение',
+      plan2Name: 'Комплект с устройством',
       plan2Price: '$149',
-      plan2Desc: 'Полный комплект: неинвазивный браслет + бессрочный доступ к ИИ-приложению.',
-      plan2Feat1: 'Носимый браслет SuGuard Sensor',
+      plan2Desc: 'Полный комплект: смарт-браслет + пожизненный доступ к приложению.',
+      plan2Feat1: 'Носимый сенсор SuGuard',
       plan2Feat2: 'ИИ-оценка риска диабета',
-      plan2Feat3: 'Сканер питания по фото',
+      plan2Feat3: 'Трекер питания по фото',
       plan2Feat4: 'Неограниченный ИИ-Консультант',
       plan2Btn: 'Заказать комплект',
-      plan3Name: 'Семейный доступ',
+      plan3Name: 'Семейный комплект',
       plan3Price: '$269',
-      plan3Desc: '2 устройства SuGuard + расширенная семейная аналитика.',
-      plan3Feat1: '2 носимых браслета SuGuard',
-      plan3Feat2: 'Семейный дашборд и уход',
+      plan3Desc: '2 устройства SuGuard + семейный доступ к мониторингу здоровья.',
+      plan3Feat1: '2x носимых сенсора SuGuard',
+      plan3Feat2: 'Семейный дашборд и алерты',
       plan3Feat3: 'Приоритетный ИИ-Консультант',
       plan3Feat4: 'Персональный менеджер',
       plan3Btn: 'Оформить семейный',
-      popularBadge: 'Самый популярный',
+      popularBadge: 'Популярный выбор',
     },
     faq: {
-      badge: 'Frequently Asked Questions',
+      badge: 'Вопросы и ответы',
       title: 'Часто задаваемые вопросы',
-      subtitle: 'Ответы на популярные вопросы о работе устройства и приложения SuGuard.',
+      subtitle: 'Ответы на популярные вопросы о работе устройства SuGuard и мобильного приложения.',
       q1: 'Что такое SuGuard?',
-      a1: 'SuGuard - это комплексная экосистема для мониторинга здоровья, состоящая из носимого оптического устройства и смарт-приложения с ИИ.',
-      q2: 'Как работает неинвазивное измерение?',
-      a2: 'Сенсор на запястье использует оптическую спектроскопию (PPG) для анализа прохождения света через капилляры, измеряя глюкозу без иголок.',
-      q3: 'Насколько точны показания сахара?',
-      a3: 'В рамках проведенных исследований точность алгоритма достигает 94% по сравнению с лабораторными глюкометрами.',
-      q4: 'Как работает сканер питания по фото?',
-      a4: 'Вы сфотографируете тарелку с едой, ИИ определят блюдо, выссчитает объем и разложит состав на белки, жиры, углеводы и калории.',
+      a1: 'SuGuard - это комплексная экосистема для мониторинга здоровья, состоящая из носимого оптического браслета и мобильного приложения с искусственным интеллектом.',
+      q2: 'Как работает неинвазивное измерение сахара?',
+      a2: 'Браслет использует оптическую PPG-спектроскопию: датчик сканирует капиллярный кровоток и определяет уровень глюкозы по коэффициенту поглощения света без уколов.',
+      q3: 'Насколько точны измерения?',
+      a3: 'В ходе испытаний алгоритмы нейросети SuGuard продемонстрировали точность до 94% по сравнению с традиционными инвазивными глюкометрами.',
+      q4: 'Как работает распознавание еды по фото?',
+      a4: 'Вы делаете фотографию блюда, а нейросеть приложения определяет состав, оценивает объем порции и рассчитывает калории, белки, жиры и углеводы.',
       q5: 'Безопасны ли мои медицинские данные?',
-      a5: 'Все данные шифруются по стандарту AES-256 и хранятся в защищенном облаке с соблюдением требований конфиденциальности.',
+      a5: 'Да, все данные шифруются по протоколу AES-256 и передаются по защищенному каналу в соответствии со стандартами медицинской тайны.',
     },
     contact: {
-      badge: 'Get in Touch',
+      badge: 'Контакты',
       title: 'Остались вопросы? Свяжитесь с нами',
-      subtitle: 'Оставьте заявку на предзаказ или консультацию с нашей командой.',
+      subtitle: 'Оставьте заявку на предзаказ или задайте интересующий вопрос нашей команде.',
       nameLabel: 'Ваше имя',
       namePlaceholder: 'Иван Иванов',
       emailLabel: 'Email адрес',
@@ -408,28 +600,43 @@ export const translations: Record<Language, TranslationSchema> = {
       submittedMsg: 'Спасибо! Ваша заявка успешно отправлена. Мы свяжемся с вами в ближайшее время.',
     },
     footer: {
+      navTitle: 'Навигация',
+      contactsTitle: 'Контакты',
+      downloadsTitle: 'Загрузки',
+      preorderLink: 'Предзаказ устройства',
+      androidApp: 'Приложение Android (.APK)',
       rights: 'Все права защищены.',
       desc: 'Инновационная система неинвазивного мониторинга глюкозы и профилактики диабета.',
+      designedIn: 'Разработано и спроектировано в Казахстане',
     },
   },
   en: {
     nav: {
+      opticalAi: 'Optical AI',
       ecosystem: 'Ecosystem',
-      achievements: 'Achievements',
+      hardware3d: '3D Hardware',
+      app: 'App',
       experts: 'Experts',
       partners: 'Partners',
-      features: 'Features',
-      app: 'App',
       pricing: 'Pricing',
       faq: 'FAQ',
       contactUs: 'Contact Us',
+      orderCta: 'Order',
+      menuTitle: 'NAVIGATION',
     },
     hero: {
       badge: 'Next-Gen AI Health Ecosystem',
+      eyebrowTech: 'OPTICAL PPG 660 / 880 NM',
       title: 'Non-Invasive Glucose Monitoring & AI Risk Analytics',
       subtitle: 'Innovative wearable tracker and companion mobile app for continuous glucose, SpO2, pulse monitoring, and diabetes prevention.',
+      btnLaser: 'How Optical Sensor Works',
+      btnLaserBadge: 'PPG 660 nm',
+      btn3d: '3D Hardware Stack',
+      btn3dBadge: '5 Layers',
+      btnDownload: 'Download App',
+      btnDownloadBadge: 'Android .APK',
       watchDemo: 'Watch Demo Video',
-      orderDevice: 'Get Wearable Device',
+      orderDevice: 'Order Device',
       statAccuracy: '94%',
       statAccuracySub: 'Sensor Accuracy',
       statTests: '300+',
@@ -438,6 +645,60 @@ export const translations: Record<Language, TranslationSchema> = {
       statInvestmentSub: 'Grant Funding',
       statSync: '< 1 sec',
       statSyncSub: 'Sync Speed',
+    },
+    cinema: {
+      kicker: 'OPTICAL PPG BIO-SENSING IN ACTION',
+      title: 'Precision in every pulse.',
+      tabWrist: '01. Wrist Scanning (Laser + Pulse)',
+      tabStudio: '02. 360° Studio Hardware Orbit',
+      badgeWrist: 'MAX30102 LASER SPECTROSCOPY • ACTIVE SCAN',
+      badgeStudio: 'SUGUARD UNIBODY • 360° STUDIO ORBIT',
+      soundOn: '🔊 Sound enabled',
+      soundOff: '🔇 Enable voiceover',
+      step1Title: 'Skin Contact',
+      step1Desc: 'Baseline calibration and ambient light filtering',
+      step2Title: '660 / 880 nm Pulse',
+      step2Desc: 'Red and IR laser illuminate wrist capillaries',
+      step3Title: 'AI Spectral Analysis',
+      step3Desc: 'Real-time calculation of glucose, SpO2, and pulse wave',
+      metricGlucose: 'GLUCOSE',
+      valGlucose: '5.8 mmol/L',
+      metricOxygen: 'OXYGEN',
+      valOxygen: '98% SpO2',
+      metricPulse: 'PULSE',
+      valPulse: '72 BPM',
+    },
+    deck: {
+      counterLabel: 'MODULE',
+      mod1Tag: 'OPTICAL PPG SPECTROSCOPY',
+      mod1Sub: 'Dual-wavelength optical capillary probing at 660 / 880 nm',
+      mod1Wavelengths: 'Wavelengths',
+      mod1ValWavelengths: '660 / 880 nm',
+      mod1Adc: 'Sensor ADC',
+      mod1NonInvasive: 'Non-invasive',
+      mod1Caption: 'MAX30102 optical biosensor scanning blood absorption spectra',
+      mod2Tag: 'PREDICTIVE AI ENGINE',
+      mod2Sub: 'Real-time neural network diabetic risk probability engine',
+      mod2Accuracy: 'AI Accuracy',
+      mod2Continuous: 'Continuous Analysis',
+      mod2Latency: 'Model Latency',
+      mod2ValLatency: '< 1 sec',
+      mod2Caption: 'Multifactor assessment of glycemic trends, resting HR, and SpO2',
+      mod3Tag: 'WEARABLE HARDWARE',
+      mod3Sub: 'Custom SuGuard.Health motherboard and up to 7-day battery life',
+      mod3Weight: 'Chassis Weight',
+      mod3ValWeight: '38 g',
+      mod3Battery: 'Li-Po Battery Life',
+      mod3ValBattery: '7 d',
+      mod3Mcu: 'ESP32 Wireless MCU',
+      mod3Caption: 'Impact-resistant matte enclosure with hypoallergenic Pin-and-Tuck strap',
+      mod4Tag: 'COMPUTER VISION & AI DOCTOR',
+      mod4Sub: 'Meal recognition by camera snapshot & personalized AI endocrinologist',
+      mod4Macros: 'Macros & Calories',
+      mod4ValMacros: 'Photo-AI',
+      mod4Consultant: 'AI Consultant',
+      mod4Export: 'Doctor PDF Export',
+      mod4Caption: 'Automated glycemic and carbohydrate analysis from a single plate photo',
     },
     ecosystem: {
       badge: 'Integrated Solution',
@@ -474,25 +735,34 @@ export const translations: Record<Language, TranslationSchema> = {
       testsDesc: 'Successfully completed real-world user tests and clinical validation.',
       partnersTitle: 'Official Partners',
       partnersDesc: 'Active collaboration with clinical centers and national institutions.',
+      syncTitle: 'Sync Speed',
+      syncDesc: 'Instant data transmission between smart wearable and phone via Bluetooth 5.3.',
     },
     experts: {
       badge: 'CustDev & Advisory Board',
       title: 'Scientific & Expert Advisory Board',
       subtitle: 'Leading international and national experts who supported our CustDev, accuracy enhancements, and prototyping.',
+      jerryName: 'Prof. Jerry Loeb',
       jerryRole: 'Scientific Advisor',
       jerryAff: 'University of Southern California',
-      jerryDesc: 'AI-driven recommendations developed by bio-engineers and PhD researchers at University of Southern California.',
+      jerryDesc: 'AI-driven bio-sensing recommendations and algorithmic guidance developed by bio-engineers and PhD researchers at USC.',
+      aidarName: 'Aidar Alimbayev',
       aidarRole: 'AI & Accuracy Expert',
       aidarAff: 'PhD Student at MBZUAI • AI Researcher',
-      aidarDesc: 'Provided recommendations on improving device accuracy and implementing AI for glucose data analysis (achieved 94% accuracy).',
+      aidarDesc: 'Provided technical guidance on maximizing sensor accuracy and implementing machine learning for non-invasive glucose estimation (achieved 94%).',
+      rustamName: 'Askaruly Rustam',
       rustamRole: 'Hardware Prototyping Specialist',
       rustamAff: 'Fab Lab NURIS Digital Prototyping Engineer',
-      rustamDesc: 'Prototyping specialist. Participated in the development of the first device prototype at Fab Lab NURIS.',
+      rustamDesc: 'Digital fabrication and hardware prototyping engineer. Led the development of the first physical device prototype.',
     },
     partners: {
       badge: 'Partnerships & Collaborations',
       title: 'Official Institutional Collaborations',
       subtitle: 'We actively partner with leading medical centers, hospitals, and national organizations.',
+      catClinical: '01 / CLINICAL',
+      catMedCenter: '02 / MEDICAL CENTER',
+      catPresidential: '03 / PRESIDENTIAL CLINIC',
+      catPublic: '04 / PUBLIC INITIATIVE',
       brbTitle: 'GKP on PHV "BRB"',
       brbDesc: 'City Clinical Hospital (Aksai Hospital) - practical testing and clinical evaluation of the device.',
       avicennaTitle: 'Avicenna Medical Center',
@@ -505,7 +775,7 @@ export const translations: Record<Language, TranslationSchema> = {
       nncrzTitle: 'Salidat Kairbekova National Center',
       nncrzDesc: 'National Scientific Center for Health Development - proposals for technological integration.',
       nuTitle: 'Nazarbayev University',
-      nuDesc: 'Nazarbayev University - R&D CustDev, research, and digital prototyping at Fab Lab NURIS.',
+      nuDesc: 'R&D CustDev, research, and hardware digital prototyping at Fab Lab NURIS.',
       amuTitle: 'Astana Medical University',
       amuDesc: 'Academic consulting with faculty researchers and clinical diabetologists.',
     },
@@ -543,14 +813,35 @@ export const translations: Record<Language, TranslationSchema> = {
       badge: 'App Interface',
       title: 'Intuitive & Powerful Mobile Dashboard',
       subtitle: 'Clear analytics, real-time metrics, and automated risk notifications.',
+      counterLabel: 'SCREEN',
+      screen1Tag: 'LIVE HEALTH OVERVIEW',
       screen1Title: 'Live Dashboard',
       screen1Desc: 'Real-time glucose, heart rate, SpO2, and sensor connection status.',
+      screen1Specs: ['Diabetes risk index %', 'Real-time glucose (mmol/L)', 'SpO2 & HR live stream'],
+      screen2Tag: 'BIOMETRIC RISK FACTORS',
       screen2Title: 'Diabetes Risk Breakdown',
       screen2Desc: 'Detailed analysis of health risk factors and personalized advice.',
+      screen2Specs: ['Risk factor breakdown', 'Average glucose trends', 'Early spike warnings'],
+      screen3Tag: 'CONTINUOUS GLUCOSE CHARTS',
       screen3Title: 'Food & Calorie Journal',
       screen3Desc: 'Photo meal recognition and daily macronutrient breakdown.',
+      screen3Specs: ['Daily, weekly & monthly charts', 'Min, max & average values', 'Photo meal recognition (Macros)'],
+      screen4Tag: 'AI ENDOCRINOLOGIST CHAT',
       screen4Title: 'AI Health Chat',
       screen4Desc: 'Around-the-clock AI guidance tailored to your health profile.',
+      screen4Specs: ['Analysis of your trends & diet', 'Personalized medical guidance', 'Instant 24/7 responses'],
+    },
+    order: {
+      kitTitle: 'SuGuard Complete Kit',
+      kitSub: 'Wearable SuGuard optical biosensor + lifetime access to the AI health monitoring ecosystem (glucose, SpO2 & nutrition).',
+      kitPriceUsd: '≈ $70 USD • One-time purchase with no subscription fees',
+      bullet1: 'SuGuard Smart Wearable (MAX30102 + SuGuard.Health PCB)',
+      bullet2: 'Non-invasive 24/7 glucose, SpO2, and heart rate monitoring',
+      bullet3: 'AI diabetes risk assessment and computer vision food logging',
+      bullet4: 'Personalized AI endocrinologist & secure cloud sync',
+      bullet5: 'USB Type-C fast charging cable & 12-month full warranty',
+      btnApp: 'Download Mobile App',
+      btnAppBadge: 'Android .APK',
     },
     pricing: {
       badge: 'Pricing & Plans',
@@ -580,7 +871,7 @@ export const translations: Record<Language, TranslationSchema> = {
       plan3Feat3: 'Priority AI Health Assistant',
       plan3Feat4: 'Dedicated Support Manager',
       plan3Btn: 'Get Family Plan',
-      popularBadge: 'Most Popular',
+      popularBadge: 'Popular Choice',
     },
     faq: {
       badge: 'Frequently Asked Questions',
@@ -613,26 +904,41 @@ export const translations: Record<Language, TranslationSchema> = {
       submittedMsg: 'Thank you! Your inquiry has been submitted. Our team will contact you shortly.',
     },
     footer: {
+      navTitle: 'Navigation',
+      contactsTitle: 'Contacts',
+      downloadsTitle: 'Downloads',
+      preorderLink: 'Pre-order Device',
+      androidApp: 'Android App (.APK)',
       rights: 'All rights reserved.',
       desc: 'Innovative non-invasive glucose monitoring & diabetes prevention platform.',
+      designedIn: 'Designed & Engineered in Kazakhstan',
     },
   },
   kk: {
     nav: {
+      opticalAi: 'Оптикалық ИИ',
       ecosystem: 'Экожүйе',
-      achievements: 'Жетістіктер',
+      hardware3d: '3D Құрылымы',
+      app: 'Қосымша',
       experts: 'Сарапшылар',
       partners: 'Серіктестер',
-      features: 'Мүмкіндіктер',
-      app: 'Қосымша',
       pricing: 'Тарифтер',
       faq: 'FAQ',
       contactUs: 'Байланысу',
+      orderCta: 'Тапсырыс',
+      menuTitle: 'НАВИГАЦИЯ',
     },
     hero: {
       badge: 'Денсаулықты Бақылаудың Жаңа Буын ИИ-Экожүйесі',
+      eyebrowTech: 'ОПТИКАЛЫҚ PPG 660 / 880 НМ',
       title: 'Глюкозаны инвазивті емес ақылды бақылау және ИИ талдау',
       subtitle: 'Глюкозаны, SpO2, тамыр соғысын үзіліссіз бақылауға және диабеттің алдын алуға арналған инновациялық тағылатын трекер мен мобильді қосымша.',
+      btnLaser: 'Лазер қалай жұмыс істейді',
+      btnLaserBadge: 'PPG 660 нм',
+      btn3d: '3D Құрылымы',
+      btn3dBadge: '5 қабат',
+      btnDownload: 'Қосымшаны жүктеу',
+      btnDownloadBadge: 'Android .APK',
       watchDemo: 'Демо видеоны қарау',
       orderDevice: 'Құрылғыға тапсырыс беру',
       statAccuracy: '94%',
@@ -644,21 +950,75 @@ export const translations: Record<Language, TranslationSchema> = {
       statSync: '< 1 сек',
       statSyncSub: 'Синхрондау Жылдамдығы',
     },
+    cinema: {
+      kicker: 'ОПТИКАЛЫҚ БИО-СЕНСОР ЖҰМЫС ҮСТІНДЕ',
+      title: 'Әр импульстегі дәлдік.',
+      tabWrist: '01. Білекте сканерлеу (Лазер + Тамыр соғысы)',
+      tabStudio: '02. Студияда 360° білезік шолуы',
+      badgeWrist: 'MAX30102 ЛАЗЕРЛІК СПЕКТРОСКОПИЯСЫ • БЕЛСЕНДІ СКАНЕРЛЕУ',
+      badgeStudio: 'SUGUARD КОРПУСЫ • 360° СТУДИЯЛЫҚ ШОЛУ',
+      soundOn: '🔊 Дыбыс қосылды',
+      soundOff: '🔇 Диктор дауысын қосу',
+      step1Title: 'Терімен байланыс',
+      step1Desc: 'Базалық сызықты калибрлеу және сыртқы жарықты сүзу',
+      step2Title: '660 / 880 нм импульс',
+      step2Desc: 'Қызыл және ИҚ-лазер білек капиллярларын жарқыратады',
+      step3Title: 'ИИ-спектрлік талдау',
+      step3Desc: 'Глюкоза, SpO2 және тамыр соғысын нақты уақытта есептеу',
+      metricGlucose: 'ГЛЮКОЗА',
+      valGlucose: '5.8 ммоль/л',
+      metricOxygen: 'ОТТЕГІ',
+      valOxygen: '98% SpO2',
+      metricPulse: 'ТАМЫР СОҒЫСЫ',
+      valPulse: '72 соғ/мин',
+    },
+    deck: {
+      counterLabel: 'МОДУЛЬ',
+      mod1Tag: 'ОПТИКАЛЫҚ PPG СПЕКТРОСКОПИЯ',
+      mod1Sub: '660 / 880 нм екі толқынды капиллярларды зондтау',
+      mod1Wavelengths: 'Толқын ұзындығы',
+      mod1ValWavelengths: '660 / 880 нм',
+      mod1Adc: 'Сенсор АЦП',
+      mod1NonInvasive: 'Инвазивті емес',
+      mod1Caption: 'MAX30102 оптикалық биосенсоры қанның сіңіру спектрін сканерлейді',
+      mod2Tag: 'БОЛЖАМДЫ ЖИ ҚОЗҒАЛТҚЫШЫ',
+      mod2Sub: 'Диабет қаупін нақты уақытта есептейтін нейрожелі',
+      mod2Accuracy: 'ИИ дәлдігі',
+      mod2Continuous: 'Үздіксіз талдау',
+      mod2Latency: 'Жауап уақыты',
+      mod2ValLatency: '< 1 сек',
+      mod2Caption: 'Гликемиялық профиль, тыныштық тамыр соғысы және SpO2 кешенді бағасы',
+      mod3Tag: 'ТАҒЫЛАТЫН ЭЛЕКТРОНИКА',
+      mod3Sub: 'SuGuard.Health аналық тақтасы және 7 күнге дейінгі автономдылық',
+      mod3Weight: 'Корпус салмағы',
+      mod3ValWeight: '38 г',
+      mod3Battery: 'Li-Po автономдылығы',
+      mod3ValBattery: '7 күн',
+      mod3Mcu: 'ESP32 радиомодулі',
+      mod3Caption: 'Pin-and-Tuck бауы бар соққыға төзімді матты корпус',
+      mod4Tag: 'КОМПЬЮТЕРЛІК КӨРУ ЖӘНЕ ЖИ-ДӘРІГЕР',
+      mod4Sub: 'Тағамдарды фотомен тану және жеке ИИ-эндокринолог',
+      mod4Macros: 'Ақуыз-май-көмірсу',
+      mod4ValMacros: 'Фото-ЖИ',
+      mod4Consultant: 'ИИ-Кеңесші',
+      mod4Export: 'Дәрігерге экспорт',
+      mod4Caption: 'Бір тәрелке фотосынан көмірсу жүктемесін автоматты есептеу',
+    },
     ecosystem: {
       badge: 'Екі Компонентті Экожүйе',
       title: 'Тағылатын Құрылғы + Мобильді Платформа',
       subtitle: 'Саусақты ауыртып тесуді ұмытыңыз. Білегіңізден глюкозаның дәл көрсеткіштерін алып, нақты уақытта денсаулық тәуекелдерін талдаңыз.',
       hardwareTitle: 'SuGuard Тағылатын Сенсоры',
-      hardwareBadge: 'HARDWARE',
+      hardwareBadge: 'АППАРАТТЫҚ ҚҰРЫЛҒЫ',
       hardwareDesc: 'Қанды инвазивті емес талдауға арналған спектроскопиялық датчиктері бар ақылды білезік.',
       hardwareFeat1Title: 'Оптикалық PPG-сенсорлар',
       hardwareFeat1Desc: 'Инесіз және тест-жолақсыз сахар мен оттегіні өлшеу.',
-      hardwareFeat2Title: 'Bluetooth 5.3 Low Energy',
+      hardwareFeat2Title: 'Bluetooth 5.3 Low Energy байланысы',
       hardwareFeat2Desc: 'Деректерді смартфонға лезде жіберу.',
       hardwareFeat3Title: '7 күнге дейін автономды',
       hardwareFeat3Desc: 'Жылдам қуаттау және IP67 судан қорғалған корпус.',
       appTitle: 'SuGuard Мобильді Қосымшасы',
-      appBadge: 'SOFTWARE & AI',
+      appBadge: 'БАҒДАРЛАМА ЖӘНЕ ЖИ',
       appDesc: 'Диабет тәуекелін бағалайтын ИИ-моделі мен тамақтану трекері бар жеке сандық ассистент.',
       appFeat1Title: 'Диабет Тәуекелін ИИ-Бағалау',
       appFeat1Desc: 'Глюкоза, пульс және SpO2 негізінде ықтималдықты % түрде есептеу.',
@@ -679,25 +1039,34 @@ export const translations: Record<Language, TranslationSchema> = {
       testsDesc: 'CustDev аясында нақты пациенттерде сәтті жүргізілген тестілеулер.',
       partnersTitle: 'Ресми Серіктестер',
       partnersDesc: 'Медициналық орталықтармен, ауруханалармен ресми серіктестік.',
+      syncTitle: 'Синхрондау Жылдамдығы',
+      syncDesc: 'Bluetooth 5.3 арқылы трекер мен мобильді қосымша арасындағы лездік дерек алмасу.',
     },
     experts: {
       badge: 'CustDev & Сарапшылар Кеңесі',
       title: 'Ғылыми Сарапшылар Кеңесі',
       subtitle: 'CustDev, құрылғы дәлдігін 94%-ға дейін арттыру және прототип жасау аясында кәсіби қолдау көрсеткен жетекші сарапшылар.',
-      jerryRole: 'Scientific Advisor',
-      jerryAff: 'University of Southern California',
-      jerryDesc: 'AI-driven recommendations developed by bio-engineers and PhD researchers at University of Southern California. ИИ алгоритмдері бойынша кеңестер.',
-      aidarRole: 'AI & Accuracy Expert',
-      aidarAff: 'PhD Student at MBZUAI • AI Researcher',
-      aidarDesc: 'Provided recommendations on improving device accuracy and implementing AI for glucose data analysis. Дәлдікті 94%-ға жеткізуге көмектескен ИИ зерттеушісі.',
-      rustamRole: 'Hardware Prototyping Specialist',
-      rustamAff: 'Fab Lab NURIS Digital Prototyping Engineer',
-      rustamDesc: 'Prototyping specialist. Participated in the development of the first device prototype. Алғашқы физикалық прототипті жасаған маман.',
+      jerryName: 'Проф. Джерри Лоеб',
+      jerryRole: 'Ғылыми кеңесші',
+      jerryAff: 'Оңтүстік Калифорния Университеті (USC)',
+      jerryDesc: 'Оңтүстік Калифорния Университетінің биоинженерлері мен PhD зерттеушілері әзірлеген биосенсорика және ЖИ ұсыныстары.',
+      aidarName: 'Айдар Әлімбаев',
+      aidarRole: 'ЖИ және деректер дәлдігі сарапшысы',
+      aidarAff: 'MBZUAI докторанты • ЖИ зерттеушісі',
+      aidarDesc: 'Сенсор дәлдігін арттыру және глюкоза деректерін талдауға жасанды интеллект енгізу бойынша кеңестер (94% дәлдікке қол жеткізді).',
+      rustamName: 'Рүстем Асқарұлы',
+      rustamRole: 'Аппараттық прототиптеу маманы',
+      rustamAff: 'Fab Lab NURIS цифрлық прототиптеу инженері',
+      rustamDesc: 'Сандық прототиптеу маманы. Құрылғының алғашқы физикалық үлгісін әзірлеуге және құрастыруға жетекшілік етті.',
     },
     partners: {
       badge: 'Серіктестік пен Ынтымақтастық',
       title: 'Ресми Ынтымақтастық',
       subtitle: 'Біз жетекші медициналық орталықтармен, ауруханалармен және қоғамдық ұйымдармен белсенді жұмыс істейміз.',
+      catClinical: '01 / КЛИНИКАЛЫҚ СЫНАҚ',
+      catMedCenter: '02 / МЕДИЦИНАЛЫҚ ОРТАЛЫҚ',
+      catPresidential: '03 / ПРЕЗИДЕНТТІК КЛИНИКА',
+      catPublic: '04 / ҚОҒАМДЫҚ БАСТАМА',
       brbTitle: '«БРБ» ШЖҚ МКК',
       brbDesc: 'Қалалық клиникалық аурухана (Ақсай ауруханасы) - практикалық ынтымақтастық және құрылғыны сынақтан өткізу.',
       avicennaTitle: '«Авиценна» Медициналық Орталығы',
@@ -710,7 +1079,7 @@ export const translations: Record<Language, TranslationSchema> = {
       nncrzTitle: 'С. Қайырбекова атындағы ҰҒДРӨО',
       nncrzDesc: 'Денсаулық сақтауды дамыту ұлттық ғылыми орталығы - технологиялық шешімдерді енгізу ұсыныстары.',
       nuTitle: 'Назарбаев Университеті',
-      nuDesc: 'Nazarbayev University - ғылыми-технологиялық CustDev және Fab Lab NURIS базасында прототип жасау.',
+      nuDesc: 'Ғылыми-технологиялық CustDev және Fab Lab NURIS зертханасында аппараттық прототип жасау.',
       amuTitle: 'Астана Медицина Университеті',
       amuDesc: 'Профильді кафедралардың сарапшыларымен және диабетологтарымен академикалық кеңестер.',
     },
@@ -728,7 +1097,7 @@ export const translations: Record<Language, TranslationSchema> = {
       f4Desc: 'Қандағы оттегі деңгейін және жүрек соғысы жиілігін үздіксіз өлшеу.',
       f5Title: 'ИИ-Кеңесші',
       f5Desc: 'Деректеріңізді талдап, денсаулыққа қатысты барлық сұрақтарға жауап беретін ИИ-ассистент.',
-      f6Title: 'Бульттік Синхрондау',
+      f6Title: 'Бұлттық Синхрондау',
       f6Desc: 'Bluetooth 5.3 арқылы нәтижелерді қорғалған бұлтқа лезде сақтау.',
     },
     device: {
@@ -739,7 +1108,7 @@ export const translations: Record<Language, TranslationSchema> = {
       spec1Desc: 'Жоғары дәлдіктегі екі толқынды оптикалық талдағыш.',
       spec2Title: 'Авиациялық Алюминий Корпусы',
       spec2Desc: 'Жеңіл, берік және IP67 стандарты бойынша судан қорғалған.',
-      spec3Title: 'Энергия Тимді Процессор',
+      spec3Title: 'Энергия Тиімді Процессор',
       spec3Desc: 'Төмен энергия тұтынатын және сигналдарды жылдам өңдейтін микроконтроллер.',
       spec4Title: 'Гипоаллергенді Бау',
       spec4Desc: 'Теріні тітіркендірмей 24/7 ыңғайлы тағуға арналған.',
@@ -748,14 +1117,35 @@ export const translations: Record<Language, TranslationSchema> = {
       badge: 'Қосымша Интерфейсі',
       title: 'Ыңғайлы Мобильді Интерфейс',
       subtitle: 'Көрнекі аналитика, динамикалық графиктер және лездік хабарландырулар.',
+      counterLabel: 'ЭКРАН',
+      screen1Tag: 'LIVE ДЕНСАУЛЫҚ ШОЛУЫ',
       screen1Title: 'Негізгі Дашборд',
       screen1Desc: 'Ағымдағы сахар деңгейі, пульс, SpO2 және құрылғы қосылу статусы.',
+      screen1Specs: ['Диабет қаупінің % индексі', 'Ағымдағы глюкоза (ммоль/л)', 'SpO2 және тамыр соғысы'],
+      screen2Tag: 'БИОМЕТРИЯЛЫҚ ҚАУІП ФАКТОРЛАРЫ',
       screen2Title: 'Диабет Тәуекел Картасы',
       screen2Desc: 'Тәуекел факторларын егжей-тегжейлі талдау және жеке ұсыныстар.',
+      screen2Specs: ['Қауіп факторларын талдау', 'Орташа қант динамикасы', 'Қант көтерілуін алдын ала ескерту'],
+      screen3Tag: 'ҮЗДІКСІЗ ГЛЮКОЗА ГРАФИКТЕРІ',
       screen3Title: 'Тамақтану Күнделігі',
       screen3Desc: 'Сурет арқылы тамақты тану және тәуліктік калория балансы.',
+      screen3Specs: ['Тәуліктік, апталық және айлық графиктер', 'Мин, макс және орташа мән', 'Фото бойынша тағамды тану (АМК)'],
+      screen4Tag: 'ЖИ-ЭНДОКРИНОЛОГПЕН ЧАТ',
       screen4Title: 'ИИ-Кеңесшімен Чат',
       screen4Desc: 'Денсаулығыңыз бойынша тәулік бойы қолдау және кеңестер.',
+      screen4Specs: ['График пен рационды талдау', 'Жеке медициналық кеңестер', '24/7 лезде жауаптар'],
+    },
+    order: {
+      kitTitle: 'SuGuard Complete Kit жиынтығы',
+      kitSub: 'SuGuard тағылатын оптикалық биосенсоры + глюкоза, SpO2 және тамақтануды бақылайтын ИИ-экожүйесіне өмірлік қолжетімділік.',
+      kitPriceUsd: '≈ $70 USD • Жасырын төлемсіз бір реттік сатып алу',
+      bullet1: 'SuGuard смарт-білезігі (MAX30102 + SuGuard.Health PCB)',
+      bullet2: 'Глюкоза, SpO2 және тамыр соғысын 24/7 инвазивті емес бақылау',
+      bullet3: 'Диабет қаупін ИИ арқылы бағалау және тағамдарды компьютерлік көру',
+      bullet4: 'Жеке ИИ-эндокринолог және бұлтты синхрондау',
+      bullet5: 'USB Type-C жылдам қуаттау кабелі және 12 айлық кепілдік',
+      btnApp: 'Мобильді қосымшаны жүктеу',
+      btnAppBadge: 'Android .APK',
     },
     pricing: {
       badge: 'Тарифтер мен Бағалар',
@@ -818,8 +1208,14 @@ export const translations: Record<Language, TranslationSchema> = {
       submittedMsg: 'Рахмет! Өтінішіңіз сәтті жіберілді. Мамандарымыз жақын арада хабарласады.',
     },
     footer: {
+      navTitle: 'Навигация',
+      contactsTitle: 'Байланыс',
+      downloadsTitle: 'Жүктеулер',
+      preorderLink: 'Құрылғыға алдын ала тапсырыс',
+      androidApp: 'Android қосымшасы (.APK)',
       rights: 'Барлық құқықтар қорғалған.',
       desc: 'Глюкозаны инвазивті емес бақылау және диабеттің алдын алу инновациялық платформасы.',
+      designedIn: 'Қазақстанда әзірленген және жобаланған',
     },
   },
 };

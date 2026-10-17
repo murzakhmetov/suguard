@@ -1686,7 +1686,7 @@ export const Bracelet3DShowcase: React.FC<{ lang: Language }> = ({ lang }) => {
       microBump.dispose();
       renderer.dispose();
     };
-  }, [lang]);
+  }, []);
 
   const currentPart = t.parts[activeStage];
 
