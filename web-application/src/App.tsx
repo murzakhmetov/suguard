@@ -135,14 +135,38 @@ function App() {
   const [activeFaq, setActiveFaq] = useState<number | null>(0);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
+  // Состояния для интерактивного киноблока WHOOP / Apple Health с suguard-wrist.mp4
+  const [wristMuted, setWristMuted] = useState(true);
+  const [activeCinemaTab, setActiveCinemaTab] = useState<'wrist' | 'studio'>('wrist');
+  const [scanPhase, setScanPhase] = useState(0);
+
   const pageRef = useRef<HTMLDivElement>(null);
   const featureBodyRefs = useRef<(HTMLDivElement | null)[]>([]);
   const featureMediaRef = useRef<HTMLDivElement>(null);
   const appScrollSectionRef = useRef<HTMLDivElement>(null);
   const appPhoneCardRef = useRef<HTMLDivElement>(null);
   const faqBodyRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const cinemaWrapRef = useRef<HTMLDivElement>(null);
+  const cinemaCardRef = useRef<HTMLDivElement>(null);
+  const wristVideoRef = useRef<HTMLVideoElement>(null);
+
+  const handleWristTimeUpdate = () => {
+    if (!wristVideoRef.current) return;
+    const cur = wristVideoRef.current.currentTime;
+    if (cur < 3.2) setScanPhase(0);
+    else if (cur < 6.8) setScanPhase(1);
+    else setScanPhase(2);
+  };
+
+  const toggleWristSound = () => {
+    if (!wristVideoRef.current) return;
+    const nextMuted = !wristMuted;
+    wristVideoRef.current.muted = nextMuted;
+    setWristMuted(nextMuted);
+  };
 
   const navLinks = [
+    { label: 'Оптический ИИ', href: '#optical-cinema' },
     { label: t.nav.ecosystem, href: '#ecosystem' },
     { label: '3D Инженерия', href: '#hardware-3d' },
     { label: t.nav.app, href: '#app' },
@@ -368,6 +392,28 @@ function App() {
         }
       );
 
+      // Расширяющийся киноэкран в стиле Apple Health / WHOOP при скролле
+      if (cinemaWrapRef.current && cinemaCardRef.current) {
+        gsap.fromTo(
+          cinemaCardRef.current,
+          {
+            scale: 0.86,
+            borderRadius: '44px',
+          },
+          {
+            scale: 1,
+            borderRadius: '20px',
+            ease: 'none',
+            scrollTrigger: {
+              trigger: cinemaWrapRef.current,
+              start: 'top 85%',
+              end: 'top 15%',
+              scrub: 0.8,
+            },
+          }
+        );
+      }
+
       gsap.utils.toArray<HTMLElement>('.gsap-section-reveal').forEach((el) => {
         gsap.fromTo(
           el,
@@ -496,9 +542,9 @@ function App() {
                 variant="primary"
               />
               <GsapButton
-                label={t.hero.watchDemo}
-                badge="Keynote 4K"
-                onClick={() => setIsVideoModalOpen(true)}
+                label="Как работает лазер (Видео)"
+                badge="PPG 660 нм"
+                href="#optical-cinema"
                 variant="glass"
               />
               <GsapButton
@@ -552,7 +598,116 @@ function App() {
       </section>
 
       {/* =================================================================
-          2. ПОЛНОЭКРАННАЯ 3D-РАЗБОРКА БРАСЛЕТА ПРИ СКРОЛЛЕ
+          2. ДИНАМИЧНЫЙ КИНОЭКРАН WHOOP / APPLE HEALTH (ВИДЕО НА РУКЕ С ЛАЗЕРОМ)
+          ================================================================= */}
+      <section ref={cinemaWrapRef} className="whoop-cinema-section" id="optical-cinema">
+        <div className="whoop-container">
+          <div className="cinema-header-row gsap-section-reveal">
+            <div>
+              <span className="whoop-kicker">OPTICAL PPG BIO-SENSING IN ACTION</span>
+              <h2 className="whoop-h2">Точность в каждом импульсе.</h2>
+            </div>
+
+            {/* Переключатель между двумя твоими видеороликами */}
+            <div className="cinema-tabs">
+              <button
+                type="button"
+                onClick={() => setActiveCinemaTab('wrist')}
+                className={`cinema-tab-btn ${activeCinemaTab === 'wrist' ? 'active' : ''}`}
+              >
+                01. Сканирование на руке (Лазер + Пульс)
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveCinemaTab('studio')}
+                className={`cinema-tab-btn ${activeCinemaTab === 'studio' ? 'active' : ''}`}
+              >
+                02. Обзор браслета 360° в студии
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Расширяющийся при скролле широкоформатный плеер с живым HUD-оверлеем */}
+        <div className="cinema-expanding-container">
+          <div ref={cinemaCardRef} className="cinema-stage-card">
+            <video
+              ref={wristVideoRef}
+              key={activeCinemaTab}
+              src={activeCinemaTab === 'wrist' ? '/suguard-wrist.mp4' : '/suguard-studio.mp4'}
+              autoPlay
+              loop
+              muted={wristMuted}
+              playsInline
+              onTimeUpdate={handleWristTimeUpdate}
+              className="cinema-main-video"
+            />
+
+            <div className="cinema-gradient-overlay" />
+
+            {/* Верхняя панель телеметрии прямо поверх видео */}
+            <div className="cinema-hud-top">
+              <div className="cinema-live-badge">
+                <span className="eyebrow-live-dot" />
+                <span>
+                  {activeCinemaTab === 'wrist'
+                    ? 'MAX30102 LASER SPECTROSCOPY • ACTIVE SCAN'
+                    : 'SUGUARD UNIBODY • 360° STUDIO ORBIT'}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={toggleWristSound}
+                className="cinema-sound-btn"
+              >
+                {wristMuted ? '🔇 Включить звук диктора' : '🔊 Звук включен'}
+              </button>
+            </div>
+
+            {/* Нижний синхронизированный с видео телеметрический бар */}
+            <div className="cinema-hud-bottom">
+              <div className="cinema-steps-indicator">
+                <div className={`cinema-step-box ${scanPhase === 0 ? 'active' : ''}`}>
+                  <span className="step-time">00:00 — 00:03</span>
+                  <h4>Контакт с кожей</h4>
+                  <p>Калибровка базовой линии и отсечение внешнего света</p>
+                </div>
+
+                <div className={`cinema-step-box ${scanPhase === 1 ? 'active' : ''}`}>
+                  <span className="step-time">00:03 — 00:06</span>
+                  <h4>Импульс 660 / 880 нм</h4>
+                  <p>Красный и ИК-лазер просвечивают капилляры запястья</p>
+                </div>
+
+                <div className={`cinema-step-box ${scanPhase === 2 ? 'active' : ''}`}>
+                  <span className="step-time">00:06 — 00:09</span>
+                  <h4>ИИ-спектральный анализ</h4>
+                  <p>Расчёт уровня глюкозы, SpO2 и волны пульса в реальном времени</p>
+                </div>
+              </div>
+
+              <div className="cinema-live-readout">
+                <div className="readout-item">
+                  <span className="readout-lbl">ГЛЮКОЗА</span>
+                  <span className="readout-val">5.8 mmol/L</span>
+                </div>
+                <div className="readout-item">
+                  <span className="readout-lbl">КИСЛОРОД</span>
+                  <span className="readout-val teal">98% SpO2</span>
+                </div>
+                <div className="readout-item">
+                  <span className="readout-lbl">ПУЛЬС</span>
+                  <span className="readout-val">72 BPM</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =================================================================
+          3. ПОЛНОЭКРАННАЯ 3D-РАЗБОРКА БРАСЛЕТА ПРИ СКРОЛЛЕ
           ================================================================= */}
       <Bracelet3DShowcase lang={lang} />
 
