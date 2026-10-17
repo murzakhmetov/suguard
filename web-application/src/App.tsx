@@ -351,6 +351,17 @@ function App() {
   }, [activeFaq]);
 
   useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileOpen]);
+
+  useEffect(() => {
     const handleScroll = () => {
       if (deckScrollSectionRef.current) {
         const rect = deckScrollSectionRef.current.getBoundingClientRect();
@@ -520,7 +531,7 @@ function App() {
             />
 
             <button
-              className="whoop-burger"
+              className={`whoop-burger ${mobileOpen ? 'open' : ''}`}
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-label="Menu"
             >
@@ -532,18 +543,62 @@ function App() {
       </header>
 
       {mobileOpen && (
-        <div className="whoop-mobile-drawer">
-          {navLinks.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              onClick={() => setMobileOpen(false)}
-              className="whoop-mobile-link"
-            >
-              {link.label}
-            </a>
-          ))}
-        </div>
+        <>
+          <div
+            className="whoop-mobile-overlay"
+            onClick={() => setMobileOpen(false)}
+          />
+          <div className="whoop-mobile-drawer">
+            <div className="mobile-drawer-header">
+              <span className="mobile-drawer-brand">НАВИГАЦИЯ</span>
+              <div className="whoop-lang-pill">
+                {(['ru', 'en', 'kk'] as Language[]).map((l) => (
+                  <button
+                    key={l}
+                    onClick={() => {
+                      setLang(l);
+                      setMobileOpen(false);
+                    }}
+                    className={`whoop-lang-btn ${lang === l ? 'active' : ''}`}
+                  >
+                    {l.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mobile-drawer-links">
+              {navLinks.map((link, idx) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileOpen(false)}
+                  className="whoop-mobile-link"
+                >
+                  <span className="mobile-link-num">0{idx + 1}</span>
+                  <span className="mobile-link-text">{link.label}</span>
+                  <span className="mobile-link-arrow">→</span>
+                </a>
+              ))}
+            </div>
+
+            <div className="mobile-drawer-footer">
+              <a
+                href="#pricing"
+                onClick={() => setMobileOpen(false)}
+                className="mobile-drawer-cta"
+              >
+                <span>{t.hero.orderDevice}</span>
+                <span className="mobile-cta-price">35 000 ₸</span>
+              </a>
+              <div className="mobile-drawer-contacts">
+                <a href="tel:+77056612373">+7 705 661 2373</a>
+                <span>•</span>
+                <a href="mailto:suguard.kz@gmail.com">suguard.kz@gmail.com</a>
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       <section className="whoop-hero">

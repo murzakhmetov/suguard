@@ -145,37 +145,209 @@
 
 .whoop-burger {
   display: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-hairline);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
   flex-direction: column;
   gap: 5px;
-  padding: 6px;
+  padding: 0;
+  transition: all 0.25s ease;
+  z-index: 101;
 }
 
 .whoop-burger span {
-  width: 20px;
-  height: 1.8px;
-  background: var(--text-white);
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: #ffffff;
+  border-radius: 2px;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+}
+
+.whoop-burger.open {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: var(--accent);
+}
+
+.whoop-burger.open span:nth-child(1) {
+  transform: translateY(3.5px) rotate(45deg);
+}
+
+.whoop-burger.open span:nth-child(2) {
+  transform: translateY(-3.5px) rotate(-45deg);
+}
+
+.whoop-mobile-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 98;
+  animation: mobileFadeIn 0.25s ease;
 }
 
 .whoop-mobile-drawer {
   position: fixed;
-  inset: 84px 20px auto 20px;
-  background: rgba(14, 15, 19, 0.96);
-  backdrop-filter: blur(24px);
+  top: 84px;
+  left: 16px;
+  right: 16px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  background: rgba(13, 15, 20, 0.96);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
   border: 1px solid var(--border-specular);
-  border-radius: 24px;
-  padding: 24px;
+  border-radius: 28px;
+  padding: 24px 20px 24px;
   z-index: 99;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 20px;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.9);
+  animation: mobileSlideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes mobileFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes mobileSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.mobile-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.mobile-drawer-brand {
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--accent);
+}
+
+.mobile-drawer-links {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .whoop-mobile-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: 14px;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-white);
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border-hairline);
+  transition: all 0.2s ease;
+  background: transparent;
+  text-decoration: none;
+}
+
+.whoop-mobile-link:hover,
+.whoop-mobile-link:active {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--accent);
+}
+
+.mobile-link-num {
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-right: 14px;
+}
+
+.mobile-link-text {
+  flex: 1;
+}
+
+.mobile-link-arrow {
+  color: var(--text-muted);
+  font-size: 16px;
+  transition: transform 0.2s ease;
+}
+
+.whoop-mobile-link:hover .mobile-link-arrow {
+  transform: translateX(4px);
+  color: var(--accent);
+}
+
+.mobile-drawer-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-hairline);
+}
+
+.mobile-drawer-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-radius: 999px;
+  background: var(--text-white);
+  color: var(--bg-obsidian);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  transition: background 0.2s ease;
+}
+
+.mobile-drawer-cta:hover,
+.mobile-drawer-cta:active {
+  background: var(--accent);
+  color: #030705;
+}
+
+.mobile-cta-price {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.12);
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.mobile-drawer-contacts {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-titanium);
+}
+
+.mobile-drawer-contacts a {
+  color: var(--text-titanium);
+  text-decoration: none;
+}
+
+.mobile-drawer-contacts a:hover {
+  color: var(--text-white);
 }
 
 .whoop-hero {
@@ -1551,18 +1723,241 @@
   }
 }
 
-@media (max-width: 640px) {
-  .whoop-metrics-bar,
-  .bento-macros-grid {
+@media (max-width: 768px) {
+  .whoop-container {
+    padding: 0 16px;
+  }
+
+  .whoop-navbar {
+    padding: 0 14px;
+    height: 52px;
+  }
+
+  .whoop-nav-actions .gsap-expanding-btn {
+    display: none;
+  }
+
+  .whoop-hero {
+    padding: 108px 0 54px;
+  }
+
+  .whoop-hero-title {
+    font-size: clamp(28px, 7.5vw, 42px);
+    line-height: 1.1;
+    margin-bottom: 18px;
+  }
+
+  .whoop-hero-sub {
+    font-size: 15px;
+    margin-bottom: 28px;
+  }
+
+  .whoop-hero-buttons {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+  }
+
+  .whoop-hero-buttons .gsap-expanding-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .whoop-metrics-bar {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 20px 16px;
+  }
+
+  .metric-giant {
+    font-size: 28px;
+  }
+
+  .metric-title {
+    font-size: 13px;
+  }
+
+  .metric-sub {
+    font-size: 11px;
+  }
+
+  .whoop-cinema-section {
+    padding: 56px 0 64px;
+  }
+
+  .cinema-header-row {
+    margin-bottom: 24px;
+  }
+
+  .cinema-tabs {
+    flex-direction: column;
+    width: 100%;
+    border-radius: 18px;
+  }
+
+  .cinema-tab-btn {
+    width: 100%;
+    text-align: center;
+    padding: 8px 12px;
+  }
+
+  .cinema-expanding-container {
+    padding: 0 12px;
+  }
+
+  .cinema-hud-top {
+    top: 12px;
+    left: 12px;
+    right: 12px;
+  }
+
+  .cinema-sound-btn {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+
+  .cinema-live-badge {
+    padding: 6px 12px;
+    font-size: 9px;
+  }
+
+  .cinema-hud-bottom {
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+  }
+
+  .cinema-live-readout {
+    padding: 10px 14px;
+    gap: 12px;
+    width: 100%;
+    justify-content: space-around;
+  }
+
+  .readout-val {
+    font-size: 13px;
+  }
+
+  .readout-lbl {
+    font-size: 8px;
+  }
+
+  .deck-scrolly-section {
+    height: auto;
+  }
+
+  .deck-scrolly-sticky {
+    position: relative;
+    height: auto;
+    padding-top: 36px;
+    padding-bottom: 24px;
+  }
+
+  .apple-interactive-deck {
     grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .deck-visual-stage {
+    height: 280px;
+    border-radius: 20px;
+  }
+
+  .deck-expanding-item {
+    padding: 14px 12px;
+  }
+
+  .deck-expanding-item.active {
+    padding: 16px 14px;
+  }
+
+  .deck-item-title {
+    font-size: 17px;
+  }
+
+  .deck-item-metrics {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .deck-mini-val {
+    font-size: 13px;
+  }
+
+  .app-scrolly-section {
+    height: auto;
+  }
+
+  .app-scrolly-sticky {
+    position: relative;
+    height: auto;
+    padding-top: 36px;
+    padding-bottom: 24px;
+  }
+
+  .app-scrolly-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .titanium-phone-large {
+    max-width: 260px;
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .whoop-metrics-bar {
+    grid-template-columns: 1fr 1fr;
   }
 
   .whoop-flagship-order {
-    padding: 28px 20px;
+    padding: 24px 16px;
+  }
+
+  .order-price-tag {
+    font-size: 32px;
+  }
+
+  .order-cta-group {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .order-cta-group .gsap-expanding-btn {
+    width: 100%;
+    justify-content: center;
   }
 
   .phone-side {
     display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .whoop-navbar-wrapper {
+    padding: 0 12px;
+    top: 12px;
+  }
+
+  .whoop-navbar {
+    height: 50px;
+    padding: 0 14px;
+  }
+
+  .whoop-nav-actions .whoop-lang-pill {
+    display: none;
+  }
+
+  .whoop-metrics-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .whoop-footer-bottom {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
   }
 }
 
