@@ -2031,51 +2031,135 @@
 }
 
 /* ============================================================================
-   APPLE PRO INTERACTIVE EXPANDING DECK (ВМЕСТО 4 КОРОБОК СО СКРИНШОТА 1)
+   APPLE PRO INTERACTIVE EXPANDING DECK (SCROLL-DRIVEN)
    ============================================================================ */
+.deck-scrolly-section {
+  position: relative;
+  height: 380vh;
+  border-bottom: 1px solid var(--border-hairline);
+  background: var(--bg-obsidian);
+  scroll-margin-top: 96px;
+}
+
+.deck-scrolly-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding-top: 86px; /* Защита от перекрытия верхним навбаром */
+  padding-bottom: 24px;
+}
+
+.deck-scrolly-inner {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+}
+
+.deck-scrolly-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border-hairline);
+  padding-bottom: 16px;
+}
+
+.deck-scrolly-title {
+  font-size: clamp(26px, 3.2vw, 40px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text-white);
+  margin-bottom: 4px;
+}
+
+.deck-scrolly-lead {
+  font-size: 14px;
+  color: var(--text-titanium);
+  max-width: 600px;
+  line-height: 1.5;
+}
+
+.deck-scrolly-counter {
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+}
+
 .apple-interactive-deck {
   display: grid;
-  grid-template-columns: 1fr 1.1fr;
-  gap: 48px;
-  align-items: stretch;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 40px;
+  align-items: center;
 }
 
 .deck-accordion-column {
   display: flex;
   flex-direction: column;
-  border-top: 1px solid var(--border-hairline);
+  gap: 10px;
 }
 
 .deck-expanding-item {
-  border-bottom: 1px solid var(--border-hairline);
-  padding: 26px 8px;
+  position: relative;
+  display: flex;
+  gap: 16px;
+  align-items: stretch;
+  border: 1px solid transparent;
+  border-radius: 18px;
+  padding: 14px 18px;
   cursor: pointer;
-  transition: background 0.25s ease;
+  background: transparent;
+  transition: all 0.3s ease;
 }
 
 .deck-expanding-item.active {
-  padding: 28px 20px;
-  background: rgba(255, 255, 255, 0.025);
-  border-radius: 20px;
-  border-bottom-color: transparent;
+  padding: 16px 20px;
+  background: var(--bg-surface);
+  border-color: var(--border-specular);
+}
+
+.deck-item-rail {
+  width: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.deck-item-rail-fill {
+  width: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: height 0.1s linear;
+}
+
+.deck-item-content {
+  flex: 1;
 }
 
 .deck-item-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 14px;
 }
 
 .deck-item-left {
   display: flex;
   align-items: baseline;
-  gap: 18px;
+  gap: 14px;
 }
 
 .deck-item-num {
   font-family: monospace;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--text-muted);
 }
@@ -2089,11 +2173,11 @@
   font-weight: 700;
   letter-spacing: 0.14em;
   color: var(--accent);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .deck-item-title {
-  font-size: 22px;
+  font-size: 19px;
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--text-titanium);
@@ -2106,7 +2190,7 @@
 }
 
 .deck-item-toggle {
-  font-size: 20px;
+  font-size: 18px;
   color: var(--text-muted);
 }
 
@@ -2118,28 +2202,29 @@
   height: 0;
   opacity: 0;
   overflow: hidden;
-  padding-left: 34px;
+  padding-left: 26px;
 }
 
 .deck-item-subtitle {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-white);
-  margin-bottom: 8px;
+  margin-top: 6px;
+  margin-bottom: 6px;
 }
 
 .deck-item-desc {
-  font-size: 14px;
-  line-height: 1.65;
+  font-size: 13px;
+  line-height: 1.55;
   color: var(--text-titanium);
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .deck-item-metrics {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-  padding-top: 16px;
+  gap: 10px;
+  padding-top: 10px;
   border-top: 1px solid var(--border-hairline);
 }
 
@@ -2150,13 +2235,13 @@
 }
 
 .deck-mini-val {
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 800;
   color: var(--text-white);
 }
 
 .deck-mini-lbl {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -2172,7 +2257,7 @@
 .deck-visual-stage {
   position: relative;
   width: 100%;
-  height: 540px;
+  height: 480px;
   border-radius: 28px;
   overflow: hidden;
   background: #07080b;

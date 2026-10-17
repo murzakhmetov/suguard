@@ -141,6 +141,8 @@ function App() {
   const [scanPhase, setScanPhase] = useState(0);
 
   const pageRef = useRef<HTMLDivElement>(null);
+  const deckScrollSectionRef = useRef<HTMLDivElement>(null);
+  const [deckScrollProgress, setDeckScrollProgress] = useState<number>(0);
   const featureBodyRefs = useRef<(HTMLDivElement | null)[]>([]);
   const featureMediaRef = useRef<HTMLDivElement>(null);
   const appScrollSectionRef = useRef<HTMLDivElement>(null);
@@ -221,8 +223,8 @@ function App() {
         { val: '7 суток', lbl: 'Автономность Li-Po' },
         { val: 'BLE 5.3', lbl: 'Радиомодуль ESP32' },
       ],
-      mediaType: 'image' as const,
-      mediaSrc: '/hardwear.jpeg',
+      mediaType: 'video' as const,
+      mediaSrc: '/suguard-studio.mp4',
       fallbackImg: '/hardwear.jpeg',
       caption: 'Ударопрочный матовый корпус на гипоаллергенном ремешке Pin-and-Tuck',
     },
@@ -348,28 +350,52 @@ function App() {
     });
   }, [activeFaq]);
 
-  // GSAP Scroll-Driven анимация для секции с телефоном (#app)
+  // GSAP Scroll-Driven анимация для Экосистемы (#ecosystem) и Телефона (#app)
   useEffect(() => {
     const handleScroll = () => {
-      if (!appScrollSectionRef.current) return;
-      const rect = appScrollSectionRef.current.getBoundingClientRect();
-      const scrollable = appScrollSectionRef.current.offsetHeight - window.innerHeight;
-      if (scrollable <= 0) return;
+      // 1. Скролл-драйвен переключение карточек в Экосистеме (#ecosystem)
+      if (deckScrollSectionRef.current) {
+        const rect = deckScrollSectionRef.current.getBoundingClientRect();
+        const scrollable = deckScrollSectionRef.current.offsetHeight - window.innerHeight;
+        if (scrollable > 0) {
+          const prog = Math.max(0, Math.min(1, -rect.top / scrollable));
+          setDeckScrollProgress(prog);
 
-      const prog = Math.max(0, Math.min(1, -rect.top / scrollable));
-      setAppScrollProgress(prog);
-
-      const nextIdx = Math.min(3, Math.floor(prog * 3.99));
-      setActiveAppScreen((prev) => {
-        if (prev !== nextIdx && appPhoneCardRef.current) {
-          gsap.fromTo(
-            appPhoneCardRef.current,
-            { y: 28, scale: 0.95, opacity: 0.4, rotateY: -10 },
-            { y: 0, scale: 1, opacity: 1, rotateY: 0, duration: 0.55, ease: 'power3.out' }
-          );
+          const nextFeature = Math.min(3, Math.floor(prog * 3.99));
+          setActiveFeature((prev) => {
+            if (prev !== nextFeature && featureMediaRef.current) {
+              gsap.fromTo(
+                featureMediaRef.current,
+                { scale: 0.94, opacity: 0.3, filter: 'blur(8px)' },
+                { scale: 1, opacity: 1, filter: 'blur(0px)', duration: 0.5, ease: 'power3.out' }
+              );
+            }
+            return nextFeature;
+          });
         }
-        return nextIdx;
-      });
+      }
+
+      // 2. Скролл-драйвен переключение экранов в Приложении (#app)
+      if (appScrollSectionRef.current) {
+        const rect = appScrollSectionRef.current.getBoundingClientRect();
+        const scrollable = appScrollSectionRef.current.offsetHeight - window.innerHeight;
+        if (scrollable > 0) {
+          const prog = Math.max(0, Math.min(1, -rect.top / scrollable));
+          setAppScrollProgress(prog);
+
+          const nextIdx = Math.min(3, Math.floor(prog * 3.99));
+          setActiveAppScreen((prev) => {
+            if (prev !== nextIdx && appPhoneCardRef.current) {
+              gsap.fromTo(
+                appPhoneCardRef.current,
+                { y: 28, scale: 0.95, opacity: 0.4, rotateY: -10 },
+                { y: 0, scale: 1, opacity: 1, rotateY: 0, duration: 0.55, ease: 'power3.out' }
+              );
+            }
+            return nextIdx;
+          });
+        }
+      }
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -435,6 +461,21 @@ function App() {
 
     return () => ctx.revert();
   }, [lang]);
+
+  // Плавный скролл к нужной карточке экосистемы по клику
+  const scrollToDeckChapter = (idx: number) => {
+    if (!deckScrollSectionRef.current) {
+      setActiveFeature(idx);
+      return;
+    }
+    const rect = deckScrollSectionRef.current.getBoundingClientRect();
+    const absTop = window.scrollY + rect.top;
+    const scrollable = deckScrollSectionRef.current.offsetHeight - window.innerHeight;
+    window.scrollTo({
+      top: absTop + scrollable * (idx / 3.0),
+      behavior: 'smooth',
+    });
+  };
 
   // Плавный скролл к нужному экрану телефона по клику на карточку слева
   const scrollToAppChapter = (idx: number) => {
@@ -712,94 +753,116 @@ function App() {
       <Bracelet3DShowcase lang={lang} />
 
       {/* =================================================================
-          3. ПРЕМИАЛЬНЫЙ ИНТЕРАКТИВНЫЙ ШОУКЕЙС ТЕХНОЛОГИЙ (ВМЕСТО 4 КОРОБОК СО СКРИНШОТА 1)
-          Каждая кнопка плавно раскрывается через GSAP и меняет медиа-сцену справа
+          3. ПРЕМИАЛЬНЫЙ ИНТЕРАКТИВНЫЙ ШОУКЕЙС ТЕХНОЛОГИЙ (SCROLL-DRIVEN)
+          Каждая карточка автоматически раскрывается при скролле и меняет медиа-сцену
           ================================================================= */}
-      <section className="whoop-section" id="ecosystem">
-        <div className="whoop-container" id="features">
-          <div className="whoop-section-head gsap-section-reveal">
-            <span className="whoop-kicker">{t.ecosystem.badge}</span>
-            <h2 className="whoop-h2">{t.ecosystem.title}</h2>
-            <p className="whoop-lead">{t.ecosystem.subtitle}</p>
-          </div>
-
-          <div className="apple-interactive-deck gsap-section-reveal">
-            {/* Левая колонка: Раскрывающиеся с GSAP-анимацией кнопки технологий */}
-            <div className="deck-accordion-column">
-              {ecosystemModules.map((mod, idx) => {
-                const isOpen = activeFeature === idx;
-                return (
-                  <div
-                    key={mod.num}
-                    onClick={() => setActiveFeature(idx)}
-                    className={`deck-expanding-item ${isOpen ? 'active' : ''}`}
-                  >
-                    <div className="deck-item-header">
-                      <div className="deck-item-left">
-                        <span className="deck-item-num">{mod.num}</span>
-                        <div>
-                          <div className="deck-item-tag">{mod.tag}</div>
-                          <h3 className="deck-item-title">{mod.title}</h3>
-                        </div>
-                      </div>
-                      <span className="deck-item-toggle">{isOpen ? '−' : '+'}</span>
-                    </div>
-
-                    {/* Раскрывающееся тело кнопки (управляется через GSAP) */}
-                    <div
-                      ref={(el) => {
-                        featureBodyRefs.current[idx] = el;
-                      }}
-                      className="deck-item-body"
-                    >
-                      <div className="deck-item-subtitle">{mod.subtitle}</div>
-                      <p className="deck-item-desc">{mod.desc}</p>
-
-                      <div className="deck-item-metrics">
-                        {mod.metrics.map((m, mIdx) => (
-                          <div key={mIdx} className="deck-mini-stat">
-                            <span className="deck-mini-val">{m.val}</span>
-                            <span className="deck-mini-lbl">{m.lbl}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+      <section ref={deckScrollSectionRef} className="deck-scrolly-section" id="ecosystem">
+        <div className="deck-scrolly-sticky">
+          <div className="whoop-container deck-scrolly-inner" id="features">
+            <div className="deck-scrolly-header">
+              <div>
+                <span className="whoop-kicker">{t.ecosystem.badge}</span>
+                <h2 className="deck-scrolly-title">{t.ecosystem.title}</h2>
+                <p className="deck-scrolly-lead">{t.ecosystem.subtitle}</p>
+              </div>
+              <div className="deck-scrolly-counter">
+                МОДУЛЬ 0{activeFeature + 1} / 04
+              </div>
             </div>
 
-            {/* Правая колонка: Крупная визуальная сцена с плавным GSAP-переходом */}
-            <div className="deck-visual-column">
-              <div ref={featureMediaRef} className="deck-visual-stage">
-                {ecosystemModules[activeFeature].mediaType === 'video' ? (
-                  <video
-                    key={ecosystemModules[activeFeature].mediaSrc}
-                    src={ecosystemModules[activeFeature].mediaSrc}
-                    poster={ecosystemModules[activeFeature].fallbackImg}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    onError={(e) => {
-                      const vid = e.currentTarget;
-                      if (!vid.src.endsWith('/video.mp4')) {
-                        vid.src = '/video.mp4';
-                      }
-                    }}
-                    className="deck-stage-media"
-                  />
-                ) : (
-                  <img
-                    src={ecosystemModules[activeFeature].mediaSrc}
-                    alt={ecosystemModules[activeFeature].title}
-                    className="deck-stage-media"
-                  />
-                )}
+            <div className="apple-interactive-deck">
+              {/* Левая колонка: Раскрывающиеся с GSAP-анимацией кнопки технологий */}
+              <div className="deck-accordion-column">
+                {ecosystemModules.map((mod, idx) => {
+                  const isOpen = activeFeature === idx;
+                  const localProg = Math.max(
+                    0,
+                    Math.min(1, (deckScrollProgress - idx * 0.25) / 0.25)
+                  );
+                  return (
+                    <div
+                      key={mod.num}
+                      onClick={() => scrollToDeckChapter(idx)}
+                      className={`deck-expanding-item ${isOpen ? 'active' : ''}`}
+                    >
+                      {/* Вертикальная линия прогресса скролла */}
+                      <div className="deck-item-rail">
+                        <div
+                          className="deck-item-rail-fill"
+                          style={{
+                            height: isOpen
+                              ? `${localProg * 100}%`
+                              : idx < activeFeature
+                              ? '100%'
+                              : '0%',
+                          }}
+                        />
+                      </div>
 
-                <div className="deck-stage-caption">
-                  <span className="caption-dot" />
-                  <span>{ecosystemModules[activeFeature].caption}</span>
+                      <div className="deck-item-content">
+                        <div className="deck-item-header">
+                          <div className="deck-item-left">
+                            <span className="deck-item-num">{mod.num}</span>
+                            <div>
+                              <div className="deck-item-tag">{mod.tag}</div>
+                              <h3 className="deck-item-title">{mod.title}</h3>
+                            </div>
+                          </div>
+                          <span className="deck-item-toggle">{isOpen ? '−' : '+'}</span>
+                        </div>
+
+                        {/* Раскрывающееся тело кнопки (управляется через GSAP) */}
+                        <div
+                          ref={(el) => {
+                            featureBodyRefs.current[idx] = el;
+                          }}
+                          className="deck-item-body"
+                        >
+                          <div className="deck-item-subtitle">{mod.subtitle}</div>
+                          <p className="deck-item-desc">{mod.desc}</p>
+
+                          <div className="deck-item-metrics">
+                            {mod.metrics.map((m, mIdx) => (
+                              <div key={mIdx} className="deck-mini-stat">
+                                <span className="deck-mini-val">{m.val}</span>
+                                <span className="deck-mini-lbl">{m.lbl}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Правая колонка: Крупная визуальная сцена с плавным GSAP-переходом */}
+              <div className="deck-visual-column">
+                <div ref={featureMediaRef} className="deck-visual-stage">
+                  {ecosystemModules[activeFeature].mediaType === 'video' ? (
+                    <video
+                      key={ecosystemModules[activeFeature].mediaSrc}
+                      src={ecosystemModules[activeFeature].mediaSrc}
+                      poster={ecosystemModules[activeFeature].fallbackImg}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      className="deck-stage-media"
+                    />
+                  ) : (
+                    <img
+                      key={ecosystemModules[activeFeature].mediaSrc}
+                      src={ecosystemModules[activeFeature].mediaSrc}
+                      alt={ecosystemModules[activeFeature].title}
+                      className="deck-stage-media"
+                    />
+                  )}
+
+                  <div className="deck-stage-caption">
+                    <span className="caption-dot" />
+                    <span>{ecosystemModules[activeFeature].caption}</span>
+                  </div>
                 </div>
               </div>
             </div>
