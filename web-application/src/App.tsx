@@ -510,16 +510,18 @@ function App() {
             </div>
           </div>
 
-          {/* Чистая титановая витрина экранов приложения без «ИИ-слоп» виджетов по бокам */}
-          <div className="hero-clean-showcase hero-gsap-fade">
-            <div className="titanium-phone phone-side">
-              <img src="/suguard5.jpeg" alt="Blood Glucose Chart" />
-            </div>
-            <div className="titanium-phone phone-main">
-              <img src="/suguard2.jpeg" alt="SuGuard Main Dashboard" />
-            </div>
-            <div className="titanium-phone phone-side">
-              <img src="/suguard1.jpeg" alt="AI Nutrition Scanner" />
+          {/* БЕСШОВНАЯ СТУДИЙНАЯ ВИДЕО-СЦЕНА С ПАРЯЩИМ БРАСЛЕТОМ SUGUARD */}
+          <div className="hero-studio-video-stage hero-gsap-fade">
+            <div className="studio-video-wrapper">
+              <video
+                src="/suguard-studio.mp4"
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="studio-blend-video"
+              />
+              <div className="studio-video-vignette" />
             </div>
           </div>
 
