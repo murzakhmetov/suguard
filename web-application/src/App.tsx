@@ -1,281 +1,161 @@
-import { useState, useRef } from 'react';
-import { motion, useScroll, useTransform, useSpring, useMotionValue, useMotionTemplate } from 'framer-motion';
+import { useEffect, useRef, useState } from 'react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import './App.css';
-import './extreme.css';
 import { type Language, translations } from './translations';
+import { Bracelet3DShowcase } from './Bracelet3DShowcase';
 
-const RevealText = ({ text, className = "" }: { text: string, className?: string }) => {
-  const words = text.split(" ");
-  return (
-    <motion.span
-      key={text}
-      initial="hidden"
-      animate="visible"
-      variants={{
-        visible: { transition: { staggerChildren: 0.05 } },
-        hidden: {}
-      }}
-      className={className}
-      style={{ display: "inline" }}
-    >
-      {words.map((word, i) => (
-        <span key={i} style={{ display: "inline-block", overflow: "hidden", paddingRight: "0.22em", verticalAlign: "top" }}>
-          <motion.span
-            variants={{
-              hidden: { y: "100%", opacity: 0 },
-              visible: {
-                y: "0%",
-                opacity: 1,
-                transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] }
-              }
-            }}
-            style={{ display: "inline-block" }}
-          >
-            {word}
-          </motion.span>
-        </span>
-      ))}
-    </motion.span>
-  );
+gsap.registerPlugin(ScrollTrigger);
+
+// Живой биометрический график PPG + Глюкоза
+const LiveTelemetryCanvas = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d')!;
+    let animId: number;
+    let phase = 0;
+
+    const render = () => {
+      animId = requestAnimationFrame(render);
+      const clientW = canvas.clientWidth;
+      const clientH = canvas.clientHeight;
+      if (!clientW || !clientH) return;
+      const w = (canvas.width = clientW * window.devicePixelRatio);
+      const h = (canvas.height = clientH * window.devicePixelRatio);
+      ctx.clearRect(0, 0, w, h);
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+      ctx.lineWidth = 1;
+      const step = 28 * window.devicePixelRatio;
+      for (let x = 0; x < w; x += step) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+      }
+      for (let y = 0; y < h; y += step) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+
+      // Кривая тренда глюкозы
+      ctx.beginPath();
+      for (let x = 0; x < w; x += 3) {
+        const normX = x / w;
+        const y =
+          h * 0.58 +
+          Math.sin(normX * 5 + phase * 0.6) * (h * 0.14) +
+          Math.cos(normX * 11 - phase * 0.4) * (h * 0.05);
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = 'rgba(251, 191, 36, 0.45)';
+      ctx.lineWidth = 2 * window.devicePixelRatio;
+      ctx.stroke();
+
+      // Пульсовая волна PPG 660/880nm
+      ctx.beginPath();
+      for (let x = 0; x < w; x += 2) {
+        const normX = x / w;
+        const cycle = (normX * 4.5 + phase) % 1;
+        const systolic = Math.exp(-Math.pow((cycle - 0.22) * 11, 2)) * 0.36;
+        const dicrotic = Math.exp(-Math.pow((cycle - 0.46) * 14, 2)) * 0.14;
+        const y = h * 0.62 - (systolic + dicrotic) * h;
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = '#00f19f';
+      ctx.lineWidth = 2.5 * window.devicePixelRatio;
+      ctx.shadowColor = 'rgba(0, 241, 159, 0.5)';
+      ctx.shadowBlur = 12;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      ctx.lineTo(w, h);
+      ctx.lineTo(0, h);
+      ctx.closePath();
+      const grad = ctx.createLinearGradient(0, h * 0.2, 0, h);
+      grad.addColorStop(0, 'rgba(0, 241, 159, 0.22)');
+      grad.addColorStop(1, 'rgba(0, 241, 159, 0.0)');
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      phase += 0.012;
+    };
+
+    render();
+    return () => cancelAnimationFrame(animId);
+  }, []);
+
+  return <canvas ref={canvasRef} className="telemetry-wave-canvas" />;
 };
-
-const SpotlightCard = ({ children, className = "" }: any) => {
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-
-  function handleMouseMove({ currentTarget, clientX, clientY }: React.MouseEvent) {
-    const { left, top } = currentTarget.getBoundingClientRect();
-    mouseX.set(clientX - left);
-    mouseY.set(clientY - top);
-  }
-
-  return (
-    <div
-      className={`spotlight-wrapper ${className}`}
-      onMouseMove={handleMouseMove}
-    >
-      <motion.div
-        className="spotlight-layer"
-        style={{
-          background: useMotionTemplate`
-            radial-gradient(
-              600px circle at ${mouseX}px ${mouseY}px,
-              rgba(0, 212, 170, 0.12),
-              transparent 80%
-            )
-          `,
-        }}
-      />
-      <div className="spotlight-content" style={{ zIndex: 2 }}>{children}</div>
-    </div>
-  );
-};
-
-const TiltCard = ({ children, className = "" }: any) => {
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-
-  const mouseXSpring = useSpring(x, { stiffness: 300, damping: 40 });
-  const mouseYSpring = useSpring(y, { stiffness: 300, damping: 40 });
-
-  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["15deg", "-15deg"]);
-  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-15deg", "15deg"]);
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
-
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    const xPct = mouseX / width - 0.5;
-    const yPct = mouseY / height - 0.5;
-
-    x.set(xPct);
-    y.set(yPct);
-  };
-
-  const handleMouseLeave = () => {
-    x.set(0);
-    y.set(0);
-  };
-
-  return (
-    <motion.div
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      style={{
-        rotateY,
-        rotateX,
-        transformStyle: "preserve-3d",
-      }}
-      className={`tilt-card ${className}`}
-    >
-      {children}
-    </motion.div>
-  );
-};
-
-const FadeIn = ({ children, direction = "up", delay = 0, className = "" }: any) => {
-  const directions: any = {
-    up: { y: 40, x: 0 },
-    down: { y: -40, x: 0 },
-    left: { x: 40, y: 0 },
-    right: { x: -40, y: 0 },
-  };
-
-  return (
-    <motion.div
-      initial={{
-        opacity: 0,
-        ...directions[direction]
-      }}
-      whileInView={{
-        opacity: 1,
-        x: 0,
-        y: 0
-      }}
-      viewport={{ once: true, margin: "-80px" }}
-      transition={{
-        duration: 0.8,
-        delay,
-        ease: [0.16, 1, 0.3, 1]
-      }}
-      className={className}
-    >
-      {children}
-    </motion.div>
-  );
-};
-
-const StaggerContainer = ({ children, className = "" }: any) => (
-  <motion.div
-    initial="hidden"
-    whileInView="visible"
-    viewport={{ once: true, margin: "-80px" }}
-    variants={{
-      visible: { transition: { staggerChildren: 0.15 } },
-      hidden: {}
-    }}
-    className={className}
-  >
-    {children}
-  </motion.div>
-);
-
-const StaggerItem = ({ children, className = "" }: any) => (
-  <motion.div
-    variants={{
-      hidden: { opacity: 0, y: 50 },
-      visible: { opacity: 1, y: 0, transition: { duration: 1, ease: [0.16, 1, 0.3, 1] } }
-    }}
-    className={className}
-  >
-    {children}
-  </motion.div>
-);
 
 function App() {
   const [lang, setLang] = useState<Language>('ru');
   const t = translations[lang];
 
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [activeFaq, setActiveFaq] = useState<number | null>(null);
+  const [activeFaq, setActiveFaq] = useState<number | null>(0);
+  const [activeAppScreen, setActiveAppScreen] = useState<number>(0);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
-  const { scrollYProgress } = useScroll();
-  const scaleX = useSpring(scrollYProgress, {
-    stiffness: 100,
-    damping: 30,
-    restDelta: 0.001
-  });
+  // Состояния для интерактивного киноблока WHOOP / Apple Health
+  const [wristMuted, setWristMuted] = useState(true);
+  const [activeCinemaTab, setActiveCinemaTab] = useState<'wrist' | 'studio'>('wrist');
+  const [scanPhase, setScanPhase] = useState(0);
 
-  const heroRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress: heroScroll } = useScroll({
-    target: heroRef,
-    offset: ["start start", "end start"]
-  });
-
-  const heroY = useTransform(heroScroll, [0, 1], ["0%", "80%"]);
-  const heroOpacity = useTransform(heroScroll, [0, 1], [1, 0]);
-
-  const toggleFaq = (index: number) => {
-    setActiveFaq(activeFaq === index ? null : index);
-  };
-  const closeMobile = () => setMobileOpen(false);
+  const pageRef = useRef<HTMLDivElement>(null);
+  const cinemaWrapRef = useRef<HTMLDivElement>(null);
+  const cinemaCardRef = useRef<HTMLDivElement>(null);
+  const wristVideoRef = useRef<HTMLVideoElement>(null);
 
   const navLinks = [
+    { label: 'Оптический ИИ', href: '#optical-cinema' },
+    { label: '3D Инженерия', href: '#hardware-3d' },
     { label: t.nav.ecosystem, href: '#ecosystem' },
-    { label: t.nav.achievements, href: '#achievements' },
+    { label: t.nav.app, href: '#app' },
     { label: t.nav.experts, href: '#experts' },
     { label: t.nav.partners, href: '#partners' },
-    { label: t.nav.features, href: '#features' },
-    { label: t.nav.app, href: '#app' },
     { label: t.nav.pricing, href: '#pricing' },
-    { label: t.nav.faq, href: '#faq' },
   ];
 
-  const featuresList = [
+  const appScreens = [
     {
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-        </svg>
-      ),
-      title: t.features.f1Title,
-      desc: t.features.f1Desc,
+      id: 'dashboard',
+      tag: '01 / LIVE TELEMETRY',
+      title: t.appSection.screen1Title,
+      desc: t.appSection.screen1Desc,
+      img: '/suguard2.jpeg',
+      metric: '5.8 mmol/L • 98% SpO2',
     },
     {
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10" />
-          <path d="M12 6v6l4 2" />
-        </svg>
-      ),
-      title: t.features.f2Title,
-      desc: t.features.f2Desc,
+      id: 'analytics',
+      tag: '02 / GLUCOSE DYNAMICS',
+      title: t.appSection.screen2Title,
+      desc: t.appSection.screen2Desc,
+      img: '/suguard5.jpeg',
+      metric: 'Day / Week / Month Trends',
     },
     {
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M18 8h1a4 4 0 010 8h-1" />
-          <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" />
-          <line x1="6" y1="1" x2="6" y2="4" />
-          <line x1="10" y1="1" x2="10" y2="4" />
-          <line x1="14" y1="1" x2="14" y2="4" />
-        </svg>
-      ),
-      title: t.features.f3Title,
-      desc: t.features.f3Desc,
+      id: 'nutrition',
+      tag: '03 / AI COMPUTER VISION',
+      title: t.appSection.screen3Title,
+      desc: t.appSection.screen3Desc,
+      img: '/suguard1.jpeg',
+      metric: 'Auto BJU & Glycemic Load',
     },
     {
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
-        </svg>
-      ),
-      title: t.features.f4Title,
-      desc: t.features.f4Desc,
-    },
-    {
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-        </svg>
-      ),
-      title: t.features.f5Title,
-      desc: t.features.f5Desc,
-    },
-    {
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
-          <line x1="12" y1="18" x2="12.01" y2="18" />
-        </svg>
-      ),
-      title: t.features.f6Title,
-      desc: t.features.f6Desc,
+      id: 'consultant',
+      tag: '04 / 24/7 AI ENDOCRINOLOGIST',
+      title: t.appSection.screen4Title,
+      desc: t.appSection.screen4Desc,
+      img: '/suguard3.jpeg',
+      metric: 'Personalized Clinical Insights',
     },
   ];
 
@@ -287,693 +167,840 @@ function App() {
     { q: t.faq.q5, a: t.faq.a5 },
   ];
 
-  return (
-    <div className="app-container">
-      <motion.div className="progress-bar" style={{ scaleX }} />
+  // Синхронизация телеметрии с таймкодом видео на руке (0..9 сек)
+  const handleWristTimeUpdate = () => {
+    const v = wristVideoRef.current;
+    if (!v) return;
+    if (v.currentTime < 3.0) setScanPhase(0);
+    else if (v.currentTime < 6.0) setScanPhase(1);
+    else setScanPhase(2);
+  };
 
-      <nav className="navbar glass-nav" id="navbar">
-        <a href="#" className="navbar-logo">
-          <motion.span
-            className="navbar-logo-icon"
-            whileHover={{ rotate: 180, scale: 1.1 }}
-            transition={{ type: "spring", stiffness: 300 }}
-          >
-            SG
-          </motion.span>
-          <span className="gradient-text-subtle">SuGuard</span>
-        </a>
-        <div className="navbar-links">
+  const toggleWristSound = () => {
+    const v = wristVideoRef.current;
+    if (!v) return;
+    v.muted = !wristMuted;
+    setWristMuted(!wristMuted);
+  };
+
+  // GSAP ScrollTrigger анимации
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      // Входная анимация Hero
+      gsap.fromTo(
+        '.hero-gsap-fade',
+        { y: 36, opacity: 0 },
+        {
+          y: 0,
+          opacity: 1,
+          duration: 1.05,
+          stagger: 0.11,
+          ease: 'power3.out',
+        }
+      );
+
+      // Парящие HUD-капсулы вокруг видео в Hero
+      gsap.to('.hero-floating-pill-left', {
+        y: -18,
+        duration: 2.8,
+        repeat: -1,
+        yoyo: true,
+        ease: 'sine.inOut',
+      });
+      gsap.to('.hero-floating-pill-right', {
+        y: 18,
+        duration: 3.2,
+        repeat: -1,
+        yoyo: true,
+        ease: 'sine.inOut',
+      });
+
+      // Расширяющийся киноэкран в стиле Apple Health / WHOOP при скролле
+      if (cinemaWrapRef.current && cinemaCardRef.current) {
+        gsap.fromTo(
+          cinemaCardRef.current,
+          {
+            scale: 0.86,
+            borderRadius: '44px',
+          },
+          {
+            scale: 1,
+            borderRadius: '20px',
+            ease: 'none',
+            scrollTrigger: {
+              trigger: cinemaWrapRef.current,
+              start: 'top 85%',
+              end: 'top 15%',
+              scrub: 0.8,
+            },
+          }
+        );
+      }
+
+      // Плавное появление секций
+      gsap.utils.toArray<HTMLElement>('.gsap-section-reveal').forEach((el) => {
+        gsap.fromTo(
+          el,
+          { y: 48, opacity: 0 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.9,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: el,
+              start: 'top 86%',
+              toggleActions: 'play none none none',
+            },
+          }
+        );
+      });
+    }, pageRef);
+
+    return () => ctx.revert();
+  }, [lang]);
+
+  return (
+    <div ref={pageRef} className="whoop-app-shell">
+      {/* ПЛАВАЮЩИЙ НАВБАР В СТИЛЕ APPLE / WHOOP */}
+      <header className="whoop-navbar-wrapper">
+        <nav className="whoop-navbar">
+          <a href="#" className="whoop-brand">
+            <span className="whoop-brand-dot" />
+            <span className="whoop-brand-text">SUGUARD</span>
+          </a>
+
+          <div className="whoop-nav-links">
+            {navLinks.map((link) => (
+              <a key={link.href} href={link.href} className="whoop-nav-link">
+                {link.label}
+              </a>
+            ))}
+          </div>
+
+          <div className="whoop-nav-actions">
+            <div className="whoop-lang-pill">
+              {(['ru', 'en', 'kk'] as Language[]).map((l) => (
+                <button
+                  key={l}
+                  onClick={() => setLang(l)}
+                  className={`whoop-lang-btn ${lang === l ? 'active' : ''}`}
+                >
+                  {l.toUpperCase()}
+                </button>
+              ))}
+            </div>
+
+            <a href="#pricing" className="whoop-nav-cta">
+              {t.hero.orderDevice}
+            </a>
+
+            <button
+              className="whoop-burger"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              aria-label="Menu"
+            >
+              <span />
+              <span />
+            </button>
+          </div>
+        </nav>
+      </header>
+
+      {mobileOpen && (
+        <div className="whoop-mobile-drawer">
           {navLinks.map((link) => (
-            <a key={link.href} href={link.href} className="nav-link-hover magnetic-btn">
+            <a
+              key={link.href}
+              href={link.href}
+              onClick={() => setMobileOpen(false)}
+              className="whoop-mobile-link"
+            >
               {link.label}
             </a>
           ))}
-        </div>
-        <div className="navbar-right">
-          <div className="lang-switcher">
-            {(['ru', 'en', 'kk'] as Language[]).map((l) => (
-              <button
-                key={l}
-                className={`lang-btn ${lang === l ? 'active' : ''}`}
-                onClick={() => setLang(l)}
-              >
-                {l.toUpperCase()}
-              </button>
-            ))}
-          </div>
-          <motion.a
-            whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(0, 212, 170, 0.4)" }}
-            whileTap={{ scale: 0.95 }}
-            href="#contact"
-            className="navbar-cta glow-button"
-          >
-            {t.nav.contactUs}
-          </motion.a>
-        </div>
-        <button
-          className="navbar-mobile-toggle"
-          onClick={() => setMobileOpen(!mobileOpen)}
-          aria-label="Toggle navigation menu"
-        >
-          <span />
-          <span />
-          <span />
-        </button>
-      </nav>
-
-      <div className={`mobile-menu${mobileOpen ? ' open' : ''}`}>
-        {navLinks.map((link) => (
-          <a key={link.href} href={link.href} onClick={closeMobile}>{link.label}</a>
-        ))}
-        <div className="mobile-lang-wrapper">
-          <div className="lang-switcher">
-            {(['ru', 'en', 'kk'] as Language[]).map((l) => (
-              <button
-                key={l}
-                className={`lang-btn ${lang === l ? 'active' : ''}`}
-                onClick={() => { setLang(l); closeMobile(); }}
-              >
-                {l.toUpperCase()}
-              </button>
-            ))}
-          </div>
-        </div>
-        <a href="#contact" onClick={closeMobile} className="btn-primary glow-button" style={{ textAlign: 'center' }}>
-          {t.nav.contactUs}
-        </a>
-      </div>
-
-      {}
-      <section className="hero" id="hero" ref={heroRef}>
-        <div className="hero-cyber-bg">
-          <div className="cyber-grid" />
-          <div className="cyber-aurora cyber-aurora-1" />
-          <div className="cyber-aurora cyber-aurora-2" />
-        </div>
-
-        <div className="bkg-glow-orb orb-1" />
-        <div className="bkg-glow-orb orb-2" />
-        <div className="bkg-glow-orb orb-3" />
-
-        <motion.div style={{ y: heroY, opacity: heroOpacity }} className="hero-content-wrapper mix-blend">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, filter: "blur(10px)" }}
-            animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-            className="hero-badge glitch-badge"
-          >
-            <span className="hero-badge-dot" />
-            {t.hero.badge}
-          </motion.div>
-
-          <h1 className="hero-title">
-            <RevealText text={t.hero.title} className="accent gradient-text" />
-          </h1>
-
-          <FadeIn delay={0.4} direction="up" className="hero-subtitle">
-            {t.hero.subtitle}
-          </FadeIn>
-
-          <FadeIn delay={0.6} direction="up" className="hero-actions">
-            <motion.a
-              whileHover={{ scale: 1.05, boxShadow: "0 0 30px rgba(0, 212, 170, 0.5)" }}
-              whileTap={{ scale: 0.95 }}
+          <div className="whoop-mobile-bottom">
+            <a
               href="/app-release.apk"
               download
-              className="btn-primary glow-button"
+              className="whoop-btn-primary"
+              onClick={() => setMobileOpen(false)}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              Download App
-            </motion.a>
-            <motion.button
-              whileHover={{ scale: 1.05, boxShadow: "0 0 25px rgba(0, 212, 170, 0.4)", backgroundColor: "rgba(0, 212, 170, 0.15)" }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setIsVideoModalOpen(true)}
-              className="btn-secondary glow-button"
-              style={{ cursor: "pointer", borderColor: "rgba(0, 212, 170, 0.5)" }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ color: "var(--accent)" }}>
-                <path d="M8 5v14l11-7z" />
-              </svg>
-              {t.hero.watchDemo}
-            </motion.button>
-            <motion.a
-              whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.05)" }}
-              whileTap={{ scale: 0.95 }}
-              href="#ecosystem"
-              className="btn-secondary magnetic-btn"
-            >
-              {t.hero.orderDevice}
-            </motion.a>
-          </FadeIn>
-
-          <StaggerContainer className="hero-screenshots">
-            <StaggerItem>
-              <TiltCard className="hero-phone hero-phone-outer floating-anim reverse-float">
-                <img src="/suguard1.jpeg" alt="SuGuard nutrition tracker" loading="lazy" />
-              </TiltCard>
-            </StaggerItem>
-            <StaggerItem>
-              <TiltCard className="hero-phone hero-phone-side floating-anim delay-1">
-                <img src="/suguard5.jpeg" alt="SuGuard glucose chart" loading="lazy" />
-              </TiltCard>
-            </StaggerItem>
-            <StaggerItem>
-              <TiltCard className="hero-phone hero-phone-center floating-anim hero-main-phone pulse-glow">
-                <img src="/suguard2.jpeg" alt="SuGuard dashboard" />
-              </TiltCard>
-            </StaggerItem>
-            <StaggerItem>
-              <TiltCard className="hero-phone hero-phone-side floating-anim delay-2 reverse-float">
-                <img src="/suguard4.jpeg" alt="SuGuard risk assessment" loading="lazy" />
-              </TiltCard>
-            </StaggerItem>
-            <StaggerItem>
-              <TiltCard className="hero-phone hero-phone-outer floating-anim delay-3">
-                <img src="/suguard3.jpeg" alt="SuGuard health consultant" loading="lazy" />
-              </TiltCard>
-            </StaggerItem>
-          </StaggerContainer>
-        </motion.div>
-      </section>
-
-      {}
-      <section className="section ecosystem-section relative-section" id="ecosystem">
-        <div className="section-glow" />
-        <div className="container">
-          <FadeIn className="section-header">
-            <span className="section-label neon-label">{t.ecosystem.badge}</span>
-            <h2 className="section-title"><RevealText text={t.ecosystem.title} /></h2>
-            <p className="section-desc">
-              {t.ecosystem.subtitle}
-            </p>
-          </FadeIn>
-
-          <StaggerContainer className="ecosystem-grid">
-            <StaggerItem>
-              <SpotlightCard className="ecosystem-card glass-panel premium-border">
-                <div className="ecosystem-card-image parallax-img-container">
-                  <motion.img
-                    whileHover={{ scale: 1.15, rotate: 2 }}
-                    transition={{ duration: 0.6, ease: "easeOut" }}
-                    src="/hardwear.jpeg"
-                    alt="SuGuard wearable on wrist"
-                  />
-                </div>
-                <div className="ecosystem-card-content">
-                  <div className="ecosystem-card-label">{t.ecosystem.hardwareBadge}</div>
-                  <h3>{t.ecosystem.hardwareTitle}</h3>
-                  <p>{t.ecosystem.hardwareDesc}</p>
-                  <ul className="ecosystem-specs">
-                    <li><span className="spec-name">{t.ecosystem.hardwareFeat1Title}</span><span className="spec-value gradient-text-subtle">{t.ecosystem.hardwareFeat1Desc}</span></li>
-                    <li><span className="spec-name">{t.ecosystem.hardwareFeat2Title}</span><span className="spec-value">{t.ecosystem.hardwareFeat2Desc}</span></li>
-                    <li><span className="spec-name">{t.ecosystem.hardwareFeat3Title}</span><span className="spec-value">{t.ecosystem.hardwareFeat3Desc}</span></li>
-                  </ul>
-                </div>
-              </SpotlightCard>
-            </StaggerItem>
-
-            <StaggerItem>
-              <SpotlightCard className="ecosystem-card glass-panel premium-border">
-                <div className="ecosystem-card-image ecosystem-card-phones parallax-img-container">
-                  <TiltCard>
-                    <motion.img
-                      whileHover={{ scale: 1.05 }}
-                      transition={{ duration: 0.6 }}
-                      src="/suguard2.jpeg"
-                      alt="SuGuard mobile app dashboard"
-                      className="eco-phone floating-anim"
-                    />
-                  </TiltCard>
-                </div>
-                <div className="ecosystem-card-content">
-                  <div className="ecosystem-card-label">{t.ecosystem.appBadge}</div>
-                  <h3>{t.ecosystem.appTitle}</h3>
-                  <p>{t.ecosystem.appDesc}</p>
-                  <ul className="ecosystem-specs">
-                    <li><span className="spec-name">{t.ecosystem.appFeat1Title}</span><span className="spec-value gradient-text-subtle">{t.ecosystem.appFeat1Desc}</span></li>
-                    <li><span className="spec-name">{t.ecosystem.appFeat2Title}</span><span className="spec-value">{t.ecosystem.appFeat2Desc}</span></li>
-                    <li><span className="spec-name">{t.ecosystem.appFeat3Title}</span><span className="spec-value">{t.ecosystem.appFeat3Desc}</span></li>
-                  </ul>
-                </div>
-              </SpotlightCard>
-            </StaggerItem>
-          </StaggerContainer>
+              Download Android .APK
+            </a>
+          </div>
         </div>
-      </section>
+      )}
 
-      {}
-      <section className="section relative-section" id="achievements">
-        <div className="section-glow" />
-        <div className="container">
-          <FadeIn className="section-header">
-            <span className="section-label neon-label">{t.achievements.badge}</span>
-            <h2 className="section-title"><RevealText text={t.achievements.title} /></h2>
-            <p className="section-desc">
-              {t.achievements.subtitle}
-            </p>
-          </FadeIn>
+      {/* =================================================================
+          1. HERO СЕКЦИЯ С ПАРЯЩИМ 3D-ВИДЕО БРАСЛЕТА В НЕВЕСОМОСТИ
+          ================================================================= */}
+      <section className="whoop-hero">
+        <div className="whoop-hero-glow" />
 
-          <StaggerContainer className="achievements-grid">
-            <StaggerItem>
-              <SpotlightCard className="achievement-card glass-panel premium-border">
-                <div className="achievement-val gradient-text">{t.hero.statInvestment}</div>
-                <div className="achievement-title">{t.achievements.invTitle}</div>
-                <div className="achievement-desc">{t.achievements.invDesc}</div>
-              </SpotlightCard>
-            </StaggerItem>
-
-            <StaggerItem>
-              <SpotlightCard className="achievement-card glass-panel premium-border">
-                <div className="achievement-val gradient-text">{t.hero.statAccuracy}</div>
-                <div className="achievement-title">{t.achievements.accTitle}</div>
-                <div className="achievement-desc">{t.achievements.accDesc}</div>
-              </SpotlightCard>
-            </StaggerItem>
-
-            <StaggerItem>
-              <SpotlightCard className="achievement-card glass-panel premium-border">
-                <div className="achievement-val gradient-text">{t.hero.statTests}</div>
-                <div className="achievement-title">{t.achievements.testsTitle}</div>
-                <div className="achievement-desc">{t.achievements.testsDesc}</div>
-              </SpotlightCard>
-            </StaggerItem>
-
-            <StaggerItem>
-              <SpotlightCard className="achievement-card glass-panel premium-border">
-                <div className="achievement-val gradient-text">4+</div>
-                <div className="achievement-title">{t.achievements.partnersTitle}</div>
-                <div className="achievement-desc">{t.achievements.partnersDesc}</div>
-              </SpotlightCard>
-            </StaggerItem>
-          </StaggerContainer>
-        </div>
-      </section>
-
-      {}
-      <section className="section relative-section" id="experts">
-        <div className="section-glow" />
-        <div className="container">
-          <FadeIn className="section-header">
-            <span className="section-label neon-label">{t.experts.badge}</span>
-            <h2 className="section-title"><RevealText text={t.experts.title} /></h2>
-            <p className="section-desc">
-              {t.experts.subtitle}
-            </p>
-          </FadeIn>
-
-          <StaggerContainer className="experts-grid">
-            <StaggerItem>
-              <SpotlightCard className="expert-card glass-panel premium-border">
-                <div className="expert-avatar-box">
-                  <img src="/jerryloeb.jpeg" alt="Jerry Loeb" className="expert-avatar-img" />
-                </div>
-                <div className="expert-tag">{t.experts.jerryRole}</div>
-                <h3 className="expert-name">Jerry Loeb</h3>
-                <div className="expert-affiliation">{t.experts.jerryAff}</div>
-                <p className="expert-desc">{t.experts.jerryDesc}</p>
-              </SpotlightCard>
-            </StaggerItem>
-
-            <StaggerItem>
-              <SpotlightCard className="expert-card glass-panel premium-border">
-                <div className="expert-avatar-box">
-                  <img src="/aidaralimbayev.jpeg" alt="Aidar Alimbayev" className="expert-avatar-img" />
-                </div>
-                <div className="expert-tag">{t.experts.aidarRole}</div>
-                <h3 className="expert-name">Aidar Alimbayev</h3>
-                <div className="expert-affiliation">{t.experts.aidarAff}</div>
-                <p className="expert-desc">{t.experts.aidarDesc}</p>
-              </SpotlightCard>
-            </StaggerItem>
-
-            <StaggerItem>
-              <SpotlightCard className="expert-card glass-panel premium-border">
-                <div className="expert-avatar-box">
-                  <img src="/rustam_askaruly.jpeg" alt="Askaruly Rustam" className="expert-avatar-img" />
-                </div>
-                <div className="expert-tag">{t.experts.rustamRole}</div>
-                <h3 className="expert-name">Askaruly Rustam</h3>
-                <div className="expert-affiliation">{t.experts.rustamAff}</div>
-                <p className="expert-desc">{t.experts.rustamDesc}</p>
-              </SpotlightCard>
-            </StaggerItem>
-          </StaggerContainer>
-        </div>
-      </section>
-
-      {}
-      <section className="section partners-section relative-section" id="partners">
-        <div className="section-glow-blue parallax-glow" />
-        <div className="container">
-          <FadeIn className="section-header">
-            <span className="section-label neon-label">{t.partners.badge}</span>
-            <h2 className="section-title"><RevealText text={t.partners.title} /></h2>
-            <p className="section-desc">
-              {t.partners.subtitle}
-            </p>
-          </FadeIn>
-
-          <StaggerContainer className="partners-grid">
-            <StaggerItem>
-              <SpotlightCard className="partner-card glass-panel premium-border">
-                <div className="partner-info">
-                  <h3>{t.partners.brbTitle}</h3>
-                  <p>{t.partners.brbDesc}</p>
-                </div>
-              </SpotlightCard>
-            </StaggerItem>
-
-            <StaggerItem>
-              <SpotlightCard className="partner-card glass-panel premium-border">
-                <div className="partner-info">
-                  <h3>{t.partners.avicennaTitle}</h3>
-                  <p>{t.partners.avicennaDesc}</p>
-                </div>
-              </SpotlightCard>
-            </StaggerItem>
-
-            <StaggerItem>
-              <SpotlightCard className="partner-card glass-panel premium-border">
-                <div className="partner-info">
-                  <h3>{t.partners.presidentialTitle}</h3>
-                  <p>{t.partners.presidentialDesc}</p>
-                </div>
-              </SpotlightCard>
-            </StaggerItem>
-
-            <StaggerItem>
-              <SpotlightCard className="partner-card glass-panel premium-border">
-                <div className="partner-info">
-                  <h3>{t.partners.amanatTitle}</h3>
-                  <p>{t.partners.amanatDesc}</p>
-                </div>
-              </SpotlightCard>
-            </StaggerItem>
-          </StaggerContainer>
-
-          <FadeIn className="academic-wrapper">
-            <div className="academic-title">
-              <span>{t.partners.academicTitle}</span>
+        <div className="whoop-container">
+          <div className="whoop-hero-Copy">
+            <div className="whoop-eyebrow-pill hero-gsap-fade">
+              <span className="eyebrow-live-dot" />
+              <span>{t.hero.badge}</span>
+              <span className="eyebrow-divider">|</span>
+              <span className="eyebrow-mono">660nm / 880nm PPG</span>
             </div>
 
-            <div className="academic-grid">
-              <div className="academic-card">
+            <h1 className="whoop-hero-title hero-gsap-fade">{t.hero.title}</h1>
+
+            <p className="whoop-hero-sub hero-gsap-fade">{t.hero.subtitle}</p>
+
+            <div className="whoop-hero-buttons hero-gsap-fade">
+              <a href="/app-release.apk" download className="whoop-btn-primary">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                <span>Download App (.APK)</span>
+              </a>
+
+              <a href="#optical-cinema" className="whoop-btn-glass">
+                <span className="play-icon-circle">▶</span>
+                <span>Как работает лазер (Видео)</span>
+              </a>
+
+              <a href="#hardware-3d" className="whoop-btn-outline">
+                3D Разборка устройства →
+              </a>
+            </div>
+          </div>
+
+          {/* БЕСШОВНАЯ СТУДИЙНАЯ ВИДЕО-СЦЕНА С ПАРЯЩИМ БРАСЛЕТОМ SUGUARD */}
+          <div className="hero-studio-video-stage hero-gsap-fade">
+            <div className="studio-video-wrapper">
+              <video
+                src="/suguard-studio.mp4"
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="studio-blend-video"
+              />
+              <div className="studio-video-vignette" />
+            </div>
+
+            {/* Парящие телеметрические капсулы Apple Health вокруг вращающегося браслета */}
+            <div className="hero-hud-pill pill-top-left hero-floating-pill-left">
+              <span className="hud-pill-dot red" />
+              <div>
+                <div className="hud-pill-label">ОПТИЧЕСКИЙ ЛАЗЕР MAX30102</div>
+                <div className="hud-pill-value">660 нм Red + 880 нм IR</div>
+              </div>
+            </div>
+
+            <div className="hero-hud-pill pill-bottom-left hero-floating-pill-right">
+              <span className="hud-pill-dot teal" />
+              <div>
+                <div className="hud-pill-label">НЕИНВАЗИВНАЯ ГЛЮКОЗА</div>
+                <div className="hud-pill-value">5.8 ммоль/л • Норма</div>
+              </div>
+            </div>
+
+            <div className="hero-hud-pill pill-top-right hero-floating-pill-right">
+              <span className="hud-pill-dot blue" />
+              <div>
+                <div className="hud-pill-label">САТУРАЦИЯ И ПУЛЬС</div>
+                <div className="hud-pill-value">98% SpO2 • 72 BPM</div>
+              </div>
+            </div>
+
+            <div className="hero-hud-pill pill-bottom-right hero-floating-pill-left">
+              <span className="hud-pill-dot amber" />
+              <div>
+                <div className="hud-pill-label">АВТОНОМНОСТЬ И СВЯЗЬ</div>
+                <div className="hud-pill-value">7 дней • Bluetooth 5.3</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Архитектурная строка ключевых цифр */}
+          <div className="whoop-metrics-bar gsap-section-reveal" id="achievements">
+            <div className="whoop-metric-cell">
+              <div className="metric-giant">{t.hero.statAccuracy}</div>
+              <div className="metric-title">{t.achievements.accTitle}</div>
+              <div className="metric-sub">{t.achievements.accDesc}</div>
+            </div>
+            <div className="whoop-metric-cell">
+              <div className="metric-giant">{t.hero.statTests}</div>
+              <div className="metric-title">{t.achievements.testsTitle}</div>
+              <div className="metric-sub">{t.achievements.testsDesc}</div>
+            </div>
+            <div className="whoop-metric-cell">
+              <div className="metric-giant">{t.hero.statInvestment}</div>
+              <div className="metric-title">{t.achievements.invTitle}</div>
+              <div className="metric-sub">{t.achievements.invDesc}</div>
+            </div>
+            <div className="whoop-metric-cell">
+              <div className="metric-giant">{t.hero.statSync}</div>
+              <div className="metric-title">{t.hero.statSyncSub}</div>
+              <div className="metric-sub">{t.achievements.partnersDesc}</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =================================================================
+          2. ДИНАМИЧНЫЙ КИНОЭКРАН WHOOP / APPLE HEALTH (ВИДЕО НА РУКЕ С ЛАЗЕРОМ)
+          ================================================================= */}
+      <section ref={cinemaWrapRef} className="whoop-cinema-section" id="optical-cinema">
+        <div className="whoop-container">
+          <div className="cinema-header-row gsap-section-reveal">
+            <div>
+              <span className="whoop-kicker">OPTICAL PPG BIO-SENSING IN ACTION</span>
+              <h2 className="whoop-h2">Точность в каждом импульсе.</h2>
+            </div>
+
+            {/* Переключатель между двумя твоими видеороликами */}
+            <div className="cinema-tabs">
+              <button
+                type="button"
+                onClick={() => setActiveCinemaTab('wrist')}
+                className={`cinema-tab-btn ${activeCinemaTab === 'wrist' ? 'active' : ''}`}
+              >
+                01. Сканирование на руке (Лазер + Пульс)
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveCinemaTab('studio')}
+                className={`cinema-tab-btn ${activeCinemaTab === 'studio' ? 'active' : ''}`}
+              >
+                02. Обзор браслета 360° в студии
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Расширяющийся при скролле широкоформатный плеер с живым HUD-оверлеем */}
+        <div className="cinema-expanding-container">
+          <div ref={cinemaCardRef} className="cinema-stage-card">
+            <video
+              ref={wristVideoRef}
+              key={activeCinemaTab}
+              src={activeCinemaTab === 'wrist' ? '/suguard-wrist.mp4' : '/suguard-studio.mp4'}
+              autoPlay
+              loop
+              muted={wristMuted}
+              playsInline
+              onTimeUpdate={handleWristTimeUpdate}
+              className="cinema-main-video"
+            />
+
+            <div className="cinema-gradient-overlay" />
+
+            {/* Верхняя панель телеметрии прямо поверх видео */}
+            <div className="cinema-hud-top">
+              <div className="cinema-live-badge">
+                <span className="eyebrow-live-dot" />
+                <span>
+                  {activeCinemaTab === 'wrist'
+                    ? 'MAX30102 LASER SPECTROSCOPY • ACTIVE SCAN'
+                    : 'SUGUARD UNIBODY • 360° STUDIO ORBIT'}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={toggleWristSound}
+                className="cinema-sound-btn"
+              >
+                {wristMuted ? '🔇 Включить звук диктора' : '🔊 Звук включен'}
+              </button>
+            </div>
+
+            {/* Нижний синхронизированный с видео телеметрический бар */}
+            <div className="cinema-hud-bottom">
+              <div className="cinema-steps-indicator">
+                <div className={`cinema-step-box ${scanPhase === 0 ? 'active' : ''}`}>
+                  <span className="step-time">00:00 — 00:03</span>
+                  <h4>Контакт с кожей</h4>
+                  <p>Калибровка базовой линии и отсечение внешнего света</p>
+                </div>
+
+                <div className={`cinema-step-box ${scanPhase === 1 ? 'active' : ''}`}>
+                  <span className="step-time">00:03 — 00:06</span>
+                  <h4>Импульс 660 / 880 нм</h4>
+                  <p>Красный и ИК-лазер просвечивают капилляры запястья</p>
+                </div>
+
+                <div className={`cinema-step-box ${scanPhase === 2 ? 'active' : ''}`}>
+                  <span className="step-time">00:06 — 00:09</span>
+                  <h4>ИИ-спектральный анализ</h4>
+                  <p>Расчёт уровня глюкозы, SpO2 и волны пульса в реальном времени</p>
+                </div>
+              </div>
+
+              <div className="cinema-live-readout">
+                <div className="readout-item">
+                  <span className="readout-lbl">ГЛЮКОЗА</span>
+                  <span className="readout-val">5.8 mmol/L</span>
+                </div>
+                <div className="readout-item">
+                  <span className="readout-lbl">КИСЛОРОД</span>
+                  <span className="readout-val teal">98% SpO2</span>
+                </div>
+                <div className="readout-item">
+                  <span className="readout-lbl">ПУЛЬС</span>
+                  <span className="readout-val">72 BPM</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =================================================================
+          3. ПОЛНОЭКРАННАЯ 3D-РАЗБОРКА БРАСЛЕТА ПРИ СКРОЛЛЕ
+          ================================================================= */}
+      <Bracelet3DShowcase lang={lang} />
+
+      {/* =================================================================
+          4. APPLE PRO BENTO GRID (ЭКОСИСТЕМА И ТЕХНОЛОГИИ)
+          ================================================================= */}
+      <section className="whoop-section" id="ecosystem">
+        <div className="whoop-container">
+          <div className="whoop-section-head gsap-section-reveal">
+            <span className="whoop-kicker">{t.ecosystem.badge}</span>
+            <h2 className="whoop-h2">{t.ecosystem.title}</h2>
+            <p className="whoop-lead">{t.ecosystem.subtitle}</p>
+          </div>
+
+          <div className="apple-bento-grid" id="features">
+            <div className="bento-card bento-span-7 gsap-section-reveal">
+              <div className="bento-top-meta">
+                <span className="bento-tag">OPTICAL PPG SPECTROSCOPY</span>
+                <span className="bento-status">ZERO NEEDLES</span>
+              </div>
+              <h3 className="bento-title">{t.features.f1Title}</h3>
+              <p className="bento-desc">{t.features.f1Desc}</p>
+
+              <div className="bento-telemetry-stage">
+                <LiveTelemetryCanvas />
+                <div className="bento-telemetry-overlay">
+                  <div className="telemetry-chip">
+                    <span className="dot-green" /> 660nm Red + 880nm Infrared
+                  </div>
+                  <div className="telemetry-chip">18-Bit Sigma-Delta ADC</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bento-card bento-span-5 gsap-section-reveal">
+              <div className="bento-top-meta">
+                <span className="bento-tag">AI RISK ENGINE</span>
+                <span className="bento-status">PREDICTIVE</span>
+              </div>
+              <h3 className="bento-title">{t.features.f2Title}</h3>
+              <p className="bento-desc">{t.features.f2Desc}</p>
+
+              <div className="whoop-gauge-showcase">
+                <svg viewBox="0 0 200 130" className="whoop-arc-svg">
+                  <defs>
+                    <linearGradient id="whoopArcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#00f19f" />
+                      <stop offset="60%" stopColor="#facc15" />
+                      <stop offset="100%" stopColor="#f43f5e" />
+                    </linearGradient>
+                  </defs>
+                  <path
+                    d="M 24 110 A 76 76 0 0 1 176 110"
+                    fill="none"
+                    stroke="rgba(255,255,255,0.08)"
+                    strokeWidth="14"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M 24 110 A 76 76 0 0 1 176 110"
+                    fill="none"
+                    stroke="url(#whoopArcGrad)"
+                    strokeWidth="14"
+                    strokeLinecap="round"
+                    strokeDasharray="240"
+                    strokeDashoffset="165"
+                  />
+                  <text x="100" y="92" textAnchor="middle" className="arc-big-num">
+                    24%
+                  </text>
+                  <text x="100" y="114" textAnchor="middle" className="arc-sub-txt">
+                    LOW-MODERATE RISK
+                  </text>
+                </svg>
+              </div>
+            </div>
+
+            <div className="bento-card bento-span-5 bento-image-card gsap-section-reveal">
+              <img
+                src="/hardwear.jpeg"
+                alt="SuGuard Hardware"
+                className="bento-bg-photo"
+              />
+              <div className="bento-image-overlay">
+                <span className="bento-tag">{t.ecosystem.hardwareBadge}</span>
+                <h3 className="bento-title">{t.ecosystem.hardwareTitle}</h3>
+                <p className="bento-desc">{t.ecosystem.hardwareDesc}</p>
+                <div className="bento-pills-row">
+                  <span className="spec-mini-pill">Bluetooth 5.3 LE</span>
+                  <span className="spec-mini-pill">7 Days Battery</span>
+                  <span className="spec-mini-pill">IP67 Case</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bento-card bento-span-7 gsap-section-reveal">
+              <div className="bento-top-meta">
+                <span className="bento-tag">COMPUTER VISION & AI ASSISTANT</span>
+                <span className="bento-status">REAL-TIME</span>
+              </div>
+              <h3 className="bento-title">
+                {t.features.f3Title} & {t.features.f5Title}
+              </h3>
+              <p className="bento-desc">{t.features.f3Desc}</p>
+
+              <div className="bento-macros-grid">
+                <div className="macro-box">
+                  <span className="macro-name">Углеводы (Carbs)</span>
+                  <span className="macro-val">14.0 г</span>
+                  <div className="macro-bar">
+                    <div className="macro-fill" style={{ width: '45%', background: '#f43f5e' }} />
+                  </div>
+                </div>
+                <div className="macro-box">
+                  <span className="macro-name">Белки (Protein)</span>
+                  <span className="macro-val">18.5 г</span>
+                  <div className="macro-bar">
+                    <div className="macro-fill" style={{ width: '68%', background: '#38bdf8' }} />
+                  </div>
+                </div>
+                <div className="macro-box">
+                  <span className="macro-name">Гликемический отклик</span>
+                  <span className="macro-val" style={{ color: '#00f19f' }}>
+                    Стабильный (+0.4 ммоль/л)
+                  </span>
+                  <div className="macro-bar">
+                    <div className="macro-fill" style={{ width: '28%', background: '#00f19f' }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =================================================================
+          5. ИНТЕРАКТИВНЫЙ СТЕНД МОБИЛЬНОГО ПРИЛОЖЕНИЯ
+          ================================================================= */}
+      <section className="whoop-section whoop-app-showcase" id="app">
+        <div className="whoop-container">
+          <div className="whoop-section-head gsap-section-reveal">
+            <span className="whoop-kicker">{t.appSection.badge}</span>
+            <h2 className="whoop-h2">{t.appSection.title}</h2>
+            <p className="whoop-lead">{t.appSection.subtitle}</p>
+          </div>
+
+          <div className="app-interactive-layout gsap-section-reveal">
+            <div className="app-chapters-list">
+              {appScreens.map((scr, idx) => (
+                <button
+                  key={scr.id}
+                  type="button"
+                  onClick={() => setActiveAppScreen(idx)}
+                  className={`app-chapter-card ${activeAppScreen === idx ? 'active' : ''}`}
+                >
+                  <div className="chapter-tag">{scr.tag}</div>
+                  <h3 className="chapter-title">{scr.title}</h3>
+                  <p className="chapter-desc">{scr.desc}</p>
+                  <div className="chapter-metric">{scr.metric}</div>
+                </button>
+              ))}
+            </div>
+
+            <div className="app-device-preview">
+              <div className="app-device-ambient" />
+              <div className="titanium-phone-large">
+                <img
+                  key={appScreens[activeAppScreen].img}
+                  src={appScreens[activeAppScreen].img}
+                  alt={appScreens[activeAppScreen].title}
+                  className="app-screen-img"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =================================================================
+          6. НАУЧНЫЙ СОВЕТ И ЭКСПЕРТЫ
+          ================================================================= */}
+      <section className="whoop-section" id="experts">
+        <div className="whoop-container">
+          <div className="whoop-section-head gsap-section-reveal">
+            <span className="whoop-kicker">{t.experts.badge}</span>
+            <h2 className="whoop-h2">{t.experts.title}</h2>
+            <p className="whoop-lead">{t.experts.subtitle}</p>
+          </div>
+
+          <div className="whoop-experts-grid">
+            <div className="whoop-expert-card gsap-section-reveal">
+              <div className="expert-top-row">
+                <img src="/jerryloeb.jpeg" alt="Jerry Loeb" className="expert-photo" />
+                <div>
+                  <span className="expert-badge">{t.experts.jerryRole}</span>
+                  <h3 className="expert-title">Prof. Jerry Loeb</h3>
+                  <div className="expert-uni">{t.experts.jerryAff}</div>
+                </div>
+              </div>
+              <p className="expert-quote">{t.experts.jerryDesc}</p>
+            </div>
+
+            <div className="whoop-expert-card gsap-section-reveal">
+              <div className="expert-top-row">
+                <img src="/aidaralimbayev.jpeg" alt="Aidar Alimbayev" className="expert-photo" />
+                <div>
+                  <span className="expert-badge">{t.experts.aidarRole}</span>
+                  <h3 className="expert-title">Aidar Alimbayev</h3>
+                  <div className="expert-uni">{t.experts.aidarAff}</div>
+                </div>
+              </div>
+              <p className="expert-quote">{t.experts.aidarDesc}</p>
+            </div>
+
+            <div className="whoop-expert-card gsap-section-reveal">
+              <div className="expert-top-row">
+                <img src="/rustam_askaruly.jpeg" alt="Askaruly Rustam" className="expert-photo" />
+                <div>
+                  <span className="expert-badge">{t.experts.rustamRole}</span>
+                  <h3 className="expert-title">Askaruly Rustam</h3>
+                  <div className="expert-uni">{t.experts.rustamAff}</div>
+                </div>
+              </div>
+              <p className="expert-quote">{t.experts.rustamDesc}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =================================================================
+          7. ПАРТНЁРЫ
+          ================================================================= */}
+      <section className="whoop-section whoop-partners-sec" id="partners">
+        <div className="whoop-container">
+          <div className="whoop-section-head gsap-section-reveal">
+            <span className="whoop-kicker">{t.partners.badge}</span>
+            <h2 className="whoop-h2">{t.partners.title}</h2>
+            <p className="whoop-lead">{t.partners.subtitle}</p>
+          </div>
+
+          <div className="whoop-partners-table gsap-section-reveal">
+            <div className="partner-cell">
+              <span className="partner-index">01 / CLINICAL</span>
+              <h3>{t.partners.brbTitle}</h3>
+              <p>{t.partners.brbDesc}</p>
+            </div>
+            <div className="partner-cell">
+              <span className="partner-index">02 / MEDICAL CENTER</span>
+              <h3>{t.partners.avicennaTitle}</h3>
+              <p>{t.partners.avicennaDesc}</p>
+            </div>
+            <div className="partner-cell">
+              <span className="partner-index">03 / PRESIDENTIAL CLINIC</span>
+              <h3>{t.partners.presidentialTitle}</h3>
+              <p>{t.partners.presidentialDesc}</p>
+            </div>
+            <div className="partner-cell">
+              <span className="partner-index">04 / PUBLIC INITIATIVE</span>
+              <h3>{t.partners.amanatTitle}</h3>
+              <p>{t.partners.amanatDesc}</p>
+            </div>
+          </div>
+
+          <div className="whoop-academic-bar gsap-section-reveal">
+            <div className="academic-bar-label">{t.partners.academicTitle}</div>
+            <div className="academic-bar-items">
+              <div className="academic-item">
                 <h4>{t.partners.nncrzTitle}</h4>
                 <p>{t.partners.nncrzDesc}</p>
               </div>
-              <div className="academic-card">
+              <div className="academic-item">
                 <h4>{t.partners.nuTitle}</h4>
                 <p>{t.partners.nuDesc}</p>
               </div>
-              <div className="academic-card">
+              <div className="academic-item">
                 <h4>{t.partners.amuTitle}</h4>
                 <p>{t.partners.amuDesc}</p>
               </div>
             </div>
-          </FadeIn>
-        </div>
-      </section>
-
-      {}
-      <section className="section features" id="features">
-        <div className="container">
-          <FadeIn className="section-header">
-            <span className="section-label neon-label">{t.features.badge}</span>
-            <h2 className="section-title"><RevealText text={t.features.title} /></h2>
-            <p className="section-desc">
-              {t.features.subtitle}
-            </p>
-          </FadeIn>
-
-          <StaggerContainer className="features-grid">
-            {featuresList.map((f, i) => (
-              <StaggerItem key={i}>
-                <SpotlightCard className="feature-card interactive-hover">
-                  <motion.div
-                    className="feature-icon"
-                    whileHover={{ scale: 1.2, rotate: 360 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                  >
-                    {f.icon}
-                  </motion.div>
-                  <h3>{f.title}</h3>
-                  <p>{f.desc}</p>
-                </SpotlightCard>
-              </StaggerItem>
-            ))}
-          </StaggerContainer>
-        </div>
-      </section>
-
-      {}
-      <div className="showcase showcase-app" id="app">
-        <div className="container">
-          <FadeIn className="section-header">
-            <span className="section-label neon-label">{t.appSection.badge}</span>
-            <h2 className="section-title"><RevealText text={t.appSection.title} /></h2>
-            <p className="section-desc">
-              {t.appSection.subtitle}
-            </p>
-          </FadeIn>
-        </div>
-
-        <div className="showcase-row">
-          <FadeIn direction="left" className="showcase-content">
-            <span className="showcase-label">Dashboard</span>
-            <h2>{t.appSection.screen1Title}</h2>
-            <p>{t.appSection.screen1Desc}</p>
-            <ul className="showcase-features-list">
-              <li><span className="showcase-check check-glow"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg></span>Real-time diabetes risk gauge with percentage score</li>
-              <li><span className="showcase-check check-glow"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg></span>Live glucose, SpO2, and pulse monitoring cards</li>
-              <li><span className="showcase-check check-glow"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg></span>Trend sparklines for instant pattern recognition</li>
-            </ul>
-          </FadeIn>
-          <FadeIn direction="right" className="showcase-image" delay={0.2}>
-            <TiltCard>
-              <div className="showcase-phone glass-phone advanced-glass float-slow">
-                <img src="/suguard2.jpeg" alt="SuGuard dashboard" />
-              </div>
-            </TiltCard>
-          </FadeIn>
-        </div>
-
-        <div className="showcase-row reverse">
-          <FadeIn direction="right" className="showcase-content">
-            <span className="showcase-label">Analytics</span>
-            <h2>{t.appSection.screen2Title}</h2>
-            <p>{t.appSection.screen2Desc}</p>
-            <ul className="showcase-features-list">
-              <li><span className="showcase-check check-glow"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg></span>Time-series charts with configurable intervals</li>
-              <li><span className="showcase-check check-glow"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg></span>Statistical breakdown: average, min, max values</li>
-              <li><span className="showcase-check check-glow"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg></span>Historical trend analysis for proactive management</li>
-            </ul>
-          </FadeIn>
-          <FadeIn direction="left" className="showcase-image" delay={0.2}>
-            <TiltCard>
-              <div className="showcase-phone glass-phone advanced-glass float-slow delay-1">
-                <img src="/suguard5.jpeg" alt="SuGuard glucose analytics" />
-              </div>
-            </TiltCard>
-          </FadeIn>
-        </div>
-      </div>
-
-      {}
-      <section className="section pricing-section relative-section" id="pricing">
-        <div className="pricing-grid-bg" />
-        <div className="container">
-          <FadeIn className="section-header">
-            <span className="section-label neon-label">{t.pricing.badge}</span>
-            <h2 className="section-title"><RevealText text={t.pricing.title} /></h2>
-            <p className="section-desc">
-              {t.pricing.subtitle}
-            </p>
-          </FadeIn>
-          <div className="pricing-card-wrapper perspective-container">
-            <FadeIn>
-              <SpotlightCard className="pricing-card advanced-glass ultra-premium-border floating-anim">
-                <div className="pricing-card-glow orb-pulse" />
-                <div className="pricing-badge pulse-glow">{t.pricing.popularBadge}</div>
-                <div className="pricing-price">
-                  <span className="pricing-currency">₸</span>
-                  <span className="pricing-amount counter">35,000</span>
-                </div>
-                <p className="pricing-note">One-time payment · Device + App Subscription (~$70 USD)</p>
-                <ul className="pricing-features">
-                  <li><span className="pricing-check check-glow"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg></span>SuGuard Wearable Device</li>
-                  <li><span className="pricing-check check-glow"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg></span>Mobile App Subscription</li>
-                  <li><span className="pricing-check check-glow"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg></span>Glucose, SpO2 & Pulse Monitoring</li>
-                  <li><span className="pricing-check check-glow"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg></span>AI Health Consultant & Risk Assessment</li>
-                  <li><span className="pricing-check check-glow"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg></span>Nutrition Tracking & Analytics</li>
-                  <li><span className="pricing-check check-glow"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg></span>Free Updates & Cloud Sync</li>
-                </ul>
-                <motion.a
-                  whileHover={{ scale: 1.05, boxShadow: "0 0 30px rgba(0, 212, 170, 0.6)" }}
-                  whileTap={{ scale: 0.95 }}
-                  href="#contact"
-                  className="btn-primary pricing-cta glow-button"
-                >
-                  {t.hero.orderDevice}
-                </motion.a>
-              </SpotlightCard>
-            </FadeIn>
           </div>
         </div>
       </section>
 
-      {}
-      <section className="section" id="faq">
-        <div className="container">
-          <FadeIn className="section-header">
-            <span className="section-label neon-label">{t.faq.badge}</span>
-            <h2 className="section-title"><RevealText text={t.faq.title} /></h2>
-            <p className="section-desc">{t.faq.subtitle}</p>
-          </FadeIn>
-          <div className="faq-list">
-            {faqsList.map((faq, i) => (
-              <FadeIn className={`faq-item glass-panel ${activeFaq === i ? ' active' : ''}`} key={i} delay={i * 0.1}>
-                <button className="faq-question" onClick={() => toggleFaq(i)}>
-                  {faq.q}
-                  <motion.span
-                    animate={{ rotate: activeFaq === i ? 180 : 0 }}
-                    transition={{ duration: 0.4, type: "spring" }}
-                    className="faq-chevron"
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </motion.span>
-                </button>
-                <motion.div
-                  initial={false}
-                  animate={{ height: activeFaq === i ? "auto" : 0, opacity: activeFaq === i ? 1 : 0 }}
-                  transition={{ duration: 0.4, ease: "easeInOut" }}
-                  className="faq-answer overflow-hidden"
-                >
-                  <div className="faq-answer-inner pt-2 pb-6">{faq.a}</div>
-                </motion.div>
-              </FadeIn>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {}
-      <section className="cta-section relative-section" id="contact">
-        <div className="section-glow orb-pulse" />
-        <FadeIn direction="up">
-          <h2 className="hero-title"><RevealText text={t.contact.title} /></h2>
-          <p className="section-desc mb-10">
-            {t.contact.subtitle}
-          </p>
-          <div className="cta-actions">
-            <motion.a
-              whileHover={{ scale: 1.05, boxShadow: "0 0 30px rgba(0, 212, 170, 0.6)" }}
-              whileTap={{ scale: 0.95 }}
-              href="/app-release.apk"
-              download
-              className="btn-primary glow-button"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              Download APK
-            </motion.a>
-            <motion.a
-              whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.05)" }}
-              whileTap={{ scale: 0.95 }}
-              href="mailto:alihanmurzakmetov15@gmail.com"
-              className="btn-secondary"
-            >
-              {t.nav.contactUs}
-            </motion.a>
-          </div>
-        </FadeIn>
-      </section>
-
-      {}
-      <footer className="footer" id="footer">
-        <div className="footer-content">
-          <div className="footer-brand">
-            <div className="footer-logo">
-              <span className="navbar-logo-icon">SG</span>
-              SuGuard
+      {/* =================================================================
+          8. КОМПЛЕКТАЦИЯ И ЗАКАЗ
+          ================================================================= */}
+      <section className="whoop-section" id="pricing">
+        <div className="whoop-container">
+          <div className="whoop-flagship-order gsap-section-reveal">
+            <div className="order-left-visual">
+              <span className="whoop-kicker">{t.pricing.popularBadge}</span>
+              <h2 className="order-title">SuGuard Complete Kit</h2>
+              <p className="order-sub">
+                Носимый оптический биосенсор SuGuard + бессрочный доступ к ИИ-экосистеме мониторинга глюкозы, SpO2 и питания.
+              </p>
+              <img
+                src="/hardwear.jpeg"
+                alt="SuGuard Kit"
+                className="order-hardware-img"
+              />
             </div>
-            <p>{t.footer.desc}</p>
-          </div>
-          <div className="footer-column">
-            <h4>Product</h4>
-            <ul>
-              <li><a href="#ecosystem">{t.nav.ecosystem}</a></li>
-              <li><a href="#features">{t.nav.features}</a></li>
-              <li><a href="#app">{t.nav.app}</a></li>
-              <li><a href="#faq">{t.nav.faq}</a></li>
-            </ul>
-          </div>
-          <div className="footer-column">
-            <h4>Contact</h4>
-            <ul>
-              <li><a href="mailto:suguard.kz@gmail.com">suguard.kz@gmail.com</a></li>
-              <li><a href="tel:+77056612373">+7 705 661 2373</a></li>
-              <li><a href="https://www.instagram.com/suguard_kz" target="_blank" rel="noopener noreferrer">Instagram: @suguard_kz</a></li>
-            </ul>
-          </div>
-          <div className="footer-column">
-            <h4>Download</h4>
-            <ul>
-              <li><a href="/app-release.apk" download>Android APK</a></li>
-              <li><a href="#">iOS (Coming Soon)</a></li>
-            </ul>
+
+            <div className="order-right-specs">
+              <div className="order-price-block">
+                <div className="order-price-tag">35 000 ₸</div>
+                <div className="order-price-usd">≈ $70 USD • Единоразовая покупка без скрытых платежей</div>
+              </div>
+
+              <ul className="order-included-list">
+                <li>
+                  <span className="order-check">✓</span>
+                  <span>Смарт-браслет SuGuard (MAX30102 + SuGuard.Health PCB)</span>
+                </li>
+                <li>
+                  <span className="order-check">✓</span>
+                  <span>Неинвазивный мониторинг глюкозы, SpO2 и ЧСС 24/7</span>
+                </li>
+                <li>
+                  <span className="order-check">✓</span>
+                  <span>ИИ-оценка риска диабета и компьютерное зрение для еды</span>
+                </li>
+                <li>
+                  <span className="order-check">✓</span>
+                  <span>Персональный ИИ-эндокринолог и облачная синхронизация</span>
+                </li>
+                <li>
+                  <span className="order-check">✓</span>
+                  <span>Кабель быстрой зарядки USB Type-C и гарантия 12 месяцев</span>
+                </li>
+              </ul>
+
+              <div className="order-cta-group" id="contact">
+                <a href="mailto:suguard.kz@gmail.com" className="whoop-btn-primary full-width">
+                  {t.hero.orderDevice} — suguard.kz@gmail.com
+                </a>
+                <a href="/app-release.apk" download className="whoop-btn-outline full-width">
+                  Скачать мобильное приложение (.APK)
+                </a>
+              </div>
+            </div>
           </div>
         </div>
-        <div className="footer-bottom">
-          <p>© 2026 SuGuard. {t.footer.rights} Made in Kazakhstan.</p>
-          <span className="footer-version">v1.2.0-ULTRA</span>
+      </section>
+
+      {/* =================================================================
+          9. FAQ & FOOTER
+          ================================================================= */}
+      <section className="whoop-section" id="faq">
+        <div className="whoop-container narrow">
+          <div className="whoop-section-head gsap-section-reveal">
+            <span className="whoop-kicker">{t.faq.badge}</span>
+            <h2 className="whoop-h2">{t.faq.title}</h2>
+          </div>
+
+          <div className="whoop-faq-list gsap-section-reveal">
+            {faqsList.map((item, idx) => {
+              const isOpen = activeFaq === idx;
+              return (
+                <div key={idx} className={`whoop-faq-item ${isOpen ? 'open' : ''}`}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveFaq(isOpen ? null : idx)}
+                    className="whoop-faq-q"
+                  >
+                    <span>{item.q}</span>
+                    <span className="faq-plus">{isOpen ? '−' : '+'}</span>
+                  </button>
+                  {isOpen && <div className="whoop-faq-a">{item.a}</div>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <footer className="whoop-footer">
+        <div className="whoop-container">
+          <div className="whoop-footer-grid">
+            <div>
+              <div className="whoop-brand">
+                <span className="whoop-brand-dot" />
+                <span className="whoop-brand-text">SUGUARD</span>
+              </div>
+              <p className="footer-desc">{t.footer.desc}</p>
+            </div>
+
+            <div className="footer-col">
+              <h4>Навигация</h4>
+              <a href="#optical-cinema">Оптический ИИ</a>
+              <a href="#hardware-3d">3D Инженерия</a>
+              <a href="#ecosystem">{t.nav.ecosystem}</a>
+              <a href="#app">{t.nav.app}</a>
+            </div>
+
+            <div className="footer-col">
+              <h4>Контакты</h4>
+              <a href="mailto:suguard.kz@gmail.com">suguard.kz@gmail.com</a>
+              <a href="tel:+77056612373">+7 705 661 2373</a>
+              <a href="https://www.instagram.com/suguard_kz" target="_blank" rel="noreferrer">
+                Instagram: @suguard_kz
+              </a>
+            </div>
+
+            <div className="footer-col">
+              <h4>Загрузки</h4>
+              <a href="/app-release.apk" download>
+                Android App (.APK)
+              </a>
+              <a href="#pricing">Предзаказ устройства</a>
+            </div>
+          </div>
+
+          <div className="whoop-footer-bottom">
+            <span>© 2026 SuGuard Health Technologies. {t.footer.rights}</span>
+            <span>Designed & Engineered in Kazakhstan</span>
+          </div>
         </div>
       </footer>
 
-      {}
       {isVideoModalOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="video-modal-backdrop"
+        <div
+          className="whoop-video-modal"
           onClick={() => setIsVideoModalOpen(false)}
         >
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="video-modal-container"
+          <div
+            className="whoop-video-dialog"
             onClick={(e) => e.stopPropagation()}
           >
             <button
-              className="video-modal-close"
+              type="button"
+              className="whoop-video-close"
               onClick={() => setIsVideoModalOpen(false)}
-              aria-label="Close Video"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
+              ✕
             </button>
             <video
-              src="/video.mp4"
+              src="/suguard-wrist.mp4"
               controls
               autoPlay
               playsInline
-              className="video-modal-element"
+              className="whoop-video-player"
             />
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       )}
     </div>
   );

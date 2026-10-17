@@ -14,3 +14,4 @@ dist/
 .pub/
 *.zip
 WhatsApp Video*.mp4
+.playwright-mcp/
