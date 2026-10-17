@@ -7,20 +7,17 @@ import { Bracelet3DShowcase } from './Bracelet3DShowcase';
 
 gsap.registerPlugin(ScrollTrigger);
 
-// Премиальная кнопка, которая плавно раскрывается через GSAP при наведении
 const GsapButton = ({
   label,
   badge,
   href,
   onClick,
-  download,
   variant = 'primary',
 }: {
   label: string;
   badge?: string;
   href?: string;
   onClick?: () => void;
-  download?: boolean;
   variant?: 'primary' | 'glass' | 'outline';
 }) => {
   const btnRef = useRef<any>(null);
@@ -95,12 +92,20 @@ const GsapButton = ({
 
   const cls = `gsap-expanding-btn ${variant}`;
 
+  const handleClick = (e: React.MouseEvent) => {
+    if (href === '#' || href === '') {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    if (onClick) onClick();
+  };
+
   if (href) {
     return (
       <a
         ref={btnRef}
         href={href}
-        download={download}
+        onClick={handleClick}
         onMouseEnter={handleEnter}
         onMouseLeave={handleLeave}
         className={cls}
@@ -135,7 +140,6 @@ function App() {
   const [activeFaq, setActiveFaq] = useState<number | null>(0);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
-  // Состояния для интерактивного киноблока WHOOP / Apple Health с suguard-wrist.mp4
   const [wristMuted, setWristMuted] = useState(true);
   const [activeCinemaTab, setActiveCinemaTab] = useState<'wrist' | 'studio'>('wrist');
   const [scanPhase, setScanPhase] = useState(0);
@@ -178,7 +182,6 @@ function App() {
     { label: t.nav.faq, href: '#faq' },
   ];
 
-  // 4 интерактивных модуля для секции Экосистемы (вместо старых 4 коробок со скриншота 1)
   const ecosystemModules = [
     {
       num: '01',
@@ -246,7 +249,6 @@ function App() {
     },
   ];
 
-  // 4 экрана для Scroll-Driven секции телефона (Скриншот 2)
   const appScreens = [
     {
       id: 'dashboard',
@@ -294,7 +296,6 @@ function App() {
     { q: t.faq.q5, a: t.faq.a5 },
   ];
 
-  // GSAP-раскрытие кнопок-аккордеонов в секции Экосистемы
   useEffect(() => {
     featureBodyRefs.current.forEach((el, idx) => {
       if (!el) return;
@@ -326,7 +327,6 @@ function App() {
     }
   }, [activeFeature]);
 
-  // GSAP-раскрытие вопросов в FAQ
   useEffect(() => {
     faqBodyRefs.current.forEach((el, idx) => {
       if (!el) return;
@@ -350,10 +350,8 @@ function App() {
     });
   }, [activeFaq]);
 
-  // GSAP Scroll-Driven анимация для Экосистемы (#ecosystem) и Телефона (#app)
   useEffect(() => {
     const handleScroll = () => {
-      // 1. Скролл-драйвен переключение карточек в Экосистеме (#ecosystem)
       if (deckScrollSectionRef.current) {
         const rect = deckScrollSectionRef.current.getBoundingClientRect();
         const scrollable = deckScrollSectionRef.current.offsetHeight - window.innerHeight;
@@ -375,7 +373,6 @@ function App() {
         }
       }
 
-      // 2. Скролл-драйвен переключение экранов в Приложении (#app)
       if (appScrollSectionRef.current) {
         const rect = appScrollSectionRef.current.getBoundingClientRect();
         const scrollable = appScrollSectionRef.current.offsetHeight - window.innerHeight;
@@ -403,7 +400,6 @@ function App() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Общие входные GSAP-анимации страницы
   useEffect(() => {
     const ctx = gsap.context(() => {
       gsap.fromTo(
@@ -418,7 +414,6 @@ function App() {
         }
       );
 
-      // Расширяющийся киноэкран в стиле Apple Health / WHOOP при скролле
       if (cinemaWrapRef.current && cinemaCardRef.current) {
         gsap.fromTo(
           cinemaCardRef.current,
@@ -462,7 +457,6 @@ function App() {
     return () => ctx.revert();
   }, [lang]);
 
-  // Плавный скролл к нужной карточке экосистемы по клику
   const scrollToDeckChapter = (idx: number) => {
     if (!deckScrollSectionRef.current) {
       setActiveFeature(idx);
@@ -477,7 +471,6 @@ function App() {
     });
   };
 
-  // Плавный скролл к нужному экрану телефона по клику на карточку слева
   const scrollToAppChapter = (idx: number) => {
     if (!appScrollSectionRef.current) return;
     const rect = appScrollSectionRef.current.getBoundingClientRect();
@@ -491,7 +484,6 @@ function App() {
 
   return (
     <div ref={pageRef} className="whoop-app-shell">
-      {/* ПЛАВАЮЩИЙ НАВБАР В СТИЛЕ APPLE / WHOOP */}
       <header className="whoop-navbar-wrapper">
         <nav className="whoop-navbar">
           <a href="#" className="whoop-brand">
@@ -554,9 +546,6 @@ function App() {
         </div>
       )}
 
-      {/* =================================================================
-          1. HERO СЕКЦИЯ (БЕЗ ПЛАВАЮЩИХ КАПСУЛ И ФЕЙКОВЫХ ОСЦИЛЛОГРАФОВ)
-          ================================================================= */}
       <section className="whoop-hero">
         <div className="whoop-hero-glow" />
 
@@ -573,13 +562,11 @@ function App() {
 
             <p className="whoop-hero-sub hero-gsap-fade">{t.hero.subtitle}</p>
 
-            {/* Кнопки с GSAP-раскрытием при наведении */}
             <div className="whoop-hero-buttons hero-gsap-fade">
               <GsapButton
                 label="Download App"
                 badge="Android .APK"
-                href="/app-release.apk"
-                download
+                href="#"
                 variant="primary"
               />
               <GsapButton
@@ -597,7 +584,6 @@ function App() {
             </div>
           </div>
 
-          {/* БЕСШОВНАЯ СТУДИЙНАЯ ВИДЕО-СЦЕНА С ПАРЯЩИМ БРАСЛЕТОМ SUGUARD */}
           <div className="hero-studio-video-stage hero-gsap-fade">
             <div className="studio-video-wrapper">
               <video
@@ -612,7 +598,6 @@ function App() {
             </div>
           </div>
 
-          {/* Архитектурная линейка ключевых показателей */}
           <div className="whoop-metrics-bar gsap-section-reveal" id="achievements">
             <div className="whoop-metric-cell">
               <div className="metric-giant">{t.hero.statAccuracy}</div>
@@ -638,9 +623,6 @@ function App() {
         </div>
       </section>
 
-      {/* =================================================================
-          2. ДИНАМИЧНЫЙ КИНОЭКРАН WHOOP / APPLE HEALTH (ВИДЕО НА РУКЕ С ЛАЗЕРОМ)
-          ================================================================= */}
       <section ref={cinemaWrapRef} className="whoop-cinema-section" id="optical-cinema">
         <div className="whoop-container">
           <div className="cinema-header-row gsap-section-reveal">
@@ -649,7 +631,6 @@ function App() {
               <h2 className="whoop-h2">Точность в каждом импульсе.</h2>
             </div>
 
-            {/* Переключатель между двумя твоими видеороликами */}
             <div className="cinema-tabs">
               <button
                 type="button"
@@ -669,7 +650,6 @@ function App() {
           </div>
         </div>
 
-        {/* Расширяющийся при скролле широкоформатный плеер с живым HUD-оверлеем */}
         <div className="cinema-expanding-container">
           <div ref={cinemaCardRef} className="cinema-stage-card">
             <video
@@ -686,7 +666,6 @@ function App() {
 
             <div className="cinema-gradient-overlay" />
 
-            {/* Верхняя панель телеметрии прямо поверх видео */}
             <div className="cinema-hud-top">
               <div className="cinema-live-badge">
                 <span className="eyebrow-live-dot" />
@@ -706,23 +685,22 @@ function App() {
               </button>
             </div>
 
-            {/* Нижний синхронизированный с видео телеметрический бар */}
             <div className="cinema-hud-bottom">
               <div className="cinema-steps-indicator">
                 <div className={`cinema-step-box ${scanPhase === 0 ? 'active' : ''}`}>
-                  <span className="step-time">00:00 — 00:03</span>
+                  <span className="step-time">00:00 - 00:03</span>
                   <h4>Контакт с кожей</h4>
                   <p>Калибровка базовой линии и отсечение внешнего света</p>
                 </div>
 
                 <div className={`cinema-step-box ${scanPhase === 1 ? 'active' : ''}`}>
-                  <span className="step-time">00:03 — 00:06</span>
+                  <span className="step-time">00:03 - 00:06</span>
                   <h4>Импульс 660 / 880 нм</h4>
                   <p>Красный и ИК-лазер просвечивают капилляры запястья</p>
                 </div>
 
                 <div className={`cinema-step-box ${scanPhase === 2 ? 'active' : ''}`}>
-                  <span className="step-time">00:06 — 00:09</span>
+                  <span className="step-time">00:06 - 00:09</span>
                   <h4>ИИ-спектральный анализ</h4>
                   <p>Расчёт уровня глюкозы, SpO2 и волны пульса в реальном времени</p>
                 </div>
@@ -747,15 +725,8 @@ function App() {
         </div>
       </section>
 
-      {/* =================================================================
-          3. ПОЛНОЭКРАННАЯ 3D-РАЗБОРКА БРАСЛЕТА ПРИ СКРОЛЛЕ
-          ================================================================= */}
       <Bracelet3DShowcase lang={lang} />
 
-      {/* =================================================================
-          3. ПРЕМИАЛЬНЫЙ ИНТЕРАКТИВНЫЙ ШОУКЕЙС ТЕХНОЛОГИЙ (SCROLL-DRIVEN)
-          Каждая карточка автоматически раскрывается при скролле и меняет медиа-сцену
-          ================================================================= */}
       <section ref={deckScrollSectionRef} className="deck-scrolly-section" id="ecosystem">
         <div className="deck-scrolly-sticky">
           <div className="whoop-container deck-scrolly-inner" id="features">
@@ -771,7 +742,6 @@ function App() {
             </div>
 
             <div className="apple-interactive-deck">
-              {/* Левая колонка: Раскрывающиеся с GSAP-анимацией кнопки технологий */}
               <div className="deck-accordion-column">
                 {ecosystemModules.map((mod, idx) => {
                   const isOpen = activeFeature === idx;
@@ -785,7 +755,6 @@ function App() {
                       onClick={() => scrollToDeckChapter(idx)}
                       className={`deck-expanding-item ${isOpen ? 'active' : ''}`}
                     >
-                      {/* Вертикальная линия прогресса скролла */}
                       <div className="deck-item-rail">
                         <div
                           className="deck-item-rail-fill"
@@ -808,10 +777,9 @@ function App() {
                               <h3 className="deck-item-title">{mod.title}</h3>
                             </div>
                           </div>
-                          <span className="deck-item-toggle">{isOpen ? '−' : '+'}</span>
+                          <span className="deck-item-toggle">{isOpen ? '-' : '+'}</span>
                         </div>
 
-                        {/* Раскрывающееся тело кнопки (управляется через GSAP) */}
                         <div
                           ref={(el) => {
                             featureBodyRefs.current[idx] = el;
@@ -836,7 +804,6 @@ function App() {
                 })}
               </div>
 
-              {/* Правая колонка: Крупная визуальная сцена с плавным GSAP-переходом */}
               <div className="deck-visual-column">
                 <div ref={featureMediaRef} className="deck-visual-stage">
                   {ecosystemModules[activeFeature].mediaType === 'video' ? (
@@ -870,13 +837,9 @@ function App() {
         </div>
       </section>
 
-      {/* =================================================================
-          4. SCROLL-DRIVEN СЕКЦИЯ С ТЕЛЕФОНОМ (СКРИНШОТ 2 — АВТОСМЕНА КАРТОЧЕК И ЭКРАНОВ ПРИ СКРОЛЛЕ)
-          ================================================================= */}
       <section ref={appScrollSectionRef} className="app-scrolly-section" id="app">
         <div className="app-scrolly-sticky">
           <div className="whoop-container app-scrolly-inner">
-            {/* Верхний заголовок секции с правильным отступом от навбара */}
             <div className="app-scrolly-header">
               <div>
                 <span className="whoop-kicker">{t.appSection.badge}</span>
@@ -888,11 +851,9 @@ function App() {
             </div>
 
             <div className="app-scrolly-grid">
-              {/* Левая колонка: Карточки автоматически раскрываются при прокрутке страницы вниз */}
               <div className="app-scrolly-cards">
                 {appScreens.map((scr, idx) => {
                   const isActive = activeAppScreen === idx;
-                  // Прогресс внутри текущей карточки (0..100%)
                   const localProg = Math.max(
                     0,
                     Math.min(1, (appScrollProgress - idx * 0.25) / 0.25)
@@ -904,7 +865,6 @@ function App() {
                       onClick={() => scrollToAppChapter(idx)}
                       className={`scrolly-chapter-item ${isActive ? 'active' : ''}`}
                     >
-                      {/* Левая линия прогресса скролла */}
                       <div className="scrolly-rail">
                         <div
                           className="scrolly-rail-fill"
@@ -943,7 +903,6 @@ function App() {
                 })}
               </div>
 
-              {/* Правая колонка: Титановый смартфон с GSAP-переключением экранов */}
               <div className="app-scrolly-phone-col">
                 <div className="app-device-ambient" />
                 <div ref={appPhoneCardRef} className="titanium-phone-large">
@@ -959,9 +918,6 @@ function App() {
         </div>
       </section>
 
-      {/* =================================================================
-          5. НАУЧНЫЙ СОВЕТ И ЭКСПЕРТЫ
-          ================================================================= */}
       <section className="whoop-section" id="experts">
         <div className="whoop-container">
           <div className="whoop-section-head gsap-section-reveal">
@@ -1010,9 +966,6 @@ function App() {
         </div>
       </section>
 
-      {/* =================================================================
-          6. ПАРТНЁРЫ
-          ================================================================= */}
       <section className="whoop-section whoop-partners-sec" id="partners">
         <div className="whoop-container">
           <div className="whoop-section-head gsap-section-reveal">
@@ -1064,9 +1017,6 @@ function App() {
         </div>
       </section>
 
-      {/* =================================================================
-          7. КОМПЛЕКТАЦИЯ И ЗАКАЗ
-          ================================================================= */}
       <section className="whoop-section" id="pricing">
         <div className="whoop-container">
           <div className="whoop-flagship-order gsap-section-reveal">
@@ -1122,8 +1072,7 @@ function App() {
                 <GsapButton
                   label="Скачать мобильное приложение"
                   badge="Android .APK"
-                  href="/app-release.apk"
-                  download
+                  href="#"
                   variant="outline"
                 />
               </div>
@@ -1132,9 +1081,6 @@ function App() {
         </div>
       </section>
 
-      {/* =================================================================
-          8. FAQ С ПЛАВНЫМ GSAP-РАСКРЫТИЕМ
-          ================================================================= */}
       <section className="whoop-section" id="faq">
         <div className="whoop-container narrow">
           <div className="whoop-section-head gsap-section-reveal">
@@ -1153,7 +1099,7 @@ function App() {
                     className="whoop-faq-q"
                   >
                     <span>{item.q}</span>
-                    <span className="faq-plus">{isOpen ? '−' : '+'}</span>
+                    <span className="faq-plus">{isOpen ? '-' : '+'}</span>
                   </button>
                   <div
                     ref={(el) => {
@@ -1170,9 +1116,6 @@ function App() {
         </div>
       </section>
 
-      {/* =================================================================
-          9. FOOTER
-          ================================================================= */}
       <footer className="whoop-footer">
         <div className="whoop-container">
           <div className="whoop-footer-grid">
@@ -1203,7 +1146,13 @@ function App() {
 
             <div className="footer-col">
               <h4>Загрузки</h4>
-              <a href="/app-release.apk" download>
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+              >
                 Android App (.APK)
               </a>
               <a href="#pricing">Предзаказ устройства</a>

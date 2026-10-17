@@ -1,6 +1,4 @@
-/* ============================================================================
-   SUGUARD FLAGSHIP DESIGN SYSTEM (APPLE WATCH ULTRA & WHOOP 5.0 AESTHETIC)
-   ============================================================================ */
+
 :root {
   --bg-obsidian: #000000;
   --bg-elevated: #0a0b0e;
@@ -32,9 +30,6 @@
   max-width: 840px;
 }
 
-/* ============================================================================
-   FLOATING DYNAMIC ISLAND NAVBAR
-   ============================================================================ */
 .whoop-navbar-wrapper {
   position: fixed;
   top: 18px;
@@ -183,9 +178,6 @@
   border-bottom: 1px solid var(--border-hairline);
 }
 
-/* ============================================================================
-   HERO SECTION (WHOOP 5.0 / APPLE WATCH ULTRA STYLE)
-   ============================================================================ */
 .whoop-hero {
   position: relative;
   padding: 156px 0 96px;
@@ -349,7 +341,6 @@
   color: var(--text-white);
 }
 
-/* Панорамная сцена Hero */
 .whoop-hero-stage {
   position: relative;
   display: grid;
@@ -478,7 +469,6 @@
   opacity: 0.72;
 }
 
-/* Архитектурная панель метрик */
 .whoop-metrics-bar {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -519,9 +509,6 @@
   color: var(--text-titanium);
 }
 
-/* ============================================================================
-   SECTIONS & APPLE BENTO GRID
-   ============================================================================ */
 .whoop-section {
   padding: 128px 0;
   border-bottom: 1px solid var(--border-hairline);
@@ -774,9 +761,6 @@
   border-radius: 4px;
 }
 
-/* ============================================================================
-   INTERACTIVE APP SHOWCASE
-   ============================================================================ */
 .app-interactive-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -870,9 +854,6 @@
   display: block;
 }
 
-/* ============================================================================
-   EXPERTS & PARTNERS
-   ============================================================================ */
 .whoop-experts-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1004,9 +985,6 @@
   color: var(--text-titanium);
 }
 
-/* ============================================================================
-   FLAGSHIP ORDER & FAQ & FOOTER
-   ============================================================================ */
 .whoop-flagship-order {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1218,9 +1196,6 @@
   display: block;
 }
 
-/* ============================================================================
-   APPLE / WHOOP STYLE FULL-SCREEN 3D SHOWCASE (РОВНАЯ ВЕРСТКА)
-   ============================================================================ */
 .suguard-3d-fullbleed {
   position: relative;
   height: 500vh;
@@ -1519,9 +1494,6 @@
   letter-spacing: 0.04em;
 }
 
-/* ============================================================================
-   RESPONSIVE BREAKPOINTS
-   ============================================================================ */
 @media (max-width: 1080px) {
   .whoop-nav-links {
     display: none;
@@ -1594,9 +1566,6 @@
   }
 }
 
-/* ============================================================================
-   HERO STUDIO FLOATING VIDEO & WHOOP EXPANDING CINEMA SECTION
-   ============================================================================ */
 .hero-studio-video-stage {
   position: relative;
   max-width: 1020px;
@@ -1616,7 +1585,6 @@
   background: #000000;
 }
 
-/* Бесшовное слияние черного фона видео с черным фоном сайта */
 .studio-blend-video {
   width: 100%;
   height: 100%;
@@ -1633,7 +1601,6 @@
   box-shadow: inset 0 0 90px 45px #000000;
 }
 
-/* Парящие капсулы биометрии вокруг видео браслета */
 .hero-hud-pill {
   position: absolute;
   z-index: 3;
@@ -1710,7 +1677,6 @@
   color: var(--text-white);
 }
 
-/* РАСШИРЯЮЩИЙСЯ ПРИ СКРОЛЛЕ КИНОБЛОК WHOOP / APPLE HEALTH */
 .whoop-cinema-section {
   padding: 110px 0 130px;
   border-bottom: 1px solid var(--border-hairline);
@@ -1940,9 +1906,6 @@
   }
 }
 
-/* ============================================================================
-   РАСКРЫВАЮЩИЕСЯ КНОПКИ С GSAP-АНИМАЦИЕЙ (GSAP EXPANDING BUTTONS)
-   ============================================================================ */
 .gsap-expanding-btn {
   display: inline-flex;
   align-items: center;
@@ -2021,7 +1984,6 @@
   font-size: 14px;
 }
 
-/* Чистая витрина в Hero без плавающих виджетов */
 .hero-clean-showcase {
   display: flex;
   align-items: center;
@@ -2030,9 +1992,6 @@
   margin-bottom: 96px;
 }
 
-/* ============================================================================
-   APPLE PRO INTERACTIVE EXPANDING DECK (SCROLL-DRIVEN)
-   ============================================================================ */
 .deck-scrolly-section {
   position: relative;
   height: 380vh;
@@ -2049,7 +2008,7 @@
   display: flex;
   align-items: center;
   overflow: hidden;
-  padding-top: 86px; /* Защита от перекрытия верхним навбаром */
+  padding-top: 86px; 
   padding-bottom: 24px;
 }
 
@@ -2298,9 +2257,6 @@
   flex-shrink: 0;
 }
 
-/* ============================================================================
-   SCROLL-DRIVEN СЕКЦИЯ ПРИЛОЖЕНИЯ С АВТОСМЕНОЙ КАРТОЧЕК (СКРИНШОТ 2)
-   ============================================================================ */
 .app-scrolly-section {
   position: relative;
   height: 360vh;
@@ -2316,7 +2272,7 @@
   display: flex;
   align-items: center;
   overflow: hidden;
-  padding-top: 84px; /* Защита от наезда на верхний навбар! */
+  padding-top: 84px; 
   padding-bottom: 24px;
 }
 

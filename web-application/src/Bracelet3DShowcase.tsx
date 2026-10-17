@@ -367,7 +367,6 @@ const contentByLang: Record<
   },
 };
 
-// Студийная HDRI-среда
 function createDarkStudioEnvMap(renderer: THREE.WebGLRenderer): THREE.Texture {
   const canvas = document.createElement('canvas');
   canvas.width = 1024;
@@ -520,21 +519,17 @@ function createHollowCaseGeometry(
   return geo;
 }
 
-// Точная геометрия верхнего ремешка (как на вашем фото: расширяется кверху + сквозная овальная прорезь)
 function createUpperStrapGeometry(): THREE.ExtrudeGeometry {
   const shape = new THREE.Shape();
-  // Координаты (x, y), где y идет от 0 (у корпуса) до 3.35 (верхний закругленный кончик)
   shape.moveTo(-0.5, 0);
   shape.lineTo(0.5, 0);
   shape.lineTo(0.5, 1.45);
-  // Плавное расширение под замок (как у Apple Watch Sport Band на вашем фото)
   shape.bezierCurveTo(0.5, 1.85, 0.68, 2.0, 0.68, 2.38);
   shape.bezierCurveTo(0.68, 2.75, 0.52, 3.35, 0.0, 3.35);
   shape.bezierCurveTo(-0.52, 3.35, -0.68, 2.75, -0.68, 2.38);
   shape.bezierCurveTo(-0.68, 2.0, -0.5, 1.85, -0.5, 1.45);
   shape.closePath();
 
-  // Настоящая сквозная овальная прорезь в ремешке
   const slot = new THREE.Path();
   const sw = 0.34;
   const sh = 0.095;
@@ -554,22 +549,18 @@ function createUpperStrapGeometry(): THREE.ExtrudeGeometry {
     bevelSize: 0.018,
     bevelThickness: 0.018,
   });
-  // Поворачиваем так, чтобы ремешок шел вдоль оси -Z (вверх от корпуса)
   geo.rotateX(-Math.PI / 2);
   return geo;
 }
 
-// Точная геометрия нижнего ремешка (длинный, с 7 настоящими сквозными отверстиями, как на вашем фото)
 function createLowerStrapGeometry(): THREE.ExtrudeGeometry {
   const shape = new THREE.Shape();
-  // y идет от 0 (у корпуса) до -4.2 (нижний кончик)
   shape.moveTo(-0.5, 0);
   shape.lineTo(0.5, 0);
   shape.lineTo(0.46, -3.7);
   shape.absarc(0, -3.7, 0.46, 0, Math.PI, true);
   shape.lineTo(-0.5, 0);
 
-  // 7 круглых сквозных отверстий регулировки
   for (let i = 0; i < 7; i++) {
     const hy = -1.15 - i * 0.36;
     const hole = new THREE.Path();
@@ -664,7 +655,6 @@ function createICPackage(
   return g;
 }
 
-// Точная текстура логотипа и надписи SuGuard с темной окантовкой 3D-печати (как на вашем фото!)
 function createExactSuGuardTopLogo(): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
   canvas.width = 1024;
@@ -672,7 +662,6 @@ function createExactSuGuardTopLogo(): THREE.CanvasTexture {
   const ctx = canvas.getContext('2d')!;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // 1. Четырехлистник/узел SuGuard сверху по центру
   ctx.save();
   ctx.translate(canvas.width / 2, 175);
 
@@ -705,12 +694,10 @@ function createExactSuGuardTopLogo(): THREE.CanvasTexture {
     ctx.stroke();
   };
 
-  // Темный паз вокруг белой вставки (как на 3D-печати на фото)
   drawLogoPaths('rgba(5, 6, 8, 0.9)', 26);
   drawLogoPaths('#dde3ea', 16);
   ctx.restore();
 
-  // 2. Крупная надпись SuGuard во всю ширину корпуса снизу
   ctx.font = '600 172px Inter, Arial, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -879,7 +866,6 @@ export const Bracelet3DShowcase: React.FC<{ lang: Language }> = ({ lang }) => {
     xrayModeRef.current = xrayMode;
   }, [xrayMode]);
 
-  // GSAP-анимация текста справа при смене этапа
   useEffect(() => {
     if (!textContentRef.current) return;
     const elems = textContentRef.current.querySelectorAll('.gsap-reveal-item');
@@ -898,7 +884,6 @@ export const Bracelet3DShowcase: React.FC<{ lang: Language }> = ({ lang }) => {
     );
   }, [activeStage, lang]);
 
-  // Скролл-контроллер с плавным демпфированием GSAP
   useEffect(() => {
     const onScroll = () => {
       if (!sectionRef.current) return;
@@ -940,14 +925,12 @@ export const Bracelet3DShowcase: React.FC<{ lang: Language }> = ({ lang }) => {
       100
     );
 
-    // Оптический сдвиг центра камеры влево (чтобы модель была строго слева без перспективного перекоса!)
     const updateCameraOffset = () => {
       if (!mount) return;
       const w = mount.clientWidth;
       const h = mount.clientHeight;
       camera.aspect = w / h;
       if (w > 1024) {
-        // Сдвигаем оптический центр камеры в левую половину экрана
         camera.setViewOffset(w, h, w * 0.21, 0, w, h);
       } else {
         camera.clearViewOffset();
@@ -987,9 +970,6 @@ export const Bracelet3DShowcase: React.FC<{ lang: Language }> = ({ lang }) => {
     blueFill.position.set(5, -4, 4);
     scene.add(blueFill);
 
-    // =========================================================================
-    // PBR-МАТЕРИАЛЫ
-    // =========================================================================
     const topCaseMat = new THREE.MeshPhysicalMaterial({
       color: 0x101216,
       roughness: 0.34,
@@ -1073,9 +1053,6 @@ export const Bracelet3DShowcase: React.FC<{ lang: Language }> = ({ lang }) => {
     const rootGroup = new THREE.Group();
     scene.add(rootGroup);
 
-    // =========================================================================
-    // 1. ВЕРХНЯЯ КРЫШКА SUGUARD (ТОЧНЫЕ ПРОПОРЦИИ С ФОТО: ПРЯМОУГОЛЬНИК С МАЛЫМ РАДИУСОМ)
-    // =========================================================================
     const topCoverGroup = new THREE.Group();
 
     const topShellMesh = new THREE.Mesh(
@@ -1106,9 +1083,6 @@ export const Bracelet3DShowcase: React.FC<{ lang: Language }> = ({ lang }) => {
 
     rootGroup.add(topCoverGroup);
 
-    // =========================================================================
-    // 2. АККУМУЛЯТОР Li-Po + BMS + КАПТОНОВАЯ ЛЕНТА
-    // =========================================================================
     const batteryGroup = new THREE.Group();
 
     const lipoCell = new THREE.Mesh(
@@ -1174,9 +1148,6 @@ export const Bracelet3DShowcase: React.FC<{ lang: Language }> = ({ lang }) => {
 
     rootGroup.add(batteryGroup);
 
-    // =========================================================================
-    // 3. КАСТОМНАЯ ЗЕЛЁНАЯ ПЛАТА SUGUARD.HEALTH (ПОЛНОСТЬЮ ПОМЕЩАЕТСЯ ВНУТРИ!)
-    // =========================================================================
     const pcbGroup = new THREE.Group();
 
     const pcbBoardMesh = new THREE.Mesh(
@@ -1406,9 +1377,6 @@ export const Bracelet3DShowcase: React.FC<{ lang: Language }> = ({ lang }) => {
 
     rootGroup.add(pcbGroup);
 
-    // =========================================================================
-    // 4. ОПТИЧЕСКИЙ ДАТЧИК MAX30102
-    // =========================================================================
     const sensorGroup = new THREE.Group();
 
     const maxPcbMesh = new THREE.Mesh(
@@ -1540,9 +1508,6 @@ export const Bracelet3DShowcase: React.FC<{ lang: Language }> = ({ lang }) => {
 
     rootGroup.add(sensorGroup);
 
-    // =========================================================================
-    // 5. НИЖНЯЯ ЧАША КОРПУСА + ТОЧНЫЙ РЕМЕШОК ПО ВАШЕМУ ФОТО
-    // =========================================================================
     const bottomCaseGroup = new THREE.Group();
 
     const lowerWalls = new THREE.Mesh(
@@ -1561,12 +1526,10 @@ export const Bracelet3DShowcase: React.FC<{ lang: Language }> = ({ lang }) => {
     lowerFloor.position.y = -0.22;
     bottomCaseGroup.add(lowerFloor);
 
-    // Верхний ремешок (с расширяющейся головкой, сквозной прорезью и круглым стальным пином)
     const upperStrapMesh = new THREE.Mesh(createUpperStrapGeometry(), strapMat);
     upperStrapMesh.position.set(0, -0.12, -0.92);
     bottomCaseGroup.add(upperStrapMesh);
 
-    // Двухуровневая стальная заклёпка-пин на кончике верхнего ремешка (один в один как на вашем фото)
     const pinFlange = new THREE.Mesh(
       new THREE.CylinderGeometry(0.18, 0.18, 0.06, 32),
       chromeMat
@@ -1579,16 +1542,12 @@ export const Bracelet3DShowcase: React.FC<{ lang: Language }> = ({ lang }) => {
     pinHead.position.set(0, 0.03, -3.72);
     bottomCaseGroup.add(pinFlange, pinHead);
 
-    // Нижний ремешок (с 7 настоящими сквозными отверстиями)
     const lowerStrapMesh = new THREE.Mesh(createLowerStrapGeometry(), strapMat);
     lowerStrapMesh.position.set(0, -0.12, 0.92);
     bottomCaseGroup.add(lowerStrapMesh);
 
     rootGroup.add(bottomCaseGroup);
 
-    // =========================================================================
-    // ВРАЩЕНИЕ МЫШЬЮ
-    // =========================================================================
     let isDragging = false;
     let prevX = 0;
     let prevY = 0;
@@ -1616,19 +1575,14 @@ export const Bracelet3DShowcase: React.FC<{ lang: Language }> = ({ lang }) => {
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', onPointerUp);
 
-    // =========================================================================
-    // ПЛАВНАЯ АНИМАЦИЯ ПО КЛЮЧЕВЫМ КАДРАМ (БЕЗ ТОРЧАЩИХ ДЕТАЛЕЙ И С ОБЩИМ ПЛАНОМ В НАЧАЛЕ)
-    // =========================================================================
     let animFrameId: number;
     const clock = new THREE.Clock();
 
     const animate = () => {
       animFrameId = requestAnimationFrame(animate);
       const elapsed = clock.getElapsedTime();
-      const p = smoothScrollRef.current.value; // 0..1
+      const p = smoothScrollRef.current.value; 
 
-      // В собранном виде (p = 0) внутренние платы уменьшены до 0.72, чтобы 100% помещаться внутри коробки без единого выступа!
-      // А при разборке и фокусе на конкретной детали — плавно увеличиваются для детального макро-обзора!
       const batScale = sampleKeyframes([0.74, 0.92, 1.32, 0.85, 0.8], p);
       const pcbScale = sampleKeyframes([0.68, 0.86, 0.82, 1.25, 0.8], p);
       const senScale = sampleKeyframes([0.72, 0.9, 0.85, 0.85, 1.42], p);
@@ -1637,7 +1591,6 @@ export const Bracelet3DShowcase: React.FC<{ lang: Language }> = ({ lang }) => {
       pcbGroup.scale.setScalar(pcbScale);
       sensorGroup.scale.setScalar(senScale);
 
-      // Позиции слоев по Y и Z для 5 этапов: [0: Сборка, 1: Взрыв-схема, 2: Аккумулятор, 3: Плата PCB, 4: MAX30102]
       topCoverGroup.position.y = sampleKeyframes([0.22, 2.2, 3.6, 3.8, 3.8], p);
       topCoverGroup.position.z = sampleKeyframes([0.0, -0.2, -1.5, -1.8, -1.8], p);
 
@@ -1653,7 +1606,6 @@ export const Bracelet3DShowcase: React.FC<{ lang: Language }> = ({ lang }) => {
       bottomCaseGroup.position.y = sampleKeyframes([-0.16, -2.15, -3.4, -3.4, -3.2], p);
       bottomCaseGroup.position.z = sampleKeyframes([0.0, -0.1, -1.2, -1.2, -1.1], p);
 
-      // Прозрачность слоев: на этапах 3, 4, 5 неактивные детали плавно растворяются (или видны в режиме Рентген)
       const minGhost = xrayModeRef.current ? 0.16 : 0.0;
       const caseAlpha = Math.max(
         minGhost,
@@ -1680,14 +1632,12 @@ export const Bracelet3DShowcase: React.FC<{ lang: Language }> = ({ lang }) => {
       pcbSolderMaskMat.opacity = xrayModeRef.current && p < 0.15 ? 1.0 : pcbAlpha;
       pcbTopMat.opacity = pcbSolderMaskMat.opacity;
 
-      // Скрываем полностью прозрачные группы, чтобы они не мешали рендеру
       topCoverGroup.visible = topCaseMat.opacity > 0.01;
       bottomCaseGroup.visible = bottomCaseMat.opacity > 0.01;
       batteryGroup.visible = lipoFoilMat.opacity > 0.01;
       pcbGroup.visible = pcbSolderMaskMat.opacity > 0.01;
       sensorGroup.visible = (xrayModeRef.current && p < 0.15 ? 1.0 : senAlpha) > 0.01;
 
-      // ДИСТАНЦИЯ КАМЕРЫ: На этапе 1 камера ДАЛЕКО (camY = 6.8, camZ = 9.8), чтобы ВЕСЬ браслет с ремешками был виден целиком!
       const camY = sampleKeyframes([6.8, 3.8, 3.2, 3.4, 2.9], p);
       const camZ = sampleKeyframes([9.6, 10.6, 6.4, 6.2, 5.6], p);
       const lookY = sampleKeyframes([-0.2, 0.0, 0.15, 0.1, 0.05], p);
@@ -1695,7 +1645,6 @@ export const Bracelet3DShowcase: React.FC<{ lang: Language }> = ({ lang }) => {
       camera.position.set(0, camY, camZ);
       camera.lookAt(0, lookY, 0);
 
-      // Красивый наклон модели на каждом этапе
       const baseRotX = sampleKeyframes([0.48, 0.32, 0.52, 0.62, 0.58], p);
       const baseRotY =
         sampleKeyframes([-0.18, 0.36, -0.22, 0.14, -0.18], p) +
@@ -1756,10 +1705,8 @@ export const Bracelet3DShowcase: React.FC<{ lang: Language }> = ({ lang }) => {
   return (
     <section ref={sectionRef} className="suguard-3d-fullbleed" id="hardware-3d">
       <div className="suguard-3d-sticky">
-        {/* Полноэкранный 3D Canvas без рамок */}
         <div ref={canvasWrapperRef} className="suguard-3d-canvas-full" />
 
-        {/* Верхняя навигация по 5 этапам */}
         <div className="suguard-3d-topbar container">
           <div className="suguard-3d-brand-head">
             <span className="suguard-3d-kicker">{t.headerTag}</span>
@@ -1791,10 +1738,8 @@ export const Bracelet3DShowcase: React.FC<{ lang: Language }> = ({ lang }) => {
           </div>
         </div>
 
-        {/* Правая колонка: Журнальная типографика БЕЗ РАМОК И БЕЗ НАЛОЖЕНИЙ */}
         <div className="suguard-3d-editorial-wrap container">
           <div ref={textContentRef} className="suguard-editorial-content">
-            {/* Номер этапа и подзаголовок в одну ровную линию */}
             <div className="editorial-index-row gsap-reveal-item">
               <span
                 className="editorial-index-num"
@@ -1822,7 +1767,6 @@ export const Bracelet3DShowcase: React.FC<{ lang: Language }> = ({ lang }) => {
               {currentPart.description}
             </p>
 
-            {/* Ключевые узлы текущего слоя (ровный список без наложений на 3D-модель) */}
             <div className="editorial-pins-list gsap-reveal-item">
               {currentPart.pins.map((pin, idx) => (
                 <div key={idx} className="editorial-pin-item">
@@ -1841,7 +1785,6 @@ export const Bracelet3DShowcase: React.FC<{ lang: Language }> = ({ lang }) => {
               ))}
             </div>
 
-            {/* Инженерные характеристики */}
             <div className="editorial-metrics-row gsap-reveal-item">
               {currentPart.specs.map((spec, i) => (
                 <div key={i} className="editorial-metric-item">
@@ -1858,7 +1801,6 @@ export const Bracelet3DShowcase: React.FC<{ lang: Language }> = ({ lang }) => {
           </div>
         </div>
 
-        {/* Нижняя панель */}
         <div className="suguard-3d-bottombar container">
           <button
             type="button"
