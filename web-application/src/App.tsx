@@ -162,7 +162,6 @@ function App() {
   const [activeFaq, setActiveFaq] = useState<number | null>(0);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
-  const [wristMuted, setWristMuted] = useState(true);
   const [activeCinemaTab, setActiveCinemaTab] = useState<'wrist' | 'studio'>('wrist');
   const [scanPhase, setScanPhase] = useState(0);
 
@@ -184,13 +183,6 @@ function App() {
     if (cur < 3.2) setScanPhase(0);
     else if (cur < 6.8) setScanPhase(1);
     else setScanPhase(2);
-  };
-
-  const toggleWristSound = () => {
-    if (!wristVideoRef.current) return;
-    const nextMuted = !wristMuted;
-    wristVideoRef.current.muted = nextMuted;
-    setWristMuted(nextMuted);
   };
 
   const navLinks = [
@@ -735,7 +727,7 @@ function App() {
               src={activeCinemaTab === 'wrist' ? '/suguard-wrist.mp4' : '/suguard-studio.mp4'}
               autoPlay
               loop
-              muted={wristMuted}
+              muted
               playsInline
               onTimeUpdate={handleWristTimeUpdate}
               className="cinema-main-video"
@@ -752,14 +744,6 @@ function App() {
                     : t.cinema.badgeStudio}
                 </span>
               </div>
-
-              <button
-                type="button"
-                onClick={toggleWristSound}
-                className="cinema-sound-btn"
-              >
-                {wristMuted ? t.cinema.soundOff : t.cinema.soundOn}
-              </button>
             </div>
 
             <div className="cinema-hud-bottom">
