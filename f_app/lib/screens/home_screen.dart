@@ -23,6 +23,17 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  /// How often the dashboard polls Firebase for new readings.
+  static const _pollInterval = Duration(seconds: 5);
+
+  /// Number of most recent readings fetched on a regular poll tick.
+  static const _recentLimit = 50;
+
+  /// Every Nth tick re-downloads the full history instead of only the
+  /// recent entries. Safety net in case the device writes keys that do not
+  /// sort chronologically, and to pick up edits/deletions of older entries.
+  static const _fullSyncEveryTicks = 12;
+
   int _currentIndex = 0;
   List<HealthData> _allData = [];
   List<HealthData> _todayData = [];
@@ -30,9 +41,15 @@ class _HomeScreenState extends State<HomeScreen> {
   final _s = AppSettings();
   Timer? _realtimeTimer;
 
+  /// Full health history keyed by Firebase key; polls merge into it.
+  final Map<String, HealthData> _dataByKey = {};
+
+  /// Pending Firebase request, if any. Poll ticks are skipped while set so
+  /// slow responses cannot pile up.
+  Future<void>? _inFlight;
+  int _ticksSinceFullSync = 0;
 
   double? _liveGlucoseMgdl;
-  double? _liveGlucoseMmol;
   double? _livePulse;
   double? _liveSpo2;
 
@@ -56,39 +73,59 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) setState(() {});
   }
 
-
-
   void _startRealtimePolling() {
     _realtimeTimer?.cancel();
+    _realtimeTimer = Timer.periodic(_pollInterval, (_) => _onPollTick());
+  }
 
-    _realtimeTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
-      if (!mounted) return;
+  void _onPollTick() {
+    if (!mounted || _inFlight != null) return;
+    _ticksSinceFullSync++;
+    final fullSync = _ticksSinceFullSync >= _fullSyncEveryTicks;
+    _fetchHealthData(recentOnly: !fullSync);
+  }
 
-      final dataFromFirebase = await FirebaseService.getHealthData();
-      if (mounted) {
-        setState(() {
-          _allData = dataFromFirebase;
-          final now = DateTime.now();
-          final todayStart = DateTime(now.year, now.month, now.day);
-          _todayData = _allData
-              .where((d) => d.timestamp.isAfter(todayStart))
-              .toList();
-
-          if (_allData.isNotEmpty) {
-            final latest = _allData.last;
-            _liveGlucoseMgdl = latest.glucose;
-            _liveGlucoseMmol = latest.glucose / 18.0;
-            _livePulse = latest.pulse;
-            _liveSpo2 = latest.spo2;
-          } else {
-            _liveGlucoseMgdl = null;
-            _liveGlucoseMmol = null;
-            _livePulse = null;
-            _liveSpo2 = null;
-          }
-        });
+  /// Fetches health data and applies it to the dashboard state.
+  ///
+  /// [recentOnly] fetches just the last [_recentLimit] entries and merges
+  /// them into the known history; otherwise the full history is downloaded
+  /// and replaces it. Only one request runs at a time.
+  Future<void> _fetchHealthData({required bool recentOnly}) {
+    return _inFlight ??= () async {
+      try {
+        final fetched = await FirebaseService.fetchHealthDataByKey(
+          limitToLast: recentOnly ? _recentLimit : null,
+        );
+        // On a failed request keep showing the last good data.
+        if (fetched == null || !mounted) return;
+        if (!recentOnly) {
+          _dataByKey.clear();
+          _ticksSinceFullSync = 0;
+        }
+        _dataByKey.addAll(fetched);
+        setState(_applyHealthData);
+      } catch (e) {
+        debugPrint('Health data fetch failed: $e');
+      } finally {
+        _inFlight = null;
       }
-    });
+    }();
+  }
+
+  /// Derives the sorted history, today's readings and the live values
+  /// from [_dataByKey].
+  void _applyHealthData() {
+    _allData = _dataByKey.values.toList()
+      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    _todayData =
+        _allData.where((d) => d.timestamp.isAfter(todayStart)).toList();
+
+    final latest = _allData.isNotEmpty ? _allData.last : null;
+    _liveGlucoseMgdl = latest?.glucose;
+    _livePulse = latest?.pulse;
+    _liveSpo2 = latest?.spo2;
   }
 
   Future<void> _downloadReport() async {
@@ -97,27 +134,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadData() async {
     setState(() => _loading = true);
-
-    _allData = await FirebaseService.getHealthData();
-    final now = DateTime.now();
-    final todayStart = DateTime(now.year, now.month, now.day);
-    _todayData = _allData
-        .where((d) => d.timestamp.isAfter(todayStart))
-        .toList();
-
-    if (_allData.isNotEmpty) {
-      final latest = _allData.last;
-      _liveGlucoseMgdl = latest.glucose;
-      _liveGlucoseMmol = latest.glucose / 18.0;
-      _livePulse = latest.pulse;
-      _liveSpo2 = latest.spo2;
-    } else {
-      _liveGlucoseMgdl = null;
-      _liveGlucoseMmol = null;
-      _livePulse = null;
-      _liveSpo2 = null;
-    }
-
+    // Let a pending poll finish so the full reload is not skipped.
+    await _inFlight;
+    await _fetchHealthData(recentOnly: false);
     if (mounted) setState(() => _loading = false);
   }
 

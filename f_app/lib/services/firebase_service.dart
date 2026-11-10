@@ -124,21 +124,46 @@ class FirebaseService {
 
 
 
+  /// Fetches the user's health readings, keyed by their Firebase key.
+  ///
+  /// With [limitToLast] only the last N children ordered by key are
+  /// downloaded (`orderBy="$key"` needs no `.indexOn` rule). That is the
+  /// most recent readings as long as keys sort chronologically, which holds
+  /// for push IDs, integer keys and `hd_<millis>`-style keys.
+  ///
+  /// Returns an empty map when logged out or when there is no data, and
+  /// `null` when the request fails.
+  static Future<Map<String, HealthData>?> fetchHealthDataByKey({
+    int? limitToLast,
+  }) async {
+    if (_currentUid == null) return {};
+
+    var url = Uri.parse('$_dbUrl/users/$_currentUid/healthData.json');
+    if (limitToLast != null) {
+      url = url.replace(queryParameters: {
+        'orderBy': '"\$key"',
+        'limitToLast': '$limitToLast',
+      });
+    }
+    final resp = await http.get(url);
+
+    if (resp.statusCode != 200) return null;
+    if (resp.body == 'null') return {};
+
+    final map = jsonDecode(resp.body) as Map<String, dynamic>;
+    return map.map((key, v) => MapEntry(
+          key,
+          HealthData.fromJson(Map<String, dynamic>.from(v as Map)),
+        ));
+  }
+
   static Future<List<HealthData>> getHealthData({
     DateTime? from,
     DateTime? to,
   }) async {
-    if (_currentUid == null) return [];
-
-    final url = Uri.parse('$_dbUrl/users/$_currentUid/healthData.json');
-    final resp = await http.get(url);
-
-    if (resp.statusCode != 200 || resp.body == 'null') return [];
-
-    final map = jsonDecode(resp.body) as Map<String, dynamic>;
-    final list = map.values
-        .map((v) => HealthData.fromJson(Map<String, dynamic>.from(v as Map)))
-        .toList();
+    final byKey = await fetchHealthDataByKey();
+    if (byKey == null) return [];
+    final list = byKey.values.toList();
 
     list.sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
