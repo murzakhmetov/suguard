@@ -27,20 +27,6 @@ class AppSettings extends ChangeNotifier {
   String? _emergencyEmail;
   String? get emergencyEmail => _emergencyEmail;
 
-  bool _highGlucoseMode = false;
-  bool get highGlucoseMode => _highGlucoseMode;
-  void toggleHighGlucoseMode() {
-    _highGlucoseMode = !_highGlucoseMode;
-    notifyListeners();
-  }
-
-  bool _secretMetricsBoost = false;
-  bool get secretMetricsBoost => _secretMetricsBoost;
-  void toggleSecretMetricsBoost() {
-    _secretMetricsBoost = !_secretMetricsBoost;
-    notifyListeners();
-  }
-
   double? _height; 
   double? _weight; 
   int? _age;
@@ -276,8 +262,6 @@ class AppSettings extends ChangeNotifier {
     'emergency_email_failed': 'Не удалось отправить уведомление',
     'save': 'Сохранить',
     'delete': 'Удалить',
-    'secret_boost': ' Секретный буст метрик',
-    'secret_boost_desc': 'Увеличить все показатели на дашборде',
   };
 
   static const Map<String, String> _en = {

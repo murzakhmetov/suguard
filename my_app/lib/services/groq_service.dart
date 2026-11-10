@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:my_app/config/env.dart';
+import 'package:my_app/services/nutrition_parser.dart';
 
 class GroqService {
-  static String get _apiKey => dotenv.env['GROQ_API_KEY'] ?? '';
+  static const String _apiKey = Env.groqApiKey;
   static const String _baseUrl =
       'https://api.groq.com/openai/v1/chat/completions';
   static const String _model = 'llama-3.3-70b-versatile';
-  static const String _foodModel = 'qwen/qwen3.6-27b';
 
   static Future<String> chat({
     required List<Map<String, String>> messages,
@@ -62,65 +62,6 @@ IMPORTANT GUIDELINES:
     }
   }
 
-  static Future<Map<String, dynamic>?> analyzeFoodPhoto(String base64Image) async {
-    const systemPrompt = '''
-You are a professional nutritionist AI. Analyze the food in the image.
-You MUST respond with ONLY a valid JSON object, no extra text.
-Format:
-{"description": "краткое описание блюда на русском", "calories": 350, "protein": 25.0, "fat": 12.0, "carbs": 40.0}
-
-Rules:
-- description: short name of the dish in Russian
-- calories: estimated total kcal (number)
-- protein: grams of protein (number)
-- fat: grams of fat (number)
-- carbs: grams of carbohydrates (number)
-- Be as accurate as possible based on visual portion size
-- Respond ONLY with JSON, no markdown, no explanation
-''';
-
-    try {
-      final response = await http.post(
-        Uri.parse(_baseUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_apiKey',
-        },
-        body: jsonEncode({
-          'model': _foodModel,
-          'messages': [
-            {
-              'role': 'user',
-              'content': [
-                {'type': 'text', 'text': systemPrompt},
-                {
-                  'type': 'image_url',
-                  'image_url': {
-                    'url': 'data:image/jpeg;base64,$base64Image'
-                  }
-                }
-              ]
-            }
-          ],
-          'temperature': 0.3,
-          'max_tokens': 512,
-        }),
-      );
-
-      final data = jsonDecode(response.body);
-      
-      if (response.statusCode == 200) {
-        final content = data['choices'][0]['message']['content'] as String;
-        return _parseNutritionJson(content);
-      } else {
-        final errMsg = data['error']?['message'] as String?;
-        throw Exception(errMsg ?? 'API Error ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Food analysis failed: $e');
-    }
-  }
-
   static Future<Map<String, dynamic>?> analyzeFoodText({
     required String foodDescription,
     required String grams,
@@ -165,31 +106,10 @@ Rules:
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final content = data['choices'][0]['message']['content'] as String;
-        return _parseNutritionJson(content);
+        return parseNutritionJson(content);
       }
     } catch (e) {
     }
     return null;
-  }
-
-  static Map<String, dynamic>? _parseNutritionJson(String raw) {
-    try {
-      var cleaned = raw.trim();
-      if (cleaned.startsWith('```')) {
-        cleaned = cleaned.replaceFirst(RegExp(r'^```\w*\n?'), '');
-        cleaned = cleaned.replaceFirst(RegExp(r'\n?```$'), '');
-        cleaned = cleaned.trim();
-      }
-      final map = jsonDecode(cleaned) as Map<String, dynamic>;
-      return {
-        'description': map['description']?.toString() ?? 'Еда',
-        'calories': (map['calories'] as num?)?.toDouble() ?? 0,
-        'protein': (map['protein'] as num?)?.toDouble() ?? 0,
-        'fat': (map['fat'] as num?)?.toDouble() ?? 0,
-        'carbs': (map['carbs'] as num?)?.toDouble() ?? 0,
-      };
-    } catch (_) {
-      return null;
-    }
   }
 }

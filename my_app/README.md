@@ -1,17 +1,26 @@
-# my_app
+# SuGuard
 
-A new Flutter project.
+Flutter app for glucose / SpO2 / pulse monitoring. Health data is stored in the
+Firebase Realtime Database; AI features use Groq (chat, text food analysis) and
+Google Gemini (food photo analysis); emergency e-mails go through Resend.
 
-## Getting Started
+## Build & run
 
-This project is a starting point for a Flutter application.
+API keys are passed at compile time, not bundled as an asset:
 
-A few resources to get you started if this is your first Flutter project:
+```sh
+cp .env.example .env        # then fill in your keys (.env is gitignored)
+flutter pub get
+flutter run --dart-define-from-file=.env
+# release build
+flutter build apk --dart-define-from-file=.env
+```
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+A fresh clone also builds without `.env` (`flutter run`); the AI and e-mail
+features then fail at request time because their keys are empty.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+You can also pass individual keys: `--dart-define=GROQ_API_KEY=...`.
+
+> **Security note:** keys compiled into a client build can be extracted from the
+> APK/IPA/JS bundle. They are not secret once shipped. Real secrecy requires
+> routing the Groq/Gemini/Resend calls through a backend proxy.

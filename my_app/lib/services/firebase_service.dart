@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:my_app/models/health_data.dart';
 import 'package:my_app/models/food_entry.dart';
 import 'package:my_app/services/health_service.dart';
+import 'package:my_app/services/password_hasher.dart';
 
 class FirebaseService {
   static const String _dbUrl =
@@ -43,7 +44,6 @@ class FirebaseService {
     };
   }
 
-
   static bool get isLoggedIn => _currentUid != null;
   static String? get uid => _currentUid;
   static String? get displayName => _currentName;
@@ -65,7 +65,6 @@ class FirebaseService {
     }
   }
 
-
   static Future<void> register({
     required String email,
     required String password,
@@ -85,7 +84,7 @@ class FirebaseService {
       body: jsonEncode({
         'name': name,
         'email': email,
-        'password': _hashPassword(password),
+        'password': PasswordHasher.hash(password),
         'createdAt': DateTime.now().toIso8601String(),
       }),
     );
@@ -118,8 +117,20 @@ class FirebaseService {
     final profile = jsonDecode(resp.body) as Map<String, dynamic>;
     final storedHash = profile['password'] as String?;
 
-    if (storedHash != _hashPassword(password)) {
+    if (!PasswordHasher.verify(password, storedHash)) {
       throw Exception('Invalid password');
+    }
+
+    if (PasswordHasher.needsRehash(storedHash)) {
+      // Lazy migration: replace the reversible legacy hash.
+      try {
+        await http.patch(
+          url,
+          body: jsonEncode({'password': PasswordHasher.hash(password)}),
+        );
+      } catch (_) {
+        // Not fatal: the legacy hash keeps working; retried on next login.
+      }
     }
 
     _currentUid = uid;
@@ -137,7 +148,6 @@ class FirebaseService {
     await prefs.remove('name');
     await prefs.remove('email');
   }
-
 
   static Future<void> _generateInitialData(String uid) async {
     final now = DateTime.now();
@@ -157,41 +167,12 @@ class FirebaseService {
     await http.put(url, body: jsonEncode(batch));
   }
 
-  static Future<List<HealthData>> getHealthData({
-    DateTime? from,
-    DateTime? to,
-  }) async {
-    if (_currentUid == null) return [];
-
-    final url = Uri.parse('$_dbUrl/users/$_currentUid/healthData.json');
-    final resp = await http.get(url);
-
-    if (resp.statusCode != 200 || resp.body == 'null') return [];
-
-    final map = jsonDecode(resp.body) as Map<String, dynamic>;
-    final list = map.values
-        .map((v) => HealthData.fromJson(Map<String, dynamic>.from(v as Map)))
-        .toList();
-
-    list.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-
-    if (from != null) {
-      list.removeWhere((d) => d.timestamp.isBefore(from));
-    }
-    if (to != null) {
-      list.removeWhere((d) => d.timestamp.isAfter(to));
-    }
-
-    return list;
-  }
-
   static Future<void> saveHealthData(HealthData data) async {
     if (_currentUid == null) return;
     final url =
         Uri.parse('$_dbUrl/users/$_currentUid/healthData/${data.id}.json');
     await http.put(url, body: jsonEncode(data.toJson()));
   }
-
 
   static Future<Map<String, dynamic>?> getUserProfile() async {
     if (_currentUid == null) return null;
@@ -210,7 +191,6 @@ class FirebaseService {
       await _saveSession();
     }
   }
-
 
   static Future<void> saveFoodEntry(FoodEntry entry) async {
     if (_currentUid == null) return;
@@ -250,7 +230,6 @@ class FirebaseService {
     await http.delete(url);
   }
 
-
   static Future<void> saveEmergencyEmail(String email) async {
     if (_currentUid == null) return;
     final url = Uri.parse('$_dbUrl/users/$_currentUid/profile.json');
@@ -263,17 +242,11 @@ class FirebaseService {
     return profile?['emergencyEmail'] as String?;
   }
 
-
   static String _emailToUid(String email) {
     return email
         .toLowerCase()
         .trim()
         .replaceAll('.', '_dot_')
         .replaceAll('@', '_at_');
-  }
-
-  static String _hashPassword(String password) {
-    final salted = 'suguard_${password}_salt2024';
-    return base64Encode(utf8.encode(salted));
   }
 }

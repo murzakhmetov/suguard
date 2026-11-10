@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:my_app/config/env.dart';
 
 class ResendService {
-  static String get _apiKey => dotenv.env['RESEND_API_KEY'] ?? '';
+  static const String _apiKey = Env.resendApiKey;
   static const String _baseUrl = 'https://api.resend.com/emails';
 
   static Future<bool> sendEmergencyEmail({

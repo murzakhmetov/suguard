@@ -1,7 +1,6 @@
 import 'dart:math';
 import 'package:my_app/models/health_data.dart';
 import 'package:my_app/services/app_settings.dart';
-import 'package:uuid/uuid.dart';
 
 class HealthService {
   static List<HealthData> generateData({
