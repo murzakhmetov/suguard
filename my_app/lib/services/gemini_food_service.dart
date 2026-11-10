@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:my_app/config/env.dart';
+import 'package:my_app/services/nutrition_parser.dart';
 
 class GeminiFoodService {
   static const String _apiKey = Env.geminiApiKey;
@@ -50,34 +51,13 @@ class GeminiFoodService {
       if (response.statusCode == 200) {
         final content =
             data['candidates'][0]['content']['parts'][0]['text'] as String;
-        return _parseNutritionJson(content);
+        return parseNutritionJson(content);
       } else {
         final errMsg = data['error']?['message'] as String?;
         throw Exception(errMsg ?? 'Gemini API Error ${response.statusCode}');
       }
     } catch (e) {
       throw Exception('Food analysis failed: $e');
-    }
-  }
-
-  static Map<String, dynamic>? _parseNutritionJson(String raw) {
-    try {
-      var cleaned = raw.trim();
-      if (cleaned.startsWith('```')) {
-        cleaned = cleaned.replaceFirst(RegExp(r'^```\w*\n?'), '');
-        cleaned = cleaned.replaceFirst(RegExp(r'\n?```$'), '');
-        cleaned = cleaned.trim();
-      }
-      final map = jsonDecode(cleaned) as Map<String, dynamic>;
-      return {
-        'description': map['description']?.toString() ?? 'Еда',
-        'calories': (map['calories'] as num?)?.toDouble() ?? 0,
-        'protein': (map['protein'] as num?)?.toDouble() ?? 0,
-        'fat': (map['fat'] as num?)?.toDouble() ?? 0,
-        'carbs': (map['carbs'] as num?)?.toDouble() ?? 0,
-      };
-    } catch (_) {
-      return null;
     }
   }
 }
