@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:my_app/models/health_data.dart';
 import 'package:my_app/models/food_entry.dart';
 import 'package:my_app/services/health_service.dart';
+import 'package:my_app/services/password_hasher.dart';
 
 class FirebaseService {
   static const String _dbUrl =
@@ -85,7 +86,7 @@ class FirebaseService {
       body: jsonEncode({
         'name': name,
         'email': email,
-        'password': _hashPassword(password),
+        'password': PasswordHasher.hash(password),
         'createdAt': DateTime.now().toIso8601String(),
       }),
     );
@@ -118,8 +119,20 @@ class FirebaseService {
     final profile = jsonDecode(resp.body) as Map<String, dynamic>;
     final storedHash = profile['password'] as String?;
 
-    if (storedHash != _hashPassword(password)) {
+    if (!PasswordHasher.verify(password, storedHash)) {
       throw Exception('Invalid password');
+    }
+
+    if (PasswordHasher.needsRehash(storedHash)) {
+      // Lazy migration: replace the reversible legacy hash.
+      try {
+        await http.patch(
+          url,
+          body: jsonEncode({'password': PasswordHasher.hash(password)}),
+        );
+      } catch (_) {
+        // Not fatal: the legacy hash keeps working; retried on next login.
+      }
     }
 
     _currentUid = uid;
@@ -270,10 +283,5 @@ class FirebaseService {
         .trim()
         .replaceAll('.', '_dot_')
         .replaceAll('@', '_at_');
-  }
-
-  static String _hashPassword(String password) {
-    final salted = 'suguard_${password}_salt2024';
-    return base64Encode(utf8.encode(salted));
   }
 }
