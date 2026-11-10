@@ -302,19 +302,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 32),
 
-            GestureDetector(
-              onTap: () {
-                _settings.toggleSecretMetricsBoost();
-              },
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Text(
-                    'Build 2026.03.30',
-                    style: TextStyle(
-                      color: AppTheme.textTertiary.withValues(alpha: 0.4),
-                      fontSize: 11,
-                    ),
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  'Build 2026.03.30',
+                  style: TextStyle(
+                    color: AppTheme.textTertiary.withValues(alpha: 0.4),
+                    fontSize: 11,
                   ),
                 ),
               ),

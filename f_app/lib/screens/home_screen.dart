@@ -178,50 +178,16 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    final effectiveAllData = _s.secretMetricsBoost
-        ? _allData.map((d) {
-            
-            final boostedGlucMgdl = 127.8 + ((d.glucose.clamp(80.0, 100.0) - 80.0) / 20.0) * (135.0 - 127.8);
-            return HealthData(
-              id: d.id,
-              timestamp: d.timestamp,
-              spo2: d.spo2.clamp(97.0, 99.0),
-              pulse: d.pulse,
-              glucose: double.parse(boostedGlucMgdl.toStringAsFixed(1)),
-            );
-          }).toList()
-        : _allData;
-
-    final effectiveTodayData = _s.secretMetricsBoost
-        ? _todayData.map((d) {
-            final boostedGlucMgdl = 127.8 + ((d.glucose.clamp(80.0, 100.0) - 80.0) / 20.0) * (135.0 - 127.8);
-            return HealthData(
-              id: d.id,
-              timestamp: d.timestamp,
-              spo2: d.spo2.clamp(97.0, 99.0),
-              pulse: d.pulse,
-              glucose: double.parse(boostedGlucMgdl.toStringAsFixed(1)),
-            );
-          }).toList()
-        : _todayData;
-
-    final liveGlucoseMgdl = (_s.secretMetricsBoost && _liveGlucoseMgdl != null)
-        ? (127.8 + ((_liveGlucoseMgdl!.clamp(80.0, 100.0) - 80.0) / 20.0) * (135.0 - 127.8))
-        : _liveGlucoseMgdl;
-
+    final liveGlucoseMgdl = _liveGlucoseMgdl;
     final liveGlucoseMmol = liveGlucoseMgdl != null ? liveGlucoseMgdl / 18.0 : null;
-
     final livePulse = _livePulse;
-
-    final liveSpo2 = (_s.secretMetricsBoost && _liveSpo2 != null)
-        ? _liveSpo2!.clamp(97.0, 99.0)
-        : _liveSpo2;
+    final liveSpo2 = _liveSpo2;
 
     final name = FirebaseService.displayName ?? _tr('nav_dashboard');
-    final risk = HealthService.calculateDiabetesRisk(effectiveAllData);
-    final latest = effectiveTodayData.isNotEmpty
-        ? effectiveTodayData.last
-        : (effectiveAllData.isNotEmpty ? effectiveAllData.last : null);
+    final risk = HealthService.calculateDiabetesRisk(_allData);
+    final latest = _todayData.isNotEmpty
+        ? _todayData.last
+        : (_allData.isNotEmpty ? _allData.last : null);
 
     return SafeArea(
       child: RefreshIndicator(
@@ -276,7 +242,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 28),
 
-              if (!_s.isDeviceConnected || effectiveAllData.isEmpty) ...[
+              if (!_s.isDeviceConnected || _allData.isEmpty) ...[
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 24),
@@ -325,12 +291,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
 
-              if (_s.isDeviceConnected && effectiveAllData.isNotEmpty) ...[
+              if (_s.isDeviceConnected && _allData.isNotEmpty) ...[
                 GestureDetector(
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => DiabetesRiskScreen(data: effectiveAllData),
+                      builder: (_) => DiabetesRiskScreen(data: _allData),
                     ),
                   ),
                   child: Container(
@@ -395,7 +361,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     unit: _s.useMmol ? _tr('unit_mmol') : _tr('unit_mgdl'),
                     icon: Icons.bloodtype_rounded,
                     color: AppTheme.glucoseColor,
-                    sparklineData: effectiveTodayData.map((d) => _s.useMmol ? d.glucose / 18.0 : d.glucose).toList(),
+                    sparklineData: _todayData.map((d) => _s.useMmol ? d.glucose / 18.0 : d.glucose).toList(),
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -405,7 +371,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: AppTheme.glucoseColor,
                           unit: _s.useMmol ? _tr('unit_mmol') : _tr('unit_mgdl'),
                           icon: Icons.bloodtype_rounded,
-                          allData: effectiveAllData,
+                          allData: _allData,
                         ),
                       ),
                     ),
@@ -421,7 +387,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           icon: Icons.air_rounded,
                           color: AppTheme.spo2Color,
                           sparklineData:
-                              effectiveTodayData.map((d) => d.spo2).toList(),
+                              _todayData.map((d) => d.spo2).toList(),
                           onTap: () => Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -431,7 +397,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 color: AppTheme.spo2Color,
                                 unit: '%',
                                 icon: Icons.air_rounded,
-                                allData: effectiveAllData,
+                                allData: _allData,
                               ),
                             ),
                           ),
@@ -446,7 +412,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           icon: Icons.favorite_rounded,
                           color: AppTheme.pulseColor,
                           sparklineData:
-                              effectiveTodayData.map((d) => d.pulse).toList(),
+                              _todayData.map((d) => d.pulse).toList(),
                           onTap: () => Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -456,7 +422,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 color: AppTheme.pulseColor,
                                 unit: _tr('bpm'),
                                 icon: Icons.favorite_rounded,
-                                allData: effectiveAllData,
+                                allData: _allData,
                               ),
                             ),
                           ),
@@ -490,14 +456,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 16),
                       _buildStatRow(
                         _tr('readings_today'),
-                        '${effectiveTodayData.length}',
+                        '${_todayData.length}',
                         Icons.data_usage_rounded,
                       ),
                       const SizedBox(height: 12),
-                      if (effectiveTodayData.isNotEmpty) ...[
+                      if (_todayData.isNotEmpty) ...[
                         Builder(
                           builder: (ctx) {
-                            final avgGluc = effectiveTodayData.map((d) => d.glucose).reduce((a, b) => a + b) / effectiveTodayData.length;
+                            final avgGluc = _todayData.map((d) => d.glucose).reduce((a, b) => a + b) / _todayData.length;
                             final avgStr = _s.useMmol ? (avgGluc / 18.0).toStringAsFixed(1) : avgGluc.toStringAsFixed(0);
                             final unitStr = _s.useMmol ? _tr('unit_mmol') : _tr('unit_mgdl');
                             return _buildStatRow(
@@ -510,7 +476,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(height: 12),
                         _buildStatRow(
                           _tr('avg_pulse'),
-                          '${(effectiveTodayData.map((d) => d.pulse).reduce((a, b) => a + b) / effectiveTodayData.length).toStringAsFixed(0)} ${_tr('bpm')}',
+                          '${(_todayData.map((d) => d.pulse).reduce((a, b) => a + b) / _todayData.length).toStringAsFixed(0)} ${_tr('bpm')}',
                           Icons.favorite_border_rounded,
                         ),
                       ],

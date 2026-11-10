@@ -4,54 +4,6 @@ import 'package:f_app/services/app_settings.dart';
 import 'package:uuid/uuid.dart';
 
 class HealthService {
-  static List<HealthData> generateData({
-    required DateTime start,
-    required DateTime end,
-    Duration interval = const Duration(minutes: 30),
-  }) {
-    final data = <HealthData>[];
-    var current = start;
-
-    
-    final deterministicRandom = Random(42);
-
-    final baseSpo2 = 98.0;
-    final basePulse = 80.5;
-    final baseGlucose = 90.0; 
-
-    while (current.isBefore(end)) {
-      final hour = current.hour;
-      final sleepFactor = (hour >= 23 || hour < 6) ? 1.0 : 0.0;
-
-      
-      final spo2 = (baseSpo2 - sleepFactor * 0.5 + (deterministicRandom.nextDouble() * 1.6 - 0.8))
-          .clamp(97.0, 99.0);
-
-      
-      final pulse = (basePulse - sleepFactor * 1.5 + (deterministicRandom.nextDouble() * 5.0 - 2.5))
-          .clamp(78.0, 83.0);
-
-      
-      final glucose = (baseGlucose + (deterministicRandom.nextDouble() * 10.0 - 5.0))
-          .clamp(80.0, 100.0);
-
-      
-      final fixedId = 'hd_${current.millisecondsSinceEpoch}';
-
-      data.add(HealthData(
-        id: fixedId,
-        timestamp: current,
-        spo2: double.parse(spo2.toStringAsFixed(0)),
-        pulse: double.parse(pulse.toStringAsFixed(0)),
-        glucose: double.parse(glucose.toStringAsFixed(1)),
-      ));
-
-      current = current.add(interval);
-    }
-
-    return data;
-  }
-
   static double calculateDiabetesRisk(List<HealthData> data) {
     if (data.isEmpty) return 0;
 
