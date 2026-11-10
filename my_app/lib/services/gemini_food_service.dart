@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:my_app/config/env.dart';
 
 class GeminiFoodService {
-  static String get _apiKey => dotenv.env['GEMINI_API_KEY'] ?? '';
+  static const String _apiKey = Env.geminiApiKey;
   static const String _model = 'gemini-3.1-flash-lite';
   static const String _baseUrl =
       'https://generativelanguage.googleapis.com/v1beta/models';
