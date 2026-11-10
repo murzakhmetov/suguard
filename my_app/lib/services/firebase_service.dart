@@ -44,7 +44,6 @@ class FirebaseService {
     };
   }
 
-
   static bool get isLoggedIn => _currentUid != null;
   static String? get uid => _currentUid;
   static String? get displayName => _currentName;
@@ -65,7 +64,6 @@ class FirebaseService {
       await prefs.setString('email', _currentEmail ?? '');
     }
   }
-
 
   static Future<void> register({
     required String email,
@@ -151,7 +149,6 @@ class FirebaseService {
     await prefs.remove('email');
   }
 
-
   static Future<void> _generateInitialData(String uid) async {
     final now = DateTime.now();
     final monthAgo = now.subtract(const Duration(days: 30));
@@ -170,41 +167,12 @@ class FirebaseService {
     await http.put(url, body: jsonEncode(batch));
   }
 
-  static Future<List<HealthData>> getHealthData({
-    DateTime? from,
-    DateTime? to,
-  }) async {
-    if (_currentUid == null) return [];
-
-    final url = Uri.parse('$_dbUrl/users/$_currentUid/healthData.json');
-    final resp = await http.get(url);
-
-    if (resp.statusCode != 200 || resp.body == 'null') return [];
-
-    final map = jsonDecode(resp.body) as Map<String, dynamic>;
-    final list = map.values
-        .map((v) => HealthData.fromJson(Map<String, dynamic>.from(v as Map)))
-        .toList();
-
-    list.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-
-    if (from != null) {
-      list.removeWhere((d) => d.timestamp.isBefore(from));
-    }
-    if (to != null) {
-      list.removeWhere((d) => d.timestamp.isAfter(to));
-    }
-
-    return list;
-  }
-
   static Future<void> saveHealthData(HealthData data) async {
     if (_currentUid == null) return;
     final url =
         Uri.parse('$_dbUrl/users/$_currentUid/healthData/${data.id}.json');
     await http.put(url, body: jsonEncode(data.toJson()));
   }
-
 
   static Future<Map<String, dynamic>?> getUserProfile() async {
     if (_currentUid == null) return null;
@@ -223,7 +191,6 @@ class FirebaseService {
       await _saveSession();
     }
   }
-
 
   static Future<void> saveFoodEntry(FoodEntry entry) async {
     if (_currentUid == null) return;
@@ -263,7 +230,6 @@ class FirebaseService {
     await http.delete(url);
   }
 
-
   static Future<void> saveEmergencyEmail(String email) async {
     if (_currentUid == null) return;
     final url = Uri.parse('$_dbUrl/users/$_currentUid/profile.json');
@@ -275,7 +241,6 @@ class FirebaseService {
     final profile = await getUserProfile();
     return profile?['emergencyEmail'] as String?;
   }
-
 
   static String _emailToUid(String email) {
     return email

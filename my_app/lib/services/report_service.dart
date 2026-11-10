@@ -1,11 +1,7 @@
 import 'dart:io';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 import 'package:my_app/models/health_data.dart';
 import 'package:my_app/services/health_service.dart';
 import 'package:my_app/services/app_settings.dart';

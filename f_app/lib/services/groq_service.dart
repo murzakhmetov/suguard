@@ -8,7 +8,6 @@ class GroqService {
   static const String _baseUrl =
       'https://api.groq.com/openai/v1/chat/completions';
   static const String _model = 'llama-3.3-70b-versatile';
-  static const String _foodModel = 'qwen/qwen3.6-27b';
 
   static Future<String> chat({
     required List<Map<String, String>> messages,
@@ -60,65 +59,6 @@ IMPORTANT GUIDELINES:
       }
     } catch (e) {
       return 'Unable to connect to AI service. Please check your internet connection.';
-    }
-  }
-
-  static Future<Map<String, dynamic>?> analyzeFoodPhoto(String base64Image) async {
-    const systemPrompt = '''
-You are a professional nutritionist AI. Analyze the food in the image.
-You MUST respond with ONLY a valid JSON object, no extra text.
-Format:
-{"description": "краткое описание блюда на русском", "calories": 350, "protein": 25.0, "fat": 12.0, "carbs": 40.0}
-
-Rules:
-- description: short name of the dish in Russian
-- calories: estimated total kcal (number)
-- protein: grams of protein (number)
-- fat: grams of fat (number)
-- carbs: grams of carbohydrates (number)
-- Be as accurate as possible based on visual portion size
-- Respond ONLY with JSON, no markdown, no explanation
-''';
-
-    try {
-      final response = await http.post(
-        Uri.parse(_baseUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_apiKey',
-        },
-        body: jsonEncode({
-          'model': _foodModel,
-          'messages': [
-            {
-              'role': 'user',
-              'content': [
-                {'type': 'text', 'text': systemPrompt},
-                {
-                  'type': 'image_url',
-                  'image_url': {
-                    'url': 'data:image/jpeg;base64,$base64Image'
-                  }
-                }
-              ]
-            }
-          ],
-          'temperature': 0.3,
-          'max_tokens': 512,
-        }),
-      );
-
-      final data = jsonDecode(response.body);
-      
-      if (response.statusCode == 200) {
-        final content = data['choices'][0]['message']['content'] as String;
-        return parseNutritionJson(content);
-      } else {
-        final errMsg = data['error']?['message'] as String?;
-        throw Exception(errMsg ?? 'API Error ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Food analysis failed: $e');
     }
   }
 

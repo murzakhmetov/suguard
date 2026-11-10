@@ -1,10 +1,8 @@
 import 'dart:convert';
-import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:f_app/models/health_data.dart';
 import 'package:f_app/models/food_entry.dart';
-import 'package:f_app/services/health_service.dart';
 import 'package:f_app/services/password_hasher.dart';
 
 class FirebaseService {
@@ -14,22 +12,6 @@ class FirebaseService {
   static String? _currentUid;
   static String? _currentName;
   static String? _currentEmail;
-
-  static Future<Map<String, dynamic>?> fetchLiveData() async {
-    final healthList = await getHealthData();
-    if (healthList.isEmpty) return null;
-
-    final latest = healthList.last;
-    final glucoseMmol = latest.glucose / 18.0;
-
-    return {
-      'glucose_mgdl': latest.glucose,
-      'glucose_mmol': double.parse(glucoseMmol.toStringAsFixed(1)),
-      'pulse': latest.pulse,
-      'spo2': latest.spo2,
-      'timestamp': latest.timestamp.toIso8601String(),
-    };
-  }
 
   static bool get isLoggedIn => _currentUid != null;
   static String? get uid => _currentUid;
@@ -134,9 +116,6 @@ class FirebaseService {
     await prefs.remove('email');
   }
 
-
-
-
   /// Fetches the user's health readings, keyed by their Firebase key.
   ///
   /// With [limitToLast] only the last N children ordered by key are
@@ -170,33 +149,12 @@ class FirebaseService {
         ));
   }
 
-  static Future<List<HealthData>> getHealthData({
-    DateTime? from,
-    DateTime? to,
-  }) async {
-    final byKey = await fetchHealthDataByKey();
-    if (byKey == null) return [];
-    final list = byKey.values.toList();
-
-    list.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-
-    if (from != null) {
-      list.removeWhere((d) => d.timestamp.isBefore(from));
-    }
-    if (to != null) {
-      list.removeWhere((d) => d.timestamp.isAfter(to));
-    }
-
-    return list;
-  }
-
   static Future<void> saveHealthData(HealthData data) async {
     if (_currentUid == null) return;
     final url =
         Uri.parse('$_dbUrl/users/$_currentUid/healthData/${data.id}.json');
     await http.put(url, body: jsonEncode(data.toJson()));
   }
-
 
   static Future<Map<String, dynamic>?> getUserProfile() async {
     if (_currentUid == null) return null;
@@ -215,7 +173,6 @@ class FirebaseService {
       await _saveSession();
     }
   }
-
 
   static Future<void> saveFoodEntry(FoodEntry entry) async {
     if (_currentUid == null) return;
@@ -255,7 +212,6 @@ class FirebaseService {
     await http.delete(url);
   }
 
-
   static Future<void> saveEmergencyEmail(String email) async {
     if (_currentUid == null) return;
     final url = Uri.parse('$_dbUrl/users/$_currentUid/profile.json');
@@ -267,7 +223,6 @@ class FirebaseService {
     final profile = await getUserProfile();
     return profile?['emergencyEmail'] as String?;
   }
-
 
   static String _emailToUid(String email) {
     return email

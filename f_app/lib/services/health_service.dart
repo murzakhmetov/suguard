@@ -1,7 +1,6 @@
 import 'dart:math';
 import 'package:f_app/models/health_data.dart';
 import 'package:f_app/services/app_settings.dart';
-import 'package:uuid/uuid.dart';
 
 class HealthService {
   static double calculateDiabetesRisk(List<HealthData> data) {

@@ -27,13 +27,6 @@ class AppSettings extends ChangeNotifier {
   String? _emergencyEmail;
   String? get emergencyEmail => _emergencyEmail;
 
-  bool _highGlucoseMode = false;
-  bool get highGlucoseMode => _highGlucoseMode;
-  void toggleHighGlucoseMode() {
-    _highGlucoseMode = !_highGlucoseMode;
-    notifyListeners();
-  }
-
   double? _height; 
   double? _weight; 
   int? _age;

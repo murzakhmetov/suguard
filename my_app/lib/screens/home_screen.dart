@@ -32,7 +32,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
 
   double? _liveGlucoseMgdl;
-  double? _liveGlucoseMmol;
   double? _livePulse;
   double? _liveSpo2;
 
@@ -68,7 +67,6 @@ class _HomeScreenState extends State<HomeScreen> {
       if (liveData != null && mounted) {
         setState(() {
           _liveGlucoseMgdl = (liveData['glucose_mgdl'] as num).toDouble();
-          _liveGlucoseMmol = (liveData['glucose_mmol'] as num).toDouble();
           _livePulse = (liveData['pulse'] as num).toDouble();
           _liveSpo2 = (liveData['spo2'] as num).toDouble();
 
@@ -111,13 +109,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final liveData = await FirebaseService.fetchLiveData();
     if (liveData != null) {
       _liveGlucoseMgdl = (liveData['glucose_mgdl'] as num).toDouble();
-      _liveGlucoseMmol = (liveData['glucose_mmol'] as num).toDouble();
       _livePulse = (liveData['pulse'] as num).toDouble();
       _liveSpo2 = (liveData['spo2'] as num).toDouble();
     } else {
       _liveSpo2 = 98.0;
       _livePulse = 70.0;
-      _liveGlucoseMmol = 5.0;
       _liveGlucoseMgdl = 90.0;
     }
 
