@@ -1,0 +1,201 @@
+{
+  "cohort": {
+    "source": "NHANES 2017-2018 (nhanes PyPI package)",
+    "n": 4318,
+    "definition": "age>=18, no diabetes diagnosis/medication, HbA1c and BMI measured"
+  },
+  "variants": {
+    "age_bmi": {
+      "dysglycemia": {
+        "auc": 0.7477181509632391,
+        "auc_sd_over_repeats": 0.00028161541782188444,
+        "auc_95ci": [
+          0.7322610849470537,
+          0.7616490538833043
+        ],
+        "average_precision": 0.5595558592523175,
+        "brier": 0.187019649883061,
+        "brier_null": 0.2243911062216588,
+        "calibration_slope": 1.0031084506437329,
+        "calibration_intercept": 0.0018712969972254682,
+        "prevalence": 0.33997220935618344,
+        "n": 4318,
+        "n_pos": 1468
+      },
+      "diabetes": {
+        "auc": 0.7492704941552204,
+        "auc_sd_over_repeats": 0.0018736250871349714,
+        "auc_95ci": [
+          0.71016073674222,
+          0.7794315050246245
+        ],
+        "average_precision": 0.08939332059528882,
+        "brier": 0.033500520117902305,
+        "brier_null": 0.0343926916227535,
+        "calibration_slope": 1.0456737918493055,
+        "calibration_intercept": 0.13427113878232325,
+        "prevalence": 0.035664659564613246,
+        "n": 4318,
+        "n_pos": 154
+      }
+    },
+    "age_sex_bmi_waist": {
+      "dysglycemia": {
+        "auc": 0.7480988813996844,
+        "auc_sd_over_repeats": 0.00033717454168576345,
+        "auc_95ci": [
+          0.7331724119834397,
+          0.7621260993818567
+        ],
+        "average_precision": 0.5575619859093212,
+        "brier": 0.18680163286916585,
+        "brier_null": 0.2243911062216588,
+        "calibration_slope": 1.0010372311888087,
+        "calibration_intercept": 0.0008064692317140437,
+        "prevalence": 0.33997220935618344,
+        "n": 4318,
+        "n_pos": 1468
+      },
+      "diabetes": {
+        "auc": 0.7454233566625498,
+        "auc_sd_over_repeats": 0.0026341442196498575,
+        "auc_95ci": [
+          0.7057225961089661,
+          0.774891776026443
+        ],
+        "average_precision": 0.08550562316958546,
+        "brier": 0.033618390791051486,
+        "brier_null": 0.0343926916227535,
+        "calibration_slope": 0.9572988731578659,
+        "calibration_intercept": -0.12797127400578054,
+        "prevalence": 0.035664659564613246,
+        "n": 4318,
+        "n_pos": 154
+      }
+    },
+    "no_pulse": {
+      "dysglycemia": {
+        "auc": 0.7483663655050432,
+        "auc_sd_over_repeats": 0.00046474725510524574,
+        "auc_95ci": [
+          0.7341572700214821,
+          0.762650013703227
+        ],
+        "average_precision": 0.5585524733994618,
+        "brier": 0.1867317066081973,
+        "brier_null": 0.2243911062216588,
+        "calibration_slope": 0.9975143508174147,
+        "calibration_intercept": -7.481503455290903e-05,
+        "prevalence": 0.33997220935618344,
+        "n": 4318,
+        "n_pos": 1468
+      },
+      "diabetes": {
+        "auc": 0.7425034619559114,
+        "auc_sd_over_repeats": 0.0026917699015207497,
+        "auc_95ci": [
+          0.7035913793290333,
+          0.7752680907032633
+        ],
+        "average_precision": 0.0875835356401132,
+        "brier": 0.03360730021526937,
+        "brier_null": 0.0343926916227535,
+        "calibration_slope": 0.9216622406559211,
+        "calibration_intercept": -0.23589478231048613,
+        "prevalence": 0.035664659564613246,
+        "n": 4318,
+        "n_pos": 154
+      }
+    },
+    "full": {
+      "dysglycemia": {
+        "auc": 0.7488709307328267,
+        "auc_sd_over_repeats": 0.0005870591661737159,
+        "auc_95ci": [
+          0.7348140115348593,
+          0.7634765557155939
+        ],
+        "average_precision": 0.5605037144505549,
+        "brier": 0.18651983595893004,
+        "brier_null": 0.2243911062216588,
+        "calibration_slope": 0.9969566455234611,
+        "calibration_intercept": -0.0002998275785548182,
+        "prevalence": 0.33997220935618344,
+        "n": 4318,
+        "n_pos": 1468
+      },
+      "diabetes": {
+        "auc": 0.7564779120975087,
+        "auc_sd_over_repeats": 0.0022088903487094843,
+        "auc_95ci": [
+          0.7180722891218783,
+          0.786658763425331
+        ],
+        "average_precision": 0.10458670150552837,
+        "brier": 0.03334516088433983,
+        "brier_null": 0.0343926916227535,
+        "calibration_slope": 0.9362161970306125,
+        "calibration_intercept": -0.18792906896864386,
+        "prevalence": 0.035664659564613246,
+        "n": 4318,
+        "n_pos": 154
+      }
+    },
+    "app": {
+      "dysglycemia": {
+        "auc": 0.7489505234475835,
+        "auc_sd_over_repeats": 0.000667888415759245,
+        "auc_95ci": [
+          0.734915175311469,
+          0.7638098112038277
+        ],
+        "average_precision": 0.5606051948201735,
+        "brier": 0.186451584847853,
+        "brier_null": 0.2243911062216588,
+        "calibration_slope": 0.9992845156319933,
+        "calibration_intercept": 0.0002981602842687585,
+        "prevalence": 0.33997220935618344,
+        "n": 4318,
+        "n_pos": 1468
+      },
+      "diabetes": {
+        "auc": 0.7559929263819753,
+        "auc_sd_over_repeats": 0.002452989865447614,
+        "auc_95ci": [
+          0.7176397199427877,
+          0.7847432086689091
+        ],
+        "average_precision": 0.10371032555546882,
+        "brier": 0.033312250749261536,
+        "brier_null": 0.0343926916227535,
+        "calibration_slope": 0.9909162425667355,
+        "calibration_intercept": -0.029681670488495123,
+        "prevalence": 0.035664659564613246,
+        "n": 4318,
+        "n_pos": 154
+      }
+    }
+  },
+  "categories_oof": {
+    "low": {
+      "share_of_population": 0.3047707271885132,
+      "observed_hba1c_ge_5_7": 0.09422492401215805,
+      "observed_hba1c_ge_6_5": 0.004559270516717325
+    },
+    "moderate": {
+      "share_of_population": 0.2665585919407133,
+      "observed_hba1c_ge_5_7": 0.3110338835794961,
+      "observed_hba1c_ge_6_5": 0.028670721112076455
+    },
+    "elevated": {
+      "share_of_population": 0.31681333950903195,
+      "observed_hba1c_ge_5_7": 0.5,
+      "observed_hba1c_ge_6_5": 0.04751461988304093
+    },
+    "high": {
+      "share_of_population": 0.11185734136174155,
+      "observed_hba1c_ge_5_7": 0.6252587991718427,
+      "observed_hba1c_ge_6_5": 0.10351966873706005
+    }
+  }
+}

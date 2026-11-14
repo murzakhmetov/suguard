@@ -1,0 +1,8 @@
+# Inference service only (no PyTorch): ONNX Runtime runs the denoiser.
+numpy>=1.26
+scipy>=1.11
+onnxruntime>=1.17
+lightgbm>=4.1
+fastapi>=0.110
+uvicorn[standard]>=0.27
+pydantic>=2.5

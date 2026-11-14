@@ -1,0 +1,19 @@
+# Runtime (inference + API)
+numpy>=1.26
+scipy>=1.11
+pandas>=2.1
+onnxruntime>=1.17
+lightgbm>=4.1
+fastapi>=0.110
+uvicorn[standard]>=0.27
+pydantic>=2.5
+# Training / evaluation
+torch>=2.2
+onnx>=1.15
+scikit-learn>=1.4
+pyarrow>=14
+matplotlib>=3.8
+nhanes==0.5.1          # bundles NHANES 2017-2018 (diabetes-risk training data)
+# Tests
+pytest>=8
+httpx>=0.26

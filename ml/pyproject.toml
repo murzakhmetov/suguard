@@ -1,0 +1,11 @@
+[project]
+name = "suguard-ml"
+version = "0.1.0"
+description = "SuGuard ML: MAX30102 PPG cleaning, vital signs, glucose estimation with personal calibration, diabetes risk"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = ["slow: trains small models (deselect with -m 'not slow')"]
+filterwarnings = ["ignore::DeprecationWarning", "ignore::UserWarning"]

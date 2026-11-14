@@ -1,0 +1,7 @@
+data/
+tests/
+notebooks/
+docs/
+firmware/
+**/__pycache__
+*.pt
