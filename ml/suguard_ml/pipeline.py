@@ -35,8 +35,11 @@ from .signal.spo2 import estimate_spo2
 MODELS_DIR = Path(__file__).resolve().parents[1] / "models"
 
 # Share of the window the denoiser may flag as motion-dominated before the
-# window is rejected (see models/metrics/denoiser_eval.json -> gate_sweep).
-MAX_ARTIFACT_FRACTION = 0.5
+# window is rejected. Tuned for denoiser v2 on simulated windows (seeds
+# 5,000,000+, separate from the evaluation seeds): 0.5 / 0.6 / 0.7 gave HR
+# coverage 51 / 55 / 59 % with the same accuracy (MAE 0.50-0.51 bpm, no error
+# > 10 bpm) and SpO2 MAE 0.16-0.17, no error > 4 points.
+MAX_ARTIFACT_FRACTION = 0.7
 # Minimum peak-to-peak IR perfusion (%) of the *input* signal.
 MIN_INPUT_PI = 0.03
 # Spectral HR is used as a fallback only with a clean, dominant peak.
