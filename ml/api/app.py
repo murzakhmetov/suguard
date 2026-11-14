@@ -22,7 +22,9 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, model_validator
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -38,6 +40,28 @@ MODELS = Path(__file__).resolve().parents[1] / "models"
 app = FastAPI(title="SuGuard ML", version=__version__,
               description="Motion-robust PPG analysis for the MAX30102 bracelet, glucose estimation "
                           "with personal calibration, and diabetes risk screening. Not a medical device.")
+
+@app.exception_handler(RequestValidationError)
+async def _validation_error(_: Request, exc: RequestValidationError):
+    """422 without echoing the input: the default handler returns the whole
+    payload (tens of thousands of samples), and crashes on NaN values."""
+    errs = [{"loc": [str(x) for x in e.get("loc", ())], "msg": str(e.get("msg", "")), "type": e.get("type")}
+            for e in exc.errors()]
+    return JSONResponse(status_code=422, content={"detail": errs})
+
+
+def _finite(obj):
+    """Replace NaN/inf anywhere in a response with None (JSON has no NaN)."""
+    import math
+
+    if isinstance(obj, float):
+        return obj if math.isfinite(obj) else None
+    if isinstance(obj, dict):
+        return {k: _finite(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_finite(v) for v in obj]
+    return obj
+
 
 PIPE = SuGuardPipeline.load(MODELS)
 GLUCOSE = GlucoseEstimator.load(MODELS)
@@ -55,10 +79,13 @@ class Context(BaseModel):
     male: Optional[bool] = None
 
 
+MAX_SAMPLES = 60_000  # per channel: 5 min at 200 Hz; bounds CPU/memory per request
+
+
 class AnalyzeRequest(BaseModel):
     fs: float = Field(100.0, ge=25, le=1000, description="MAX30102 output sample rate, Hz")
-    red: list[float] = Field(..., description="raw red counts (18-bit)")
-    ir: list[float] = Field(..., description="raw IR counts (18-bit)")
+    red: list[float] = Field(..., max_length=MAX_SAMPLES, description="raw red counts (18-bit)")
+    ir: list[float] = Field(..., max_length=MAX_SAMPLES, description="raw IR counts (18-bit)")
     timestamp: Optional[float] = Field(None, description="unix seconds of the first sample")
     temperature_c: Optional[float] = Field(None, description="MAX30102 die temperature")
     prior_hr: Optional[float] = Field(None, ge=30, le=220, description="previous window's HR, for tracking")
@@ -74,10 +101,9 @@ class AnalyzeRequest(BaseModel):
         dur = len(self.ir) / self.fs
         if not 2.0 <= dur <= 300.0:
             raise ValueError(f"window must be 2-300 s long, got {dur:.1f} s")
-        lo = min(min(self.red), min(self.ir))
-        hi = max(max(self.red), max(self.ir))
-        if lo < 0 or hi > ADC_MAX:
-            raise ValueError("samples must be raw 18-bit counts (0..262143)")
+        # NaN/inf would pass min/max comparisons silently; reject explicitly.
+        if not all(0.0 <= v <= ADC_MAX for v in self.red) or not all(0.0 <= v <= ADC_MAX for v in self.ir):
+            raise ValueError("samples must be finite raw 18-bit counts (0..262143)")
         return self
 
 
@@ -159,7 +185,7 @@ def analyze(req: AnalyzeRequest):
         res["glucose"] = {"status": "poor_signal", "mg_dl": None}
     res["latency_ms"] = round((time.perf_counter() - t0) * 1000, 1)
     res["disclaimer"] = "Research prototype, not a medical device. Do not use for treatment decisions."
-    return res
+    return _finite(res)
 
 
 @app.post("/v1/glucose/calibrate")
@@ -188,4 +214,4 @@ def risk(req: RiskRequest):
     out["model"] = {"version": RISK.spec.get("version"), "validation": {
         k: {"auc": v["auc"], "auc_95ci": v["auc_95ci"]} for k, v in RISK.spec.get("validation", {}).items()}}
     out["disclaimer"] = "Screening estimate, not a diagnosis. Confirm with an HbA1c or fasting glucose test."
-    return out
+    return _finite(out)

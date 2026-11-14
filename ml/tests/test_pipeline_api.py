@@ -82,6 +82,13 @@ def test_api_endpoints():
 
     bad = client.post("/v1/analyze", json={"fs": 100.0, "red": [1.0] * 10, "ir": [1.0] * 10})
     assert bad.status_code == 422
+    nan_red = red.round().tolist()
+    nan_red[100] = float("nan")
+    r_nan = client.post("/v1/analyze", content=__import__("json").dumps(
+        {"fs": 100.0, "red": nan_red, "ir": ir.round().tolist()}), headers={"content-type": "application/json"})
+    assert r_nan.status_code == 422
+    huge = client.post("/v1/analyze", json={"fs": 200.0, "red": [1e5] * 60_001, "ir": [1e5] * 60_001})
+    assert huge.status_code == 422
 
     cal = None
     for i, v in enumerate([110, 118, 115]):
