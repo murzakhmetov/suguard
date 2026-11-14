@@ -28,11 +28,16 @@ class Beats:
 
 
 def _parabolic(x: np.ndarray, i: int) -> float:
+    """Sub-sample extremum position; the vertex of a parabola through three
+    samples around a true local extremum lies within +-0.5 sample, so larger
+    offsets (flat or non-extremal neighbourhoods) are rejected."""
     if 0 < i < x.size - 1:
         a, b, c = x[i - 1], x[i], x[i + 1]
         den = a - 2 * b + c
         if den != 0:
-            return i + 0.5 * (a - c) / den
+            off = 0.5 * (a - c) / den
+            if abs(off) <= 0.5:
+                return i + off
     return float(i)
 
 
@@ -163,15 +168,29 @@ def beat_template(x: np.ndarray, beats: Beats, length: int = 64) -> tuple[np.nda
     return tmpl, float(np.nanmean(corr))
 
 
-def hrv_metrics(ibi_s: np.ndarray) -> dict[str, float | None]:
-    """Time-domain HRV from clean inter-beat intervals (needs >= ~60 s)."""
+def hrv_metrics(ibi_s: np.ndarray, valid: np.ndarray | None = None) -> dict[str, float | None]:
+    """Time-domain HRV from inter-beat intervals (needs >= ~60 s).
+
+    ``valid`` marks plausible intervals (Beats.valid_ibi). NN editing is done
+    on the full series: the interval after a rejected one is dropped too
+    (compensatory pause after an ectopic beat), and successive differences
+    are taken only between truly adjacent normal intervals, so removed beats
+    cannot create spurious jumps in RMSSD / pNN50.
+    """
     ibi = np.asarray(ibi_s, dtype=np.float64) * 1000.0
-    if ibi.size < 5:
-        return {"sdnn_ms": None, "rmssd_ms": None, "pnn50": None, "mean_ibi_ms": None}
+    empty = {"sdnn_ms": None, "rmssd_ms": None, "pnn50": None, "mean_ibi_ms": None}
+    if ibi.size == 0:
+        return empty
+    v = np.ones(ibi.size, dtype=bool) if valid is None else np.asarray(valid, dtype=bool).copy()
+    nn = v.copy()
+    nn[1:] &= v[:-1]
+    if nn.sum() < 5:
+        return empty
     d = np.diff(ibi)
+    pair = nn[1:] & nn[:-1]
     return {
-        "sdnn_ms": float(np.std(ibi, ddof=1)),
-        "rmssd_ms": float(np.sqrt(np.mean(d**2))),
-        "pnn50": float(np.mean(np.abs(d) > 50.0)),
-        "mean_ibi_ms": float(np.mean(ibi)),
+        "sdnn_ms": float(np.std(ibi[nn], ddof=1)),
+        "rmssd_ms": float(np.sqrt(np.mean(d[pair] ** 2))) if pair.sum() >= 3 else None,
+        "pnn50": float(np.mean(np.abs(d[pair]) > 50.0)) if pair.sum() >= 3 else None,
+        "mean_ibi_ms": float(np.mean(ibi[nn])),
     }

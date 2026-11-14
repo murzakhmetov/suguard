@@ -70,8 +70,12 @@ class Denoiser:
         """Denoise pre-processed blood-volume signals of any length >= 1 s.
 
         Signals longer than one window are processed in 50 %-overlapping
-        windows and recombined with a Hann taper (overlap-add); shorter ones
-        are zero-padded.
+        windows and recombined with a Hann taper (overlap-add). Shorter ones
+        are extended by mirror-periodic repetition (zeros never occur in the
+        training data and make the network flag everything as artefact),
+        with the scale taken from the real samples only; quality still drops
+        for very short inputs, so the pipeline uses the classical path below
+        ~6 s.
         """
         if abs(fs - FS) > 1e-6:
             raise ValueError(f"denoiser expects {FS} Hz input, got {fs}")
@@ -79,8 +83,10 @@ class Denoiser:
         red_bv = np.asarray(red_bv, dtype=np.float64)
         n = ir_bv.size
         if n <= WINDOW:
-            pad = WINDOW - n
-            x, scale = normalise(np.pad(ir_bv, (0, pad)), np.pad(red_bv, (0, pad)))
+            def ext(v):
+                return np.resize(np.concatenate([v, v[::-1]]), WINDOW)
+            scale = max(float(np.std(ir_bv)), 1e-9)
+            x = np.clip(np.stack([ext(ir_bv), ext(red_bv)]).astype(np.float32) / scale, -INPUT_CLIP, INPUT_CLIP)
             y = self.run(x[None])[0]
             return Denoised(ir_bv=y[0, :n] * scale, red_bv=y[1, :n] * scale,
                             artifact_prob=_sigmoid(y[2, :n]), fs=fs)

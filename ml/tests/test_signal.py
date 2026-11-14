@@ -73,3 +73,44 @@ def test_spo2_calibration_fit():
     y = 110 - 25 * r
     a, b, c = fit_spo2_calibration(r, y, quadratic=False)
     assert (a, b, c) == pytest.approx((0.0, -25.0, 110.0), abs=1e-6)
+
+
+def test_tls_ratio_is_not_biased_by_noise():
+    """OLS of red on noisy IR reads R low (SpO2 high); TLS must not."""
+    from suguard_ml.signal.spo2 import ratio_of_ratios
+
+    rng = np.random.default_rng(1)
+    t = np.arange(0, 10.24, 1 / FS)
+    pulse = 0.001 * np.sin(2 * np.pi * 1.2 * t)   # weak pulse, 0.1 % PI
+    r_true = 0.9
+    est = []
+    for _ in range(30):
+        ir = pulse + rng.normal(0, 0.0004, t.size)
+        red = r_true * pulse + rng.normal(0, 0.0004, t.size)
+        est.append(ratio_of_ratios(red, ir)[0])
+    assert np.mean(est) == pytest.approx(r_true, abs=0.05)
+
+
+def test_hrv_ignores_removed_ectopic_intervals():
+    from suguard_ml.signal.beats import hrv_metrics
+
+    ibi = np.full(40, 0.8)
+    ibi[20], ibi[21] = 0.5, 1.1                      # ectopic beat + compensatory pause
+    valid = np.ones(40, dtype=bool)
+    valid[20] = False                                # the premature interval is rejected
+    h = hrv_metrics(ibi, valid)
+    assert h["rmssd_ms"] == pytest.approx(0.0, abs=1e-9) and h["pnn50"] == 0.0
+
+
+def test_spo2_rejects_out_of_range_ratio():
+    assert spo2_from_ratio(2.0) is None and spo2_from_ratio(0.1) is None
+    assert spo2_from_ratio(0.3) == pytest.approx(spo2_from_ratio(0.34), abs=0.1)   # vertex, ~100 %
+
+
+def test_notch_features_nan_without_inflection():
+    from suguard_ml.signal.features import N_T, template_features
+
+    x = np.linspace(0, 1, N_T)
+    tmpl = np.where(x < 0.2, x / 0.2, np.exp(-(x - 0.2) / 0.15))   # monotone decay: no notch
+    f = template_features(tmpl, 0.8)
+    assert f["notch_present"] == 0.0 and np.isnan(f["notch_height"])

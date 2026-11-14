@@ -307,11 +307,17 @@ def _measure(t: np.ndarray, fs: float, rng: np.random.Generator, pulse: np.ndarr
     red = np.clip(np.round(red), 0, ADC_MAX)
 
     # --- ground-truth artefact mask ----------------------------------------
-    bv_noisy, _ = preprocess(ir, fs)
-    bv_clean, _ = preprocess(ir_clean, fs)
-    ac_pp = np.percentile(bv_clean, 97) - np.percentile(bv_clean, 3)
-    err = np.abs(bv_noisy - bv_clean)
-    mask = (ndimage.maximum_filter1d(err, size=max(int(0.3 * fs), 1)) > 0.25 * ac_pp).astype(np.float32)
+    # A sample is "artefact" if either channel deviates from its clean pulse
+    # by more than a quarter of that channel's pulse amplitude: the mask also
+    # weights the SpO2 ratio, which needs *both* channels clean.
+    k = max(int(0.3 * fs), 1)
+    mask = np.zeros(t.size, dtype=bool)
+    for noisy_raw, clean_raw in ((ir, ir_clean), (red, red_clean)):
+        bv_noisy, _ = preprocess(noisy_raw, fs)
+        bv_clean, _ = preprocess(clean_raw, fs)
+        ac_pp = np.percentile(bv_clean, 97) - np.percentile(bv_clean, 3)
+        mask |= ndimage.maximum_filter1d(np.abs(bv_noisy - bv_clean), size=k) > 0.25 * ac_pp
+    mask = mask.astype(np.float32)
     sat = (ir >= 0.98 * ADC_MAX) | (red >= 0.98 * ADC_MAX) | (ir <= 0) | (red <= 0)
     mask[ndimage.binary_dilation(sat, iterations=int(0.2 * fs))] = 1.0
 

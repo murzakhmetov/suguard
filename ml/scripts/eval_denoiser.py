@@ -27,7 +27,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from suguard_ml.config import FS, WINDOW  # noqa: E402
 from suguard_ml.data.realppg import load_recordings  # noqa: E402
-from suguard_ml.eval.vitals_eval import summarize_errors, vitals_from_bv  # noqa: E402
+from suguard_ml.eval.vitals_eval import both_finite, summarize_errors, vitals_from_bv  # noqa: E402
+from suguard_ml.pipeline import SuGuardPipeline  # noqa: E402
+from suguard_ml.synth.ppg import simulate_window  # noqa: E402
 from suguard_ml.models.denoiser import Denoiser  # noqa: E402
 from suguard_ml.signal.beats import beat_template, detect_beats  # noqa: E402
 from suguard_ml.signal.filters import bandpass, preprocess  # noqa: E402
@@ -51,8 +53,11 @@ def eval_synthetic(den: Denoiser, path: Path) -> dict:
     rows_dn = [vitals_from_bv(Y[i, 0], Y[i, 1], FS, P[i]) for i in range(len(X))]
     hr, spo2, mfrac = meta[:, 0], meta[:, 1], meta[:, 6]
     art = np.array([r["artifact_frac"] for r in rows_dn])
+    common = both_finite(rows_raw, rows_dn)
     res = {"n": int(len(X)), "mask_auc": float(roc_auc_score(M.reshape(-1)[::5], P.reshape(-1)[::5])),
-           "all": {"raw": summarize_errors(rows_raw, hr, spo2), "denoised": summarize_errors(rows_dn, hr, spo2)},
+           "all": {"raw": summarize_errors(rows_raw, hr, spo2), "denoised": summarize_errors(rows_dn, hr, spo2),
+                   "raw_on_common": summarize_errors(rows_raw, hr, spo2, common=common),
+                   "denoised_on_common": summarize_errors(rows_dn, hr, spo2, common=common)},
            "by_severity": {}, "gate_sweep": []}
     for name, lo, hi in SEVERITY:
         s = (mfrac >= lo) & (mfrac < hi)
@@ -64,6 +69,41 @@ def eval_synthetic(den: Denoiser, path: Path) -> dict:
         e = summarize_errors(rows_dn, hr, spo2, keep)
         res["gate_sweep"].append({"max_artifact_fraction": thr, **e})
     return res
+
+
+def eval_pipeline(den: Denoiser, n: int = 600, seed0: int = 4_000_000) -> dict:
+    """Full pipeline with every reliability gate, on fresh simulated raw
+    windows: classical fallback vs denoiser. Reports how often a value is
+    given (coverage) and how accurate the given values are."""
+    out = {}
+    wins = [simulate_window(seed0 + i) for i in range(n)]
+    for name, pipe in (("classical", SuGuardPipeline(denoiser=None)), ("denoiser", SuGuardPipeline(denoiser=den))):
+        hr_e, sp_e, rel, sp_given, clean, mf = [], [], [], [], [], []
+        for w in wins:
+            r = pipe.analyze(w.red_raw, w.ir_raw, fs=w.fs)
+            hr, sp = r["heart_rate"]["bpm"], r["spo2"]["percent"]
+            rel.append(r["reliable"])
+            sp_given.append(sp is not None)
+            hr_e.append(abs(hr - w.hr_bpm) if hr is not None else np.nan)
+            sp_e.append(abs(sp - w.spo2) if sp is not None else np.nan)
+            mf.append(float(w.mask.mean()))
+        hr_e, sp_e, rel, mf = np.array(hr_e), np.array(sp_e), np.array(rel), np.array(mf)
+        ok_h, ok_s = np.isfinite(hr_e), np.isfinite(sp_e)
+        out[name] = {
+            "windows": n, "hr_coverage": float(ok_h.mean()), "spo2_coverage": float(ok_s.mean()),
+            "clean_window_hr_coverage": float(ok_h[mf < 0.05].mean()),
+            "hr_mae": float(np.mean(hr_e[ok_h])) if ok_h.any() else None,
+            "hr_p95": float(np.percentile(hr_e[ok_h], 95)) if ok_h.any() else None,
+            "hr_errors_over_10bpm": int(np.sum(hr_e[ok_h] > 10)),
+            "spo2_mae": float(np.mean(sp_e[ok_s])) if ok_s.any() else None,
+            "spo2_p95": float(np.percentile(sp_e[ok_s], 95)) if ok_s.any() else None,
+            "spo2_errors_over_4pts": int(np.sum(sp_e[ok_s] > 4)),
+            "by_motion_share": {f"{lo}-{hi}": {"windows": int(((mf >= lo) & (mf < hi)).sum()),
+                                               "hr_coverage": float(ok_h[(mf >= lo) & (mf < hi)].mean())}
+                                for lo, hi in ((0, 0.05), (0.05, 0.3), (0.3, 0.7), (0.7, 1.01))},
+        }
+        print(name, json.dumps({k: v for k, v in out[name].items() if k != "by_motion_share"}), flush=True)
+    return out
 
 
 def eval_real(den: Denoiser, n_corrupt: int = 6, seed: int = 0) -> dict:
@@ -106,8 +146,11 @@ def eval_real(den: Denoiser, n_corrupt: int = 6, seed: int = 0) -> dict:
                         corr_clean.append(float(np.corrcoef(clean[32:-32], d.ir_bv[32:-32])[0, 1]))
         hr_true, sp_true = np.array(hr_true), np.array(sp_true)
         art = np.array([r["artifact_frac"] for r in rows_dn])
+        common = both_finite(rows_raw, rows_dn)
         entry = {"windows": len(hr_true), "raw": summarize_errors(rows_raw, hr_true, sp_true),
                  "denoised": summarize_errors(rows_dn, hr_true, sp_true),
+                 "raw_on_common": summarize_errors(rows_raw, hr_true, sp_true, common=common),
+                 "denoised_on_common": summarize_errors(rows_dn, hr_true, sp_true, common=common),
                  "denoised_gated": summarize_errors(rows_dn, hr_true, sp_true, art <= 0.5)}
         if corr_clean:
             entry["waveform_corr_clean_vs_denoised"] = float(np.median(corr_clean))
@@ -122,15 +165,18 @@ def main():
     ap.add_argument("--data", default="data/denoiser")
     ap.add_argument("--out", default="models/metrics")
     ap.add_argument("--models", default="models")
+    ap.add_argument("--onnx", default=None, help="evaluate this model file instead of models/denoiser.onnx")
+    ap.add_argument("--name", default="denoiser_eval")
     a = ap.parse_args()
-    den = Denoiser(Path(a.models) / "denoiser.onnx")
+    den = Denoiser(Path(a.onnx) if a.onnx else Path(a.models) / "denoiser.onnx")
     report = {"synthetic_test": eval_synthetic(den, Path(a.data) / "test.npz")}
     s = report["synthetic_test"]
     print("synthetic all:", json.dumps(s["all"], indent=1)[:900])
+    report["pipeline_with_gates"] = eval_pipeline(den)
     report["real_ppg_simulated_motion"] = eval_real(den)
     Path(a.out).mkdir(parents=True, exist_ok=True)
-    (Path(a.out) / "denoiser_eval.json").write_text(json.dumps(report, indent=2))
-    print("wrote", Path(a.out) / "denoiser_eval.json")
+    (Path(a.out) / f"{a.name}.json").write_text(json.dumps(report, indent=2))
+    print("wrote", Path(a.out) / f"{a.name}.json")
 
 
 if __name__ == "__main__":

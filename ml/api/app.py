@@ -4,23 +4,26 @@
 
 Endpoints
     GET  /health                    models loaded, versions
-    POST /v1/analyze                raw MAX30102 window -> quality, HR, SpO2,
-                                    HRV, PPG features, glucose estimate
-    POST /v1/glucose/calibrate      add a fingerstick -> new calibration state
-    POST /v1/risk                   profile + resting HR (+ glucose evidence)
-                                    -> diabetes risk
+    POST /v1/analyze                raw MAX30102 window -> quality, HR, SpO2, HRV,
+                                    PPG features (only for reliable windows)
+    POST /v1/glucose/estimate       features of >= 3 recent reliable windows
+                                    (+ calibration state) -> glucose with status
+    POST /v1/glucose/calibrate      fingerstick + the same window features
+                                    -> new calibration state
+    POST /v1/risk                   profile + resting HR -> diabetes-risk screening
 
 The API is stateless: the per-user calibration state is returned to the
 client, which stores it (e.g. Firebase users/<uid>/mlCalibration) and sends
-it back with later requests.
+it back. It is validated on every request.
 """
 
 from __future__ import annotations
 
+import math
 import sys
 import time
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -31,15 +34,49 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from suguard_ml import __version__  # noqa: E402
 from suguard_ml.config import ADC_MAX  # noqa: E402
+from suguard_ml.data.paired import FEATURE_AGGREGATION, aggregate_window_features  # noqa: E402
 from suguard_ml.models.glucose import GlucoseEstimator, PersonalCalibration  # noqa: E402
 from suguard_ml.models.risk import GlucoseEvidence, RiskInput, RiskModel  # noqa: E402
 from suguard_ml.pipeline import SuGuardPipeline  # noqa: E402
 
 MODELS = Path(__file__).resolve().parents[1] / "models"
+MAX_SAMPLES = 60_000            # per channel: 5 min at 200 Hz
+MAX_BODY_BYTES = 2_000_000      # ~2 x 60k samples x 9 chars, with margin
+UNIX_MIN, UNIX_MAX = 1.5e9, 4.1e9   # seconds; rejects millisecond epochs
+DISCLAIMER = "Research prototype, not a medical device. Do not use for diagnosis or treatment decisions."
+
+
+class BodySizeLimit:
+    """Reject oversized bodies before they are read and parsed (413)."""
+
+    def __init__(self, app, max_bytes: int = MAX_BODY_BYTES):
+        self.app, self.max_bytes = app, max_bytes
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+        cl = dict(scope.get("headers") or []).get(b"content-length")
+        if cl is not None and cl.isdigit() and int(cl) > self.max_bytes:
+            return await JSONResponse({"detail": "request body too large"}, status_code=413)(scope, receive, send)
+        seen = 0
+
+        async def limited_receive():
+            nonlocal seen
+            msg = await receive()
+            if msg["type"] == "http.request":
+                seen += len(msg.get("body", b""))
+                if seen > self.max_bytes:
+                    raise HTTPException(413, "request body too large")
+            return msg
+
+        return await self.app(scope, limited_receive, send)
+
 
 app = FastAPI(title="SuGuard ML", version=__version__,
               description="Motion-robust PPG analysis for the MAX30102 bracelet, glucose estimation "
-                          "with personal calibration, and diabetes risk screening. Not a medical device.")
+                          "with personal calibration, and diabetes-risk screening. Not a medical device.")
+app.add_middleware(BodySizeLimit)
+
 
 @app.exception_handler(RequestValidationError)
 async def _validation_error(_: Request, exc: RequestValidationError):
@@ -52,8 +89,6 @@ async def _validation_error(_: Request, exc: RequestValidationError):
 
 def _finite(obj):
     """Replace NaN/inf anywhere in a response with None (JSON has no NaN)."""
-    import math
-
     if isinstance(obj, float):
         return obj if math.isfinite(obj) else None
     if isinstance(obj, dict):
@@ -66,32 +101,28 @@ def _finite(obj):
 PIPE = SuGuardPipeline.load(MODELS)
 GLUCOSE = GlucoseEstimator.load(MODELS)
 RISK = RiskModel.load(MODELS / "risk_model.json") if (MODELS / "risk_model.json").exists() else None
+MODEL_VERSION = GLUCOSE.model.version if GLUCOSE.model is not None else None
 
 
 # --- schemas ---------------------------------------------------------------
 
 class Context(BaseModel):
-    minutes_since_meal: Optional[float] = Field(None, ge=0)
-    carbs_last_meal_g: Optional[float] = Field(None, ge=0)
-    carbs_3h_g: Optional[float] = Field(None, ge=0)
-    age: Optional[float] = Field(None, ge=10, le=110)
-    bmi: Optional[float] = Field(None, ge=10, le=80)
+    minutes_since_meal: Optional[float] = Field(None, ge=0, le=100_000, allow_inf_nan=False)
+    carbs_last_meal_g: Optional[float] = Field(None, ge=0, le=1000, allow_inf_nan=False)
+    carbs_3h_g: Optional[float] = Field(None, ge=0, le=2000, allow_inf_nan=False)
+    age: Optional[float] = Field(None, ge=10, le=110, allow_inf_nan=False)
+    bmi: Optional[float] = Field(None, ge=10, le=80, allow_inf_nan=False)
     male: Optional[bool] = None
 
 
-MAX_SAMPLES = 60_000  # per channel: 5 min at 200 Hz; bounds CPU/memory per request
-
-
 class AnalyzeRequest(BaseModel):
-    fs: float = Field(100.0, ge=25, le=1000, description="MAX30102 output sample rate, Hz")
+    fs: float = Field(100.0, ge=25, le=1000, allow_inf_nan=False, description="MAX30102 output rate, Hz")
     red: list[float] = Field(..., max_length=MAX_SAMPLES, description="raw red counts (18-bit)")
     ir: list[float] = Field(..., max_length=MAX_SAMPLES, description="raw IR counts (18-bit)")
-    timestamp: Optional[float] = Field(None, description="unix seconds of the first sample")
-    temperature_c: Optional[float] = Field(None, description="MAX30102 die temperature")
-    prior_hr: Optional[float] = Field(None, ge=30, le=220, description="previous window's HR, for tracking")
-    tz_offset_h: float = Field(5.0, ge=-12, le=14, description="user's UTC offset (Kazakhstan: +5)")
-    context: Optional[Context] = None
-    calibration: Optional[dict] = Field(None, description="state returned by /v1/glucose/calibrate")
+    timestamp: Optional[float] = Field(None, ge=UNIX_MIN, le=UNIX_MAX, allow_inf_nan=False,
+                                       description="unix seconds of the first sample")
+    temperature_c: Optional[float] = Field(None, ge=-20, le=80, allow_inf_nan=False)
+    prior_hr: Optional[float] = Field(None, ge=30, le=220, allow_inf_nan=False)
     include_signals: bool = False
 
     @model_validator(mode="after")
@@ -107,39 +138,70 @@ class AnalyzeRequest(BaseModel):
         return self
 
 
-class CalibrateRequest(BaseModel):
-    reference_mgdl: float = Field(..., ge=20, le=600, description="glucometer reading")
-    timestamp: float = Field(..., description="unix seconds of the fingerstick")
-    features: Optional[dict] = Field(None, description="features from /v1/analyze near the fingerstick")
-    tz_offset_h: float = Field(5.0, ge=-12, le=14)
+class GlucoseRequest(BaseModel):
+    recent_features: list[dict] = Field(..., min_length=1, max_length=120,
+                                        description="'features' of reliable /v1/analyze windows, newest last")
+    timestamp: float = Field(..., ge=UNIX_MIN, le=UNIX_MAX, allow_inf_nan=False)
+    tz_offset_h: float = Field(5.0, ge=-12, le=14, allow_inf_nan=False, description="UTC offset (Kazakhstan +5)")
     context: Optional[Context] = None
-    calibration: Optional[dict] = None
+    calibration: Optional[dict] = Field(None, description="state returned by /v1/glucose/calibrate")
 
 
-class GlucoseEvidenceIn(BaseModel):
-    mean_mgdl: float = Field(..., ge=40, le=500)
-    error_sd_mgdl: float = Field(..., gt=0, le=200, description="validated SD of the mean's error")
-    days: float = Field(..., ge=0)
+class CalibrateRequest(GlucoseRequest):
+    recent_features: list[dict] = Field(default_factory=list, max_length=120,
+                                        description="window features around the fingerstick (needed once a "
+                                                    "glucose model is installed)")
+    reference_mgdl: float = Field(..., ge=20, le=600, allow_inf_nan=False, description="glucometer reading")
 
 
 class RiskRequest(BaseModel):
-    age: float = Field(..., ge=18, le=100)
-    bmi: Optional[float] = Field(None, ge=12, le=80)
-    height_cm: Optional[float] = Field(None, ge=100, le=230)
-    weight_kg: Optional[float] = Field(None, ge=25, le=300)
+    age: float = Field(..., ge=18, le=110, allow_inf_nan=False)
+    bmi: Optional[float] = Field(None, ge=12, le=80, allow_inf_nan=False)
+    height_cm: Optional[float] = Field(None, ge=100, le=230, allow_inf_nan=False)
+    weight_kg: Optional[float] = Field(None, ge=25, le=300, allow_inf_nan=False)
     male: Optional[bool] = None
-    waist_cm: Optional[float] = Field(None, ge=40, le=200)
-    resting_hr_bpm: Optional[float] = Field(None, ge=35, le=150)
+    ancestry: Optional[Literal["asian", "european", "other"]] = None
+    resting_hr_bpm: Optional[float] = Field(None, ge=35, le=150, allow_inf_nan=False)
     physically_active: Optional[bool] = None
+    waist_cm: Optional[float] = Field(None, ge=40, le=200, allow_inf_nan=False)
     smoker: Optional[bool] = None
     diagnosed_diabetes: bool = False
-    glucose: Optional[GlucoseEvidenceIn] = None
 
     @model_validator(mode="after")
     def _need_bmi(self):
         if self.bmi is None and not (self.height_cm and self.weight_kg):
             raise ValueError("provide bmi or height_cm + weight_kg")
         return self
+
+
+# --- helpers -------------------------------------------------------------------
+
+def _calibration(state: dict | None) -> PersonalCalibration:
+    try:
+        return PersonalCalibration.from_dict(state, model_version=MODEL_VERSION)
+    except ValueError as e:
+        raise HTTPException(422, str(e)) from e
+
+
+def _model_features(windows: list[dict], ctx: Context | None, t: float, tz_offset_h: float) -> dict:
+    """Training-equivalent inputs: median over windows + context + local hour."""
+    out = aggregate_window_features(windows)
+    if ctx is not None:
+        out.update({k: (float(v) if v is not None else None) for k, v in ctx.model_dump().items()})
+    h = (t / 3600.0 + tz_offset_h) % 24.0
+    out["hour_sin"], out["hour_cos"] = math.sin(2 * math.pi * h / 24), math.cos(2 * math.pi * h / 24)
+    return out
+
+
+def _check_windows(windows: list[dict]) -> None:
+    need = FEATURE_AGGREGATION["min_windows"]
+    if len(windows) < need:
+        raise HTTPException(422, f"need features of >= {need} reliable 10.24-s windows (got {len(windows)})")
+    for w in windows:
+        if not isinstance(w, dict) or len(w) > 200 or not all(
+                v is None or (isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v))
+                for v in w.values()):
+            raise HTTPException(422, "each window's features must be a flat dict of finite numbers")
 
 
 # --- endpoints ---------------------------------------------------------------
@@ -150,22 +212,9 @@ def health():
         "status": "ok", "version": __version__,
         "denoiser": PIPE.denoiser is not None,
         "glucose_model": None if GLUCOSE.model is None else {
-            "version": GLUCOSE.model.meta.get("version"), "validated": GLUCOSE.model.validated},
+            "version": GLUCOSE.model.version, "validated_on_this_device": GLUCOSE.model.validated},
         "risk_model": None if RISK is None else RISK.spec.get("version"),
     }
-
-
-def _model_features(feats: dict | None, ctx: Context | None, t: float | None, tz_offset_h: float) -> dict:
-    """Model inputs: PPG features + context + local hour of day (as in training)."""
-    import math
-
-    out = dict(feats or {})
-    if ctx is not None:
-        out.update({k: (float(v) if v is not None else None) for k, v in ctx.model_dump().items()})
-    if t is not None:
-        h = (t / 3600.0 + tz_offset_h) % 24.0
-        out["hour_sin"], out["hour_cos"] = math.sin(2 * math.pi * h / 24), math.cos(2 * math.pi * h / 24)
-    return out
 
 
 @app.post("/v1/analyze")
@@ -176,29 +225,38 @@ def analyze(req: AnalyzeRequest):
                            prior_hr=req.prior_hr, include_signals=req.include_signals)
     except ValueError as e:
         raise HTTPException(422, str(e)) from e
-    cal = PersonalCalibration.from_dict(req.calibration)
-    t = req.timestamp or time.time()
-    if res["features"] is not None:
-        res["glucose"] = GLUCOSE.estimate(_model_features(res["features"], req.context, t, req.tz_offset_h), cal, t,
-                                          sqi=res["quality"]["sqi"])
-    else:
-        res["glucose"] = {"status": "poor_signal", "mg_dl": None}
+    res["timestamp"] = req.timestamp if req.timestamp is not None else time.time()
     res["latency_ms"] = round((time.perf_counter() - t0) * 1000, 1)
-    res["disclaimer"] = "Research prototype, not a medical device. Do not use for treatment decisions."
+    res["disclaimer"] = DISCLAIMER
     return _finite(res)
+
+
+@app.post("/v1/glucose/estimate")
+def glucose_estimate(req: GlucoseRequest):
+    _check_windows(req.recent_features)
+    cal = _calibration(req.calibration)
+    feats = _model_features(req.recent_features, req.context, req.timestamp, req.tz_offset_h)
+    out = GLUCOSE.estimate(feats, cal, req.timestamp)
+    out["windows_used"] = len(req.recent_features)
+    out["disclaimer"] = DISCLAIMER
+    return _finite(out)
 
 
 @app.post("/v1/glucose/calibrate")
 def calibrate(req: CalibrateRequest):
-    cal = PersonalCalibration.from_dict(req.calibration)
-    if GLUCOSE.model is not None and req.features:
-        f, _, _ = GLUCOSE.model.predict(_model_features(req.features, req.context, req.timestamp, req.tz_offset_h))
+    cal = _calibration(req.calibration)
+    if GLUCOSE.model is not None:
+        # The calibration maps the model's output to the reference, so it must
+        # see the model output for the same moment (training-equivalent input).
+        _check_windows(req.recent_features)
+        f, _, _ = GLUCOSE.model.predict(_model_features(req.recent_features, req.context, req.timestamp,
+                                                        req.tz_offset_h))
     else:
         f = cal.f0
     before = cal.predict(f, req.timestamp)[0]
     cal.update(f, req.reference_mgdl, req.timestamp)
-    return {"calibration": cal.to_dict(), "n_points": cal.n_points,
-            "estimate_before_mgdl": round(before, 1), "reference_mgdl": req.reference_mgdl}
+    return _finite({"calibration": cal.to_dict(), "n_points": cal.n_points,
+                    "estimate_before_mgdl": round(before, 1), "reference_mgdl": req.reference_mgdl})
 
 
 @app.post("/v1/risk")
@@ -206,11 +264,13 @@ def risk(req: RiskRequest):
     if RISK is None:
         raise HTTPException(503, "risk model not available")
     inp = RiskInput(age=req.age, bmi=req.bmi, height_cm=req.height_cm, weight_kg=req.weight_kg, male=req.male,
-                    waist_cm=req.waist_cm, resting_hr_bpm=req.resting_hr_bpm,
+                    waist_cm=req.waist_cm, resting_hr_bpm=req.resting_hr_bpm, ancestry=req.ancestry,
                     physically_active=req.physically_active, smoker=req.smoker,
                     diagnosed_diabetes=req.diagnosed_diabetes)
-    ev = None if req.glucose is None else GlucoseEvidence(**req.glucose.model_dump())
-    out = RISK.predict(inp, ev)
+    # Glucose evidence is deliberately not accepted from clients: it would be
+    # used only with a glucose model validated on this device, whose error the
+    # server knows; no such model exists yet.
+    out = RISK.predict(inp)
     out["model"] = {"version": RISK.spec.get("version"), "validation": {
         k: {"auc": v["auc"], "auc_95ci": v["auc_95ci"]} for k, v in RISK.spec.get("validation", {}).items()}}
     out["disclaimer"] = "Screening estimate, not a diagnosis. Confirm with an HbA1c or fasting glucose test."

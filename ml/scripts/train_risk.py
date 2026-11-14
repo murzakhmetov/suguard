@@ -37,9 +37,14 @@ VARIANTS = {
     # Final model: drops waist (r=0.91 with BMI, unstable sign) and smoking
     # (cross-sectional NHANES gives it a spurious protective sign); neither
     # improves discrimination, and an app must not explain risk with them.
-    "app": ["age_z", "age_z2", "male", "log_bmi", "pulse_z", "active"],
+    "app_no_ancestry": ["age_z", "age_z2", "male", "log_bmi", "pulse_z", "active"],
+    # Asian ancestry + its interaction with BMI: without it the model
+    # under-predicts for Asian participants (the group closest to SuGuard's
+    # users) at every BMI, as Asian adults reach high HbA1c at lower BMI.
+    "app": ["age_z", "age_z2", "male", "log_bmi", "pulse_z", "active", "asian", "asian_log_bmi", "european"],
 }
 FINAL = "app"
+AGE_BANDS = [(18, 40), (40, 60), (60, 81)]
 
 
 def fit_imputers(df: pd.DataFrame) -> dict:
@@ -59,7 +64,7 @@ def design(df: pd.DataFrame, imputers: dict) -> np.ndarray:
         m = imputers[col]
         guess = m["intercept"] + m["age"] * d["age"] + m["male"] * d["male"] + m["bmi"] * d["bmi"]
         d[col] = d[col].fillna(guess)
-    return np.stack([design_row(r.age, r.male, r.bmi, r.waist_cm, r.pulse_bpm, r.active, r.smoker)
+    return np.stack([design_row(r.age, r.male, r.bmi, r.waist_cm, r.pulse_bpm, r.active, r.smoker, r.asian, r.european)
                      for r in d.itertuples()])
 
 
@@ -83,12 +88,13 @@ def bootstrap_auc(y, p, n=1000, seed=0):
 
 def cross_validate(df, cols_idx, target, C, n_rep=5, seed=0):
     y = df[target].to_numpy()
+    sw = df["weight"].to_numpy() if "weight" in df else None
     oof = np.zeros((n_rep, y.size))
     rskf = RepeatedStratifiedKFold(n_splits=5, n_repeats=n_rep, random_state=seed)
     for k, (tr, te) in enumerate(rskf.split(df, y)):
         imp = fit_imputers(df.iloc[tr])
         Xtr, Xte = design(df.iloc[tr], imp)[:, cols_idx], design(df.iloc[te], imp)[:, cols_idx]
-        m = LogisticRegression(C=C, max_iter=2000).fit(Xtr, y[tr])
+        m = LogisticRegression(C=C, max_iter=2000).fit(Xtr, y[tr], sample_weight=None if sw is None else sw[tr])
         oof[k // 5, te] = m.predict_proba(Xte)[:, 1]
     aucs = [roc_auc_score(y, o) for o in oof]
     p = oof.mean(axis=0)
@@ -101,7 +107,24 @@ def cross_validate(df, cols_idx, target, C, n_rep=5, seed=0):
         "brier_null": float(brier_score_loss(y, np.full(y.size, y.mean()))),
         "calibration_slope": slope, "calibration_intercept": inter,
         "prevalence": float(y.mean()), "n": int(y.size), "n_pos": int(y.sum()),
-    }, p
+    }, oof[0]
+
+
+def subgroup_calibration(df: pd.DataFrame, oof: np.ndarray, target: str) -> dict:
+    """Mean predicted vs observed (and logistic recalibration) per subgroup."""
+    out = {}
+    y = df[target].to_numpy()
+    groups = {f"ethnicity:{e}": (df["ethnicity"] == e).to_numpy() for e in df["ethnicity"].dropna().unique()}
+    groups.update({f"age:{lo}-{hi - 1}": ((df["age"] >= lo) & (df["age"] < hi)).to_numpy() for lo, hi in AGE_BANDS})
+    groups.update({"sex:male": (df["male"] == 1).to_numpy(), "sex:female": (df["male"] == 0).to_numpy()})
+    for name, s in groups.items():
+        if s.sum() < 50 or y[s].min() == y[s].max():
+            continue
+        slope, inter = calib_slope_intercept(y[s], oof[s])
+        out[name] = {"n": int(s.sum()), "mean_predicted": float(oof[s].mean()), "observed": float(y[s].mean()),
+                     "calibration_slope": slope, "calibration_intercept": inter,
+                     "auc": float(roc_auc_score(y[s], oof[s]))}
+    return out
 
 
 def a1c_densities(df: pd.DataFrame) -> dict:
@@ -120,11 +143,16 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="models")
     ap.add_argument("--C", type=float, default=1.0)
+    ap.add_argument("--weights", default=None, help="DEMO_J.XPT or CSV with SEQN,WTMEC2YR (survey weights)")
     a = ap.parse_args()
     out = Path(a.out)
     (out / "metrics").mkdir(parents=True, exist_ok=True)
 
     df = screening_cohort()
+    if a.weights:
+        from suguard_ml.data.nhanes import attach_weights
+        df = attach_weights(df, a.weights)
+        print("fitting with NHANES MEC survey weights")
     print(f"screening cohort: {len(df)} adults without diagnosed diabetes; "
           f"HbA1c>=5.7: {df.y_dysglycemia.mean():.1%}, >=6.5: {df.y_diabetes.mean():.1%}")
 
@@ -155,27 +183,38 @@ def main():
                     "observed_hba1c_ge_6_5": float(df.y_diabetes[s].mean()) if s.any() else None}
     report["categories_oof"] = table
     print(json.dumps(table, indent=1))
+    report["subgroup_calibration"] = {t: subgroup_calibration(df, oof_full[t], TARGETS[t]) for t in TARGETS}
+    for t, groups in report["subgroup_calibration"].items():
+        for g, v in groups.items():
+            print(f"  {t:12s} {g:45s} n={v['n']:4d} pred {v['mean_predicted']:.3f} obs {v['observed']:.3f} AUC {v['auc']:.2f}")
 
     # Final fit on all data.
     imp = fit_imputers(df)
     X = design(df, imp)
-    spec = {"name": "suguard-risk", "version": "1.0.0", "design": DESIGN_NAMES, "models": {},
+    spec = {"name": "suguard-risk", "version": "1.1.0", "design": DESIGN_NAMES, "models": {},
             "imputers": imp,
+            # Shares used to marginalise unanswered binary inputs (NHANES sample;
+            # for Kazakhstan the app should ask about ancestry instead).
             "binary_prevalence": {"male": float(df.male.mean()), "active": float(df.active.mean()),
-                                  "smoker": float(df.smoker.mean())},
+                                  "smoker": float(df.smoker.mean()), "asian": float(df.asian.mean()),
+                                  "european": float(df.european.mean())},
+            "age_range": [float(df.age.min()), float(df.age.max())],
+            "survey_weighted": bool(a.weights),
             "a1c_grid": {"start": 4.0, "stop": 15.0, "step": 0.05},
             "a1c_density": a1c_densities(df),
             "training": report["cohort"]}
     idx = [DESIGN_NAMES.index(c) for c in VARIANTS[FINAL]]
     spec["features_used"] = VARIANTS[FINAL]
     for tname, tcol in TARGETS.items():
-        m = LogisticRegression(C=a.C, max_iter=5000).fit(X[:, idx], df[tcol].to_numpy())
+        m = LogisticRegression(C=a.C, max_iter=5000).fit(
+            X[:, idx], df[tcol].to_numpy(), sample_weight=df["weight"].to_numpy() if "weight" in df else None)
         coef = np.zeros(len(DESIGN_NAMES))
         coef[idx] = m.coef_[0]
         spec["models"][tname] = {"intercept": float(m.intercept_[0]), "coef": [float(c) for c in coef]}
         print(tname, dict(zip(DESIGN_NAMES, np.round(coef, 3))), round(float(m.intercept_[0]), 3))
     spec["validation"] = {t: report["variants"][FINAL][t] for t in TARGETS}
     spec["categories_oof"] = table
+    spec["subgroup_calibration"] = report["subgroup_calibration"]
     (out / "risk_model.json").write_text(json.dumps(spec, indent=1))
     (out / "metrics" / "risk_cv.json").write_text(json.dumps(report, indent=2))
     print("wrote", out / "risk_model.json")

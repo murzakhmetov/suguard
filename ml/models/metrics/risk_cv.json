@@ -109,39 +109,39 @@
     },
     "full": {
       "dysglycemia": {
-        "auc": 0.7488709307328267,
-        "auc_sd_over_repeats": 0.0005870591661737159,
+        "auc": 0.7707354558057269,
+        "auc_sd_over_repeats": 0.00034975501369611487,
         "auc_95ci": [
-          0.7348140115348593,
-          0.7634765557155939
+          0.7568580256997224,
+          0.784249665189236
         ],
-        "average_precision": 0.5605037144505549,
-        "brier": 0.18651983595893004,
+        "average_precision": 0.5923644257152505,
+        "brier": 0.180205195798668,
         "brier_null": 0.2243911062216588,
-        "calibration_slope": 0.9969566455234611,
-        "calibration_intercept": -0.0002998275785548182,
+        "calibration_slope": 0.9893771897113897,
+        "calibration_intercept": -0.003316243840064556,
         "prevalence": 0.33997220935618344,
         "n": 4318,
         "n_pos": 1468
       },
       "diabetes": {
-        "auc": 0.7564779120975087,
-        "auc_sd_over_repeats": 0.0022088903487094843,
+        "auc": 0.7919358259415897,
+        "auc_sd_over_repeats": 0.003365339970473144,
         "auc_95ci": [
-          0.7180722891218783,
-          0.786658763425331
+          0.7532176797287409,
+          0.8188793722827306
         ],
-        "average_precision": 0.10458670150552837,
-        "brier": 0.03334516088433983,
+        "average_precision": 0.11255724407574187,
+        "brier": 0.033229322614696105,
         "brier_null": 0.0343926916227535,
-        "calibration_slope": 0.9362161970306125,
-        "calibration_intercept": -0.18792906896864386,
+        "calibration_slope": 0.922089932221001,
+        "calibration_intercept": -0.22350566133770688,
         "prevalence": 0.035664659564613246,
         "n": 4318,
         "n_pos": 154
       }
     },
-    "app": {
+    "app_no_ancestry": {
       "dysglycemia": {
         "auc": 0.7489505234475835,
         "auc_sd_over_repeats": 0.000667888415759245,
@@ -174,28 +174,244 @@
         "n": 4318,
         "n_pos": 154
       }
+    },
+    "app": {
+      "dysglycemia": {
+        "auc": 0.7698899564988765,
+        "auc_sd_over_repeats": 0.0003906571419890986,
+        "auc_95ci": [
+          0.7560833419713805,
+          0.7834201790566296
+        ],
+        "average_precision": 0.5935450718675255,
+        "brier": 0.18033210896612034,
+        "brier_null": 0.2243911062216588,
+        "calibration_slope": 0.9975115689321391,
+        "calibration_intercept": -0.0005776311544439552,
+        "prevalence": 0.33997220935618344,
+        "n": 4318,
+        "n_pos": 1468
+      },
+      "diabetes": {
+        "auc": 0.7894435295732126,
+        "auc_sd_over_repeats": 0.004078912452299399,
+        "auc_95ci": [
+          0.7492439334466475,
+          0.814935838357763
+        ],
+        "average_precision": 0.11284167011713332,
+        "brier": 0.03312922881019851,
+        "brier_null": 0.0343926916227535,
+        "calibration_slope": 0.9681591261799167,
+        "calibration_intercept": -0.09492745766363767,
+        "prevalence": 0.035664659564613246,
+        "n": 4318,
+        "n_pos": 154
+      }
     }
   },
   "categories_oof": {
     "low": {
-      "share_of_population": 0.3047707271885132,
-      "observed_hba1c_ge_5_7": 0.09422492401215805,
-      "observed_hba1c_ge_6_5": 0.004559270516717325
+      "share_of_population": 0.31982399258916167,
+      "observed_hba1c_ge_5_7": 0.09341057204923968,
+      "observed_hba1c_ge_6_5": 0.005068790731354091
     },
     "moderate": {
-      "share_of_population": 0.2665585919407133,
-      "observed_hba1c_ge_5_7": 0.3110338835794961,
-      "observed_hba1c_ge_6_5": 0.028670721112076455
+      "share_of_population": 0.2660954145437703,
+      "observed_hba1c_ge_5_7": 0.30374238468233244,
+      "observed_hba1c_ge_6_5": 0.019147084421235857
     },
     "elevated": {
-      "share_of_population": 0.31681333950903195,
-      "observed_hba1c_ge_5_7": 0.5,
-      "observed_hba1c_ge_6_5": 0.04751461988304093
+      "share_of_population": 0.27188513200555814,
+      "observed_hba1c_ge_5_7": 0.4991482112436116,
+      "observed_hba1c_ge_6_5": 0.04770017035775128
     },
     "high": {
-      "share_of_population": 0.11185734136174155,
-      "observed_hba1c_ge_5_7": 0.6252587991718427,
-      "observed_hba1c_ge_6_5": 0.10351966873706005
+      "share_of_population": 0.14219546086150997,
+      "observed_hba1c_ge_5_7": 0.6579804560260586,
+      "observed_hba1c_ge_6_5": 0.11237785016286644
+    }
+  },
+  "subgroup_calibration": {
+    "dysglycemia": {
+      "ethnicity:Non-Hispanic Black": {
+        "n": 977,
+        "mean_predicted": 0.39982521195753007,
+        "observed": 0.45752302968270214,
+        "calibration_slope": 0.8213841637652152,
+        "calibration_intercept": 0.23736902338011517,
+        "auc": 0.7426512177620193
+      },
+      "ethnicity:Non-Hispanic Asian": {
+        "n": 608,
+        "mean_predicted": 0.3819427317708686,
+        "observed": 0.3832236842105263,
+        "calibration_slope": 1.212197997377944,
+        "calibration_intercept": 0.07637450432654586,
+        "auc": 0.7919427753934193
+      },
+      "ethnicity:Mexican American": {
+        "n": 586,
+        "mean_predicted": 0.3372010202397901,
+        "observed": 0.29180887372013653,
+        "calibration_slope": 0.9511614662203436,
+        "calibration_intercept": -0.27797232730560295,
+        "auc": 0.7487775664059748
+      },
+      "ethnicity:Non-Hispanic White": {
+        "n": 1514,
+        "mean_predicted": 0.2773295407947016,
+        "observed": 0.2767503302509908,
+        "calibration_slope": 1.0000618927813345,
+        "calibration_intercept": -0.0032562111306338654,
+        "auc": 0.7577914364490361
+      },
+      "ethnicity:Other Race - Including Multi-Racial": {
+        "n": 219,
+        "mean_predicted": 0.33779734040836773,
+        "observed": 0.2968036529680365,
+        "calibration_slope": 1.0692295947345252,
+        "calibration_intercept": -0.2064654390552673,
+        "auc": 0.7813186813186813
+      },
+      "ethnicity:Other Hispanic": {
+        "n": 414,
+        "mean_predicted": 0.37019693299651996,
+        "observed": 0.321256038647343,
+        "calibration_slope": 1.2007288766570539,
+        "calibration_intercept": -0.2220708944374513,
+        "auc": 0.7975276268964225
+      },
+      "age:18-39": {
+        "n": 1671,
+        "mean_predicted": 0.14098269640210329,
+        "observed": 0.1436265709156194,
+        "calibration_slope": 1.122631761734318,
+        "calibration_intercept": 0.21473257651714983,
+        "auc": 0.7540181691125086
+      },
+      "age:40-59": {
+        "n": 1341,
+        "mean_predicted": 0.3949534526699312,
+        "observed": 0.39671886651752425,
+        "calibration_slope": 1.0892890480430097,
+        "calibration_intercept": 0.04219211912067455,
+        "auc": 0.6978354415085923
+      },
+      "age:60-80": {
+        "n": 1306,
+        "mean_predicted": 0.5377883749728865,
+        "observed": 0.5329249617151608,
+        "calibration_slope": 0.8159403399290118,
+        "calibration_intercept": 0.0058581117725951155,
+        "auc": 0.6315149802148107
+      },
+      "sex:male": {
+        "n": 2029,
+        "mean_predicted": 0.35472826124236395,
+        "observed": 0.35485460818137016,
+        "calibration_slope": 0.9118284836246697,
+        "calibration_intercept": -0.036452349555055365,
+        "auc": 0.7486912189118071
+      },
+      "sex:female": {
+        "n": 2289,
+        "mean_predicted": 0.32670277036790113,
+        "observed": 0.32678025338575795,
+        "calibration_slope": 1.0812184964404234,
+        "calibration_intercept": 0.04130666533575368,
+        "auc": 0.7885778905981601
+      }
+    },
+    "diabetes": {
+      "ethnicity:Non-Hispanic Black": {
+        "n": 977,
+        "mean_predicted": 0.05269446615084626,
+        "observed": 0.05424769703172978,
+        "calibration_slope": 0.8110805115261799,
+        "calibration_intercept": -0.44181509508296274,
+        "auc": 0.7423834027607613
+      },
+      "ethnicity:Non-Hispanic Asian": {
+        "n": 608,
+        "mean_predicted": 0.042036194871629844,
+        "observed": 0.04276315789473684,
+        "calibration_slope": 0.9740501893484783,
+        "calibration_intercept": -0.05324371734596763,
+        "auc": 0.7481496167063177
+      },
+      "ethnicity:Mexican American": {
+        "n": 586,
+        "mean_predicted": 0.03762286623036641,
+        "observed": 0.03754266211604096,
+        "calibration_slope": 1.1270793551611602,
+        "calibration_intercept": 0.3526847187968435,
+        "auc": 0.7868310767246938
+      },
+      "ethnicity:Non-Hispanic White": {
+        "n": 1514,
+        "mean_predicted": 0.01889404396250151,
+        "observed": 0.0178335535006605,
+        "calibration_slope": 0.9594402055596296,
+        "calibration_intercept": -0.20907728408704382,
+        "auc": 0.7473162469799994
+      },
+      "ethnicity:Other Race - Including Multi-Racial": {
+        "n": 219,
+        "mean_predicted": 0.04085685298794351,
+        "observed": 0.0365296803652968,
+        "calibration_slope": 1.1273875134521216,
+        "calibration_intercept": 0.21734730001576869,
+        "auc": 0.8116113744075828
+      },
+      "ethnicity:Other Hispanic": {
+        "n": 414,
+        "mean_predicted": 0.043440610299230555,
+        "observed": 0.043478260869565216,
+        "calibration_slope": 1.0574133130629881,
+        "calibration_intercept": 0.15450303648385633,
+        "auc": 0.7709034792368126
+      },
+      "age:18-39": {
+        "n": 1671,
+        "mean_predicted": 0.011659042207987268,
+        "observed": 0.011370436864153202,
+        "calibration_slope": 1.164823413291772,
+        "calibration_intercept": 0.6097917667776918,
+        "auc": 0.8154390212820186
+      },
+      "age:40-59": {
+        "n": 1341,
+        "mean_predicted": 0.046052900655598555,
+        "observed": 0.049962714392244596,
+        "calibration_slope": 0.9197761428947736,
+        "calibration_intercept": -0.1309404027584107,
+        "auc": 0.7214555167646851
+      },
+      "age:60-80": {
+        "n": 1306,
+        "mean_predicted": 0.05619138303299114,
+        "observed": 0.05206738131699847,
+        "calibration_slope": 0.9196250029735629,
+        "calibration_intercept": -0.2897303328833397,
+        "auc": 0.7192340587284995
+      },
+      "sex:male": {
+        "n": 2029,
+        "mean_predicted": 0.03169645512321033,
+        "observed": 0.031542631838344014,
+        "calibration_slope": 0.9034819298768757,
+        "calibration_intercept": -0.292966143802552,
+        "auc": 0.7684796437659034
+      },
+      "sex:female": {
+        "n": 2289,
+        "mean_predicted": 0.039455237267277,
+        "observed": 0.039318479685452164,
+        "calibration_slope": 1.0120806523759125,
+        "calibration_intercept": 0.02833181666089731,
+        "auc": 0.791036329644788
+      }
     }
   }
 }

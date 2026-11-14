@@ -32,6 +32,7 @@ import numpy as np
 
 PRIOR_MEAN_MGDL = 105.0          # typical fasting/postprandial mix, non-diabetic adult
 GLUCOMETER_CV = 0.05             # ISO 15197-grade meter, ~5 % CV
+SUGUARD_DEVICE = "suguard_max30102"   # meta_source of tables recorded with the bracelet
 
 
 # ---------------------------------------------------------------------------
@@ -46,7 +47,13 @@ class GlucosePopulationModel:
 
     @property
     def validated(self) -> bool:
-        return bool(self.meta.get("validated", False))
+        """Validated *for this device*: a model validated on another sensor
+        (e.g. Empatica E4 green PPG in BIG IDEAs) stays experimental here."""
+        return bool(self.meta.get("validated", False)) and self.meta.get("validated_on_device") == SUGUARD_DEVICE
+
+    @property
+    def version(self) -> str | None:
+        return self.meta.get("version")
 
     @classmethod
     def load(cls, model_dir: str | Path) -> "GlucosePopulationModel | None":
@@ -98,10 +105,11 @@ class PersonalCalibration:
     last_t: float | None = None          # unix seconds of last update
     drift_a_per_day: float = 6.0**2      # process noise (mg/dL)^2 / day
     drift_b_per_day: float = 0.03**2
+    model_version: str | None = None     # population model the state was fitted against
 
     def _predict_state(self, t: float | None) -> np.ndarray:
         P = np.array(self.P, dtype=float)
-        if t is not None and self.last_t is not None:
+        if t is not None and self.last_t is not None and math.isfinite(t) and math.isfinite(self.last_t):
             days = max(t - self.last_t, 0.0) / 86400.0
             P = P + np.diag([self.drift_a_per_day * days, self.drift_b_per_day * days])
         return P
@@ -131,15 +139,43 @@ class PersonalCalibration:
         self.a, self.b = float(theta[0]), float(np.clip(theta[1], 0.0, 3.0))
         self.P = P.tolist()
         self.n_points += 1
-        self.last_t = t if t is not None else self.last_t
+        if t is not None and math.isfinite(t):
+            self.last_t = t if self.last_t is None else max(self.last_t, t)  # clock never runs backwards
         return self
 
     def to_dict(self) -> dict:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, d: dict | None) -> "PersonalCalibration":
-        return cls(**d) if d else cls()
+    def from_dict(cls, d: dict | None, model_version: str | None = None) -> "PersonalCalibration":
+        """Rebuild a state sent back by a client, validating every field.
+
+        Unknown keys are ignored; malformed or implausible values raise
+        ValueError. A state fitted against a different population model
+        version is reset (its offsets do not apply to the new model).
+        """
+        if not d:
+            return cls(model_version=model_version)
+        known = {f for f in cls.__dataclass_fields__}
+        d = {k: v for k, v in d.items() if k in known}
+        try:
+            c = cls(**d)
+            P = np.asarray(c.P, dtype=float)
+            nums = [c.a, c.b, c.f0, c.resid_var, c.drift_a_per_day, c.drift_b_per_day]
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"invalid calibration state: {e}") from e
+        ok = (P.shape == (2, 2) and np.isfinite(P).all() and np.allclose(P, P.T, atol=1e-6)
+              and np.all(np.linalg.eigvalsh(P) >= -1e-9) and all(isinstance(x, (int, float)) and math.isfinite(x)
+                                                                  for x in nums)
+              and -400 <= c.a <= 400 and 0 <= c.b <= 3 and 40 <= c.f0 <= 400 and 4.0 <= c.resid_var <= 60.0**2
+              and 0 <= c.drift_a_per_day <= 1e4 and 0 <= c.drift_b_per_day <= 1.0
+              and isinstance(c.n_points, int) and 0 <= c.n_points <= 100_000
+              and (c.last_t is None or (isinstance(c.last_t, (int, float)) and math.isfinite(c.last_t))))
+        if not ok:
+            raise ValueError("invalid calibration state")
+        if c.model_version != model_version:
+            return cls(model_version=model_version)
+        return c
 
 
 # ---------------------------------------------------------------------------
@@ -166,10 +202,11 @@ class GlucoseEstimator:
         if self.model is None:
             if cal.n_points >= self.MIN_CALIBRATIONS:
                 y, sd = cal.predict(cal.f0, t)
-                return {"status": "calibration_only", "mg_dl": round(y, 1),
+                return {"status": "calibration_only", "mg_dl": None,
+                        "fingerstick_average_mgdl": round(y, 1),
                         "interval_80": [round(y - 1.2816 * sd, 1), round(y + 1.2816 * sd, 1)],
-                        "message": "No trained glucose model: this is your recent level from fingerstick "
-                                   "calibrations, not a live measurement."}
+                        "message": "No glucose model: this is the average of your recent fingerstick readings, "
+                                   "not a reading from the bracelet."}
             return {"status": "unavailable", "mg_dl": None,
                     "message": "No glucose model trained on paired data yet; add fingerstick readings "
                                "to collect training data (docs/DATA_COLLECTION.md)."}

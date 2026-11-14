@@ -22,7 +22,7 @@ import torch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from suguard_ml.config import FS, WINDOW  # noqa: E402
-from suguard_ml.eval.vitals_eval import summarize_errors, vitals_from_bv  # noqa: E402
+from suguard_ml.eval.vitals_eval import both_finite, summarize_errors, vitals_from_bv  # noqa: E402
 from suguard_ml.models.denoiser_net import DenoiseUNet, denoiser_loss  # noqa: E402
 
 
@@ -70,8 +70,11 @@ def evaluate(model, X, Y, M, meta, device, n_vitals=600):
     rows_raw = [vitals_from_bv(X[i, 0].astype(np.float64), X[i, 1].astype(np.float64), FS) for i in range(k)]
     hr, spo2 = meta[:k, 0], meta[:k, 1]
     flagged_ok = np.array([r["artifact_frac"] < 0.5 for r in rows_dn])
+    common = both_finite(rows_raw, rows_dn)
     res["vitals_raw"] = summarize_errors(rows_raw, hr, spo2)
     res["vitals_denoised"] = summarize_errors(rows_dn, hr, spo2)
+    res["vitals_raw_common"] = summarize_errors(rows_raw, hr, spo2, common=common)
+    res["vitals_denoised_common"] = summarize_errors(rows_dn, hr, spo2, common=common)
     res["vitals_denoised_confident"] = summarize_errors(rows_dn, hr, spo2, keep=flagged_ok)
     model.train()
     return res
@@ -148,7 +151,7 @@ def main():
             print(json.dumps({k: v for k, v in res.items() if not k.startswith("vitals")}),
                   "\n  raw  ", res["vitals_raw"]["hr"], res["vitals_raw"]["spo2"],
                   "\n  dn   ", res["vitals_denoised"]["hr"], res["vitals_denoised"]["spo2"],
-                  "\n  dn-ok", res["vitals_denoised_confident"]["coverage"],
+                  "\n  dn-ok", res["vitals_denoised_confident"]["selected_fraction"],
                   res["vitals_denoised_confident"]["hr"], res["vitals_denoised_confident"]["spo2"], flush=True)
             if score < best:
                 best = score

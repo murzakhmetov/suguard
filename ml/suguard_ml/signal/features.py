@@ -113,29 +113,37 @@ def template_features(tmpl: np.ndarray, ibi_s: float, prefix: str = "") -> dict:
         above = np.flatnonzero(y >= lvl * y[i_sys])
         f[f"width{int(lvl * 100)}_ratio"] = (above[-1] - above[0]) / N_T if above.size else np.nan
 
-    # Dicrotic notch: first local minimum after the systolic peak, else the
-    # flattest point of the descent (late-systolic inflection in stiff arteries).
-    after = y[i_sys + 3: int(0.85 * N_T)]
-    mins, _ = signal.find_peaks(-after)
+    # Dicrotic notch: first local minimum after the systolic peak; otherwise
+    # the flattest *interior* point of the descent (late-systolic inflection
+    # in stiff arteries); if neither exists the notch features are undefined.
+    lo, hi = i_sys + 3, int(0.85 * N_T)
+    mins, _ = signal.find_peaks(-y[lo:hi])
+    i_n = None
     if mins.size:
-        i_n = i_sys + 3 + mins[0]
-        notch_type = 1.0
+        i_n, notch_type = lo + int(mins[0]), 1.0
     else:
-        d1a = d1[i_sys + 3: int(0.85 * N_T)]
-        i_n = i_sys + 3 + int(np.argmax(d1a)) if d1a.size else i_sys
         notch_type = 0.0
+        d1s = signal.savgol_filter(d1, 9, 3)[lo:hi]
+        pk, _ = signal.find_peaks(d1s)            # never returns the slice ends
+        if pk.size:
+            i_n = lo + int(pk[int(np.argmax(d1s[pk]))])
     f["notch_present"] = notch_type
-    f["notch_time_ratio"] = i_n / N_T
-    f["notch_height"] = float(y[i_n])
-    post = y[i_n:]
-    i_d = i_n + int(np.argmax(post)) if post.size else i_n
-    f["dia_height"] = float(y[i_d])                       # reflection index
-    f["dia_time_ratio"] = i_d / N_T
-    f["delta_t_s"] = (i_d - i_sys) / N_T * ibi_s           # stiffness index ~ height / delta_t
-    a_sys = float(np.trapezoid(y[: i_n + 1], t[: i_n + 1]))
-    a_dia = float(np.trapezoid(y[i_n:], t[i_n:]))
-    f["area_total"] = a_sys + a_dia
-    f["ipa"] = a_dia / a_sys if a_sys > 0 else np.nan     # inflection point area ratio
+    if i_n is None:
+        for k in ("notch_time_ratio", "notch_height", "dia_height", "dia_time_ratio", "delta_t_s", "ipa"):
+            f[k] = np.nan
+        f["area_total"] = float(np.trapezoid(y, t))
+    else:
+        f["notch_time_ratio"] = i_n / N_T
+        f["notch_height"] = float(y[i_n])
+        post = y[i_n:]
+        i_d = i_n + int(np.argmax(post)) if post.size else i_n
+        f["dia_height"] = float(y[i_d])                       # reflection index
+        f["dia_time_ratio"] = i_d / N_T
+        f["delta_t_s"] = (i_d - i_sys) / N_T * ibi_s           # stiffness index ~ height / delta_t
+        a_sys = float(np.trapezoid(y[: i_n + 1], t[: i_n + 1]))
+        a_dia = float(np.trapezoid(y[i_n:], t[i_n:]))
+        f["area_total"] = a_sys + a_dia
+        f["ipa"] = a_dia / a_sys if a_sys > 0 else np.nan     # inflection point area ratio
     f["skew"] = float(stats.skew(y))
     f["kurt"] = float(stats.kurtosis(y))
     f.update(_sdppg_waves(d2, i_sys))
@@ -165,7 +173,7 @@ def extract_features(ir_bv: np.ndarray, red_bv: np.ndarray | None = None, fs: fl
     feats: dict[str, float] = {}
     good_ibi = beats.ibi_s[beats.valid_ibi]
     feats["hr_bpm"] = float(60.0 / np.median(good_ibi)) if good_ibi.size >= 2 else np.nan
-    hrv = hrv_metrics(good_ibi)
+    hrv = hrv_metrics(beats.ibi_s, beats.valid_ibi)
     feats.update({k: (np.nan if v is None else v) for k, v in hrv.items()})
     feats["pi_ir"] = float(np.percentile(ir_bv, 97) - np.percentile(ir_bv, 3)) * 100
     feats["ir_dc"] = np.nan if ir_dc is None else float(ir_dc)
@@ -182,8 +190,8 @@ def extract_features(ir_bv: np.ndarray, red_bv: np.ndarray | None = None, fs: fl
     if red_bv is not None:
         red_bv = np.asarray(red_bv, dtype=np.float64)
         w = None if artifact_prob is None else 1 - artifact_prob
-        from .spo2 import ratio_of_ratios
-        r, rc = ratio_of_ratios(red_bv, ir_bv, w)
+        from .spo2 import cardiac_band, ratio_of_ratios
+        r, rc = ratio_of_ratios(cardiac_band(red_bv, fs), cardiac_band(ir_bv, fs), w)
         feats["r_ratio"] = np.nan if r is None else r
         feats["red_ir_corr"] = rc
         feats["pi_red"] = float(np.percentile(red_bv, 97) - np.percentile(red_bv, 3)) * 100
