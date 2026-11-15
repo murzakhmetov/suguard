@@ -20,6 +20,20 @@ def test_resample_keeps_tone():
     assert f == pytest.approx(1.2, abs=0.11)
 
 
+def test_resample_follows_a_drifting_window_to_its_edges():
+    """Raw counts with a drift (the usual case): no ringing where the window starts and ends.
+    With zero padding outside the window the first sample was off by hundreds of counts."""
+    t = np.arange(0, 10.24, 1 / 100.0)
+    def counts(tt):
+        return 60_000 + 400 * tt + 80 * np.sin(2 * np.pi * 1.2 * tt)      # 4,000 counts of drift, an 80-count pulse
+    y = resample(counts(t), 100.0, FS)
+    ref = counts(t[::2])
+    assert y.size == ref.size
+    assert np.max(np.abs(y - ref)) < 4.0
+    assert np.max(np.abs(resample(counts(t[::2]), FS, 100.0)[:t.size - 1] - counts(t[:-1]))) < 4.0     # and upwards
+    assert resample(np.array([5.0]), 100.0, FS).tolist() == [5.0] and resample(np.array([]), 100.0, FS).size == 0
+
+
 def test_blood_volume_is_inverted_and_normalised():
     t = np.arange(0, 10, 1 / FS)
     pulse = 0.01 * np.sin(2 * np.pi * t)            # 1 % blood-volume modulation

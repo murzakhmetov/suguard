@@ -103,10 +103,13 @@ One line per window on USB:
  "reasons":"","nn":true,"dc":[88211,126034],"led":[35,38],"temp":31.50,"fs":50.012,"proc_ms":1400,"bat":87,"usb":false}
 ```
 
-`reasons` says why a window was rejected: `no_contact`, `adc_saturated`, `led_current_too_high`,
-`weak_pulse`, `implausible_amplitude`, `motion`, `irregular_or_noisy`, `red_ir_inconsistent`,
-`denoiser_mismatch` (the cleaned-up pulse is not supported by the measured signal). `hr` is
-corrected for the sensor's clock error (`fs` is the measured sample rate).
+`reasons` says why a window was rejected: `no_contact`, `adc_saturated`, `weak_pulse`,
+`implausible_amplitude`, `motion`, `irregular_or_noisy`, `red_ir_inconsistent`,
+`denoiser_mismatch` (the cleaned-up pulse is not supported by the measured signal).
+`led_current_too_high` is a note, not a rejection: the level is near the top of the ADC range and
+the LED control lowers the current. `hr` is corrected for the sensor's clock error (`fs` is the
+measured sample rate). The rules behind each reason are listed in
+[../ml/docs/MODEL_CARD.md](../ml/docs/MODEL_CARD.md#2-the-decision-to-report-a-value).
 
 Every `report_interval_s`, if at least one window was reliable, one record with the medians goes to
 USB (`"t":"record"`) and, if Wi-Fi and `user` are set, to Firebase:
@@ -178,7 +181,8 @@ Behaviour worth knowing:
 
 Everything below except the first row runs with `python -m pytest firmware/tests` (45 tests; needs
 `g++`; the RV32 tests also need `gcc-riscv64-unknown-elf`, `picolibc-riscv64-unknown-elf` and
-`qemu-system-misc`).
+`qemu-system-misc`). The first row is a 46th test that runs when `SG_ARDUINO_CACHE` names a folder
+for the downloaded headers (it needs `arm-none-eabi-g++` and access to GitHub).
 
 | What | How | Result |
 |---|---|---|

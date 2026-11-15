@@ -8,11 +8,28 @@ heart rate for 8-s windows (2-s shift).
     wget https://archive.ics.uci.edu/static/public/495/ppg+dalia.zip && unzip ppg+dalia.zip && unzip -q PPG_FieldStudy.zip
     python scripts/eval_dalia.py --root PPG_FieldStudy --out models/metrics
 
-Caveat: the E4 BVP is a single (green) channel, so the denoiser gets the same
-signal on both inputs and cannot use the red/IR motion cue it was built
-around; this measures its single-channel behaviour. For reference, published
-results on this dataset: ~15-20 bpm MAE for classical spectral trackers
-without accelerometer, ~7.7 bpm for DeepPPG with accelerometer (Reiss 2019).
+Two evaluations, written to dalia_hr_eval.json:
+
+``gated_pipeline``  What the bracelet would show: the complete pipeline with
+    every reliability check on consecutive 10.24-s windows, for the classical
+    path, the server denoiser and the integer bracelet model. Reported: how
+    often a heart rate is given (coverage), how wrong the given values are,
+    and both per activity. This is the test of the claim "a value that is
+    shown can be trusted" on motion that was not simulated.
+
+``spectral_tracking``  Heart rate of every window from the spectral peak,
+    with and without the denoiser, no checks. For comparison with published
+    results on this dataset: ~15-20 bpm MAE for classical spectral trackers
+    without accelerometer, ~7.7 bpm for DeepPPG with accelerometer (Reiss 2019).
+
+Caveats. The E4 records one (green) channel in arbitrary units, not raw
+red/IR counts, so the recording is turned into MAX30102-like counts with
+assumptions: the red channel is a copy of the IR one at a fixed ratio (so the
+checks that compare the two wavelengths pass trivially and the network
+cannot use the red/IR motion cue it was built around), and the quietest
+quarter of each recording is given a pulse amplitude of 1 % of the light
+level (which the amplitude checks then refer to). Read the result as a lower
+bound on what the two-wavelength sensor can reject.
 """
 
 from __future__ import annotations
@@ -27,13 +44,22 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from suguard_ml.config import FS  # noqa: E402
+from suguard_ml.config import ADC_MAX, FS, WINDOW  # noqa: E402
 from suguard_ml.models.denoiser import Denoiser  # noqa: E402
+from suguard_ml.pipeline import SuGuardPipeline  # noqa: E402
 from suguard_ml.signal.beats import spectral_hr  # noqa: E402
 from suguard_ml.signal.filters import bandpass, resample  # noqa: E402
 
 ACTIVITIES = {0: "transient", 1: "sitting", 2: "stairs", 3: "table_soccer", 4: "cycling", 5: "driving",
               6: "lunch", 7: "walking", 8: "working"}
+BVP_FS = 64.0             # Empatica E4
+LABEL_SHIFT_S, LABEL_CENTRE_S = 2.0, 4.0      # reference label i covers [2i, 2i + 8] s
+ACTIVITY_FS = 4.0
+
+# Assumptions that turn the single-channel recording into two-channel raw counts.
+REST_PI = 0.01            # pulse amplitude (peak to peak, AC/DC) given to the quietest quarter of a recording
+IR_DC, R_RATIO = 100_000.0, 0.6               # light level (counts) and red/IR ratio of ratios (SpO2 ~ 97 %)
+RED_DC = 60_000.0
 
 
 def load_subject(pkl: Path) -> dict:
@@ -41,22 +67,92 @@ def load_subject(pkl: Path) -> dict:
         return pickle.load(fh, encoding="latin1")
 
 
-def subject_errors(d: dict, den: Denoiser | None) -> dict:
+def pulse_signal(d: dict) -> np.ndarray:
+    """The wrist BVP at FS, band-limited, systolic peaks pointing up."""
     bvp = np.asarray(d["signal"]["wrist"]["BVP"], dtype=float).ravel()
-    x = resample(bvp, 64.0, FS)
-    x = bandpass(x, FS, 0.4, 12.0)
-    if np.mean(np.diff(x) > 0) > 0.5:
-        x = -x
+    x = resample(bandpass(bvp, BVP_FS, 0.4, 12.0), BVP_FS, FS)
+    # A pulse rises faster than it falls: most samples of an upright pulse wave are falling.
+    return -x if np.mean(np.diff(x) > 0) > 0.5 else x
+
+
+def labels_at(d: dict, centres_s: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Reference heart rate and activity for windows centred at ``centres_s``."""
     label = np.asarray(d["label"], dtype=float).ravel()
-    act_raw = np.asarray(d.get("activity", np.zeros(1)), dtype=float).ravel()  # 4 Hz
+    act = np.asarray(d.get("activity", np.zeros(1)), dtype=float).ravel()
+    i = np.round((centres_s - LABEL_CENTRE_S) / LABEL_SHIFT_S).astype(int)
+    ok = (i >= 0) & (i < label.size)
+    hr = np.where(ok, label[np.clip(i, 0, label.size - 1)], np.nan)
+    a = act[np.clip((centres_s * ACTIVITY_FS).astype(int), 0, act.size - 1)] if act.size > 1 else np.zeros(i.size)
+    return hr, a
+
+
+def to_counts(x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Raw red and IR counts (as the MAX30102 would deliver them) from the pulse signal."""
+    n = x.size // WINDOW
+    amp = np.array([np.percentile(w, 97) - np.percentile(w, 3) for w in x[:n * WINDOW].reshape(n, WINDOW)])
+    rest = float(np.percentile(amp[amp > 0], 25)) if np.any(amp > 0) else 1.0
+    bv = np.clip(REST_PI * x / rest, -0.95, 0.95)             # more blood, less light
+    ir = np.clip(np.round(IR_DC * (1.0 - bv)), 0, ADC_MAX)
+    red = np.clip(np.round(RED_DC * (1.0 - R_RATIO * bv)), 0, ADC_MAX)
+    return red, ir
+
+
+def gated_windows(d: dict, pipes: dict[str, SuGuardPipeline]) -> dict:
+    """Per path: absolute heart-rate error of every consecutive 10.24-s window
+    (NaN where the pipeline gave no value), with the activity of the window."""
+    red, ir = to_counts(pulse_signal(d))
+    starts = np.arange(0, ir.size - WINDOW + 1, WINDOW)
+    ref, act = labels_at(d, (starts + WINDOW / 2) / FS)
+    keep = np.isfinite(ref)
+    starts, ref, act = starts[keep], ref[keep], act[keep]
+    out = {"activity": act}
+    for name, pipe in pipes.items():
+        err = np.full(starts.size, np.nan)
+        for k, s in enumerate(starts):
+            hr = pipe.analyze(red[s:s + WINDOW], ir[s:s + WINDOW], fs=FS)["heart_rate"]["bpm"]
+            if hr is not None:
+                err[k] = abs(hr - ref[k])
+        out[name] = err
+    return out
+
+
+def coverage_and_error(err: np.ndarray) -> dict:
+    given = np.isfinite(err)
+    e = err[given]
+    return {"windows": int(err.size), "hr_coverage": float(given.mean()) if err.size else None,
+            "hr_mae": float(e.mean()) if e.size else None,
+            "hr_p95": float(np.percentile(e, 95)) if e.size else None,
+            "hr_errors_over_10bpm": int(np.sum(e > 10)),
+            "share_of_given_values_over_10bpm": float(np.mean(e > 10)) if e.size else None}
+
+
+def summarise_gated(per_subject: dict[str, dict], paths: list[str]) -> dict:
+    out = {"assumptions": {"rest_pulse_amplitude_ac_dc": REST_PI, "red_ir_ratio": R_RATIO,
+                           "note": "single green channel: red is a copy of IR, red/IR checks pass trivially"}}
+    act = np.concatenate([r["activity"] for r in per_subject.values()]) if per_subject else np.zeros(0)
+    for p in paths:
+        err = np.concatenate([r[p] for r in per_subject.values()]) if per_subject else np.zeros(0)
+        res = coverage_and_error(err)
+        res["by_activity"] = {ACTIVITIES.get(int(a), str(int(a))): {k: v for k, v in coverage_and_error(err[act == a]).items()
+                                                                    if k in ("windows", "hr_coverage", "hr_mae", "hr_errors_over_10bpm")}
+                              for a in np.unique(act)}
+        res["by_subject"] = {s: {k: v for k, v in coverage_and_error(r[p]).items()
+                                 if k in ("windows", "hr_coverage", "hr_mae", "hr_errors_over_10bpm")}
+                             for s, r in per_subject.items()}
+        out[p] = res
+    return out
+
+
+def spectral_errors(d: dict, den: Denoiser | None) -> dict:
+    """Spectral heart rate of every reference window, no reliability checks."""
+    x = pulse_signal(d)
+    label = np.asarray(d["label"], dtype=float).ravel()
     y_hat = {"spectral": [], "spectral_tracked": [], "denoised_tracked": []}
     p_s, p_d = None, None
-    dn = None
-    if den is not None:
-        dn = den.denoise_bv(x, 0.6 * x, FS)
-    for i, hr_ref in enumerate(label):
-        c = (4.0 + 2.0 * i) * FS
-        a, b = int(c - 5.12 * FS), int(c + 5.12 * FS)
+    dn = den.denoise_bv(x, R_RATIO * x, FS) if den is not None else None
+    for i in range(label.size):
+        c = (LABEL_CENTRE_S + LABEL_SHIFT_S * i) * FS
+        a, b = int(c - WINDOW / 2), int(c + WINDOW / 2)
         if a < 0 or b > x.size:
             for k in y_hat:
                 y_hat[k].append(np.nan)
@@ -70,16 +166,17 @@ def subject_errors(d: dict, den: Denoiser | None) -> dict:
             hd, _ = spectral_hr(dn.ir_bv[a:b], FS, prior_bpm=p_d)
             y_hat["denoised_tracked"].append(hd)
             p_d = hd or p_d
-    acts = np.array([act_raw[min(int((4 + 2 * i) * 4), act_raw.size - 1)] for i in range(label.size)]) \
-        if act_raw.size > 1 else np.zeros(label.size)
+    _, acts = labels_at(d, LABEL_CENTRE_S + LABEL_SHIFT_S * np.arange(label.size))
     out = {}
     for k, v in y_hat.items():
         if not v:
             continue
         e = np.abs(np.array(v, dtype=float) - label)
+        if not np.isfinite(e).any():
+            continue
         out[k] = {"mae": float(np.nanmean(e)),
-                  "by_activity": {ACTIVITIES.get(int(a), str(a)): float(np.nanmean(e[acts == a]))
-                                  for a in np.unique(acts)}}
+                  "by_activity": {ACTIVITIES.get(int(a), str(int(a))): float(np.nanmean(e[acts == a]))
+                                  for a in np.unique(acts) if np.isfinite(e[acts == a]).any()}}
     return out
 
 
@@ -88,16 +185,44 @@ def main():
     ap.add_argument("--root", required=True, help="PPG_FieldStudy folder with S1..S15")
     ap.add_argument("--out", default="models/metrics")
     ap.add_argument("--models", default="models")
+    ap.add_argument("--subjects", type=int, default=None, help="only the first N subjects (quick run)")
     a = ap.parse_args()
-    onnx = Path(a.models) / "denoiser.onnx"
-    den = Denoiser(onnx) if onnx.exists() else None
-    report = {}
-    for pkl in sorted(Path(a.root).glob("S*/S*.pkl"), key=lambda p: int(p.stem[1:])):
-        report[pkl.stem] = subject_errors(load_subject(pkl), den)
-        print(pkl.stem, {k: round(v["mae"], 2) for k, v in report[pkl.stem].items()}, flush=True)
-    methods = {m for r in report.values() for m in r}
-    report["mean_mae"] = {m: float(np.mean([r[m]["mae"] for k, r in report.items() if m in r])) for m in methods}
-    print("mean MAE (bpm):", report["mean_mae"])
+    models = Path(a.models)
+    den = Denoiser(models / "denoiser.onnx") if (models / "denoiser.onnx").exists() else None
+    pipes = {"classical": SuGuardPipeline(denoiser=None)}
+    if den is not None:
+        pipes["server"] = SuGuardPipeline(denoiser=den)
+    if (models / "denoiser_edge_int.npz").exists():
+        from suguard_ml.models.edge_int import EdgeDenoiserInt
+        pipes["bracelet"] = SuGuardPipeline(denoiser=EdgeDenoiserInt(models / "denoiser_edge_int.npz"))
+
+    files = sorted(Path(a.root).glob("S*/S*.pkl"), key=lambda p: int(p.stem[1:]))[:a.subjects]
+    if not files:
+        sys.exit(f"no S*/S*.pkl under {a.root}")
+    spectral, gated = {}, {}
+    for pkl in files:
+        d = load_subject(pkl)
+        gated[pkl.stem] = gated_windows(d, pipes)
+        spectral[pkl.stem] = spectral_errors(d, den)
+        line = {p: "%.0f %% given, MAE %s" % (100 * np.isfinite(gated[pkl.stem][p]).mean(),
+                                               "%.1f" % np.nanmean(gated[pkl.stem][p])
+                                               if np.isfinite(gated[pkl.stem][p]).any() else "-") for p in pipes}
+        print(pkl.stem, "gated:", line, "| spectral MAE:", {k: round(v["mae"], 1) for k, v in spectral[pkl.stem].items()},
+              flush=True)
+
+    methods = sorted({m for r in spectral.values() for m in r})
+    report = {
+        "gated_pipeline": summarise_gated(gated, list(pipes)),
+        "spectral_tracking": {**spectral, "mean_mae": {
+            m: float(np.mean([r[m]["mae"] for r in spectral.values() if m in r])) for m in methods}},
+    }
+    for p in pipes:
+        r = report["gated_pipeline"][p]
+        print(f"{p:10s} heart rate given in {100 * r['hr_coverage']:.0f} % of {r['windows']} windows; "
+              + (f"MAE {r['hr_mae']:.2f} bpm, p95 {r['hr_p95']:.1f}, errors > 10 bpm: {r['hr_errors_over_10bpm']} "
+                 f"({100 * r['share_of_given_values_over_10bpm']:.1f} % of the given values)"
+                 if r["hr_mae"] is not None else "no value given"))
+    print("spectral tracking, mean MAE (bpm):", report["spectral_tracking"]["mean_mae"])
     Path(a.out).mkdir(parents=True, exist_ok=True)
     (Path(a.out) / "dalia_hr_eval.json").write_text(json.dumps(report, indent=2))
 

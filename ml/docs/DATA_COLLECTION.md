@@ -51,7 +51,10 @@ sensors (Empatica E4, green light): they are useful to test the idea, not to rep
  "red": [101234, 101201, ...], "ir": [143002, 142987, ...]}
 ```
 
-`ts` is the unix time (UTC) of the first sample, `fs` the measured sample rate.
+`ts` is the unix time (UTC) of the first sample, `fs` the measured sample rate. The PC recorder
+also stores which clock dated the window (`clock`: the bracelet's, or the PC's when the bracelet
+has no Wi-Fi), the LED currents, a sequence number and the window flags; windows without any time
+cannot be paired and are skipped.
 
 `fingersticks.csv` (a CGM export converted to the same columns works too):
 

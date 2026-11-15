@@ -18,6 +18,31 @@ def raw_at_100hz(seed, **kw):
     return w, resample(w.red_raw, FS, 100.0), resample(w.ir_raw, FS, 100.0)
 
 
+def test_decision_does_not_depend_on_the_input_rate():
+    """The same window delivered at 100 Hz and at 50 Hz gets the same decision and heart rate.
+    (Edge ringing of the resampler used to reject every tenth good window at 100 Hz.)"""
+    from scipy.interpolate import CubicSpline
+
+    from suguard_ml.pipeline import SuGuardPipeline
+    pipe = SuGuardPipeline(denoiser=None)
+    differ, reliable = [], 0
+    for seed in range(4_000_000, 4_000_060):
+        w = simulate_window(seed)
+        t = np.arange(w.ir_raw.size) / FS
+
+        def at_100hz(v):
+            return np.round(CubicSpline(t, v.astype(float))(np.arange(2 * v.size - 1) / (2 * FS)))
+        a = pipe.analyze(w.red_raw, w.ir_raw, fs=FS)
+        b = pipe.analyze(at_100hz(w.red_raw), at_100hz(w.ir_raw), fs=2 * FS)
+        if a["reliable"] != b["reliable"]:
+            differ.append(seed)
+        elif a["reliable"]:
+            reliable += 1
+            assert abs(a["heart_rate"]["bpm"] - b["heart_rate"]["bpm"]) < 1.5, seed
+    assert reliable >= 15
+    assert len(differ) <= 1, differ
+
+
 def test_pipeline_classical_clean():
     """Motion-free windows: the classical fallback may reject weak, noisy ones,
     but must accept most and be accurate when it does."""

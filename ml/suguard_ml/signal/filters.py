@@ -11,16 +11,29 @@ from ..config import FS, PPG_BAND_HZ
 
 
 def resample(x: np.ndarray, fs_in: float, fs_out: float = FS) -> np.ndarray:
-    """Polyphase resampling with an anti-aliasing filter."""
+    """Polyphase resampling with an anti-aliasing filter.
+
+    The straight line through the first and the last sample is taken out
+    before filtering and put back afterwards. What the filter sees then
+    starts and ends at zero, so it does not ring at the edges of raw counts
+    (a large DC) or of a window with a drift, and the DC and the drift
+    themselves pass exactly instead of through a filter whose stop band
+    (about -60 dB) would leave images of a 100,000-count level as a tone of
+    some tens of counts. Measured on raw 10.24-s windows delivered at 100 Hz:
+    first-sample error 615 -> 8 counts, and the reliability decision equals
+    that of the same window at 50 Hz (it differed in 10 % of the windows when
+    only the mean was removed).
+    """
     x = np.asarray(x, dtype=np.float64)
-    if abs(fs_in - fs_out) < 1e-9:
+    if abs(fs_in - fs_out) < 1e-9 or x.size < 2:
         return x.copy()
     frac = Fraction(fs_out / fs_in).limit_denominator(1000)
-    # resample_poly treats samples outside the signal as zero, which rings at
-    # the edges of a signal with a large DC (raw counts). Remove the mean first.
-    mean = float(np.mean(x)) if x.size else 0.0
-    y = signal.resample_poly(x - mean, frac.numerator, frac.denominator)
-    return y + mean
+    up, down = frac.numerator, frac.denominator
+    if up == down:
+        return x.copy()
+    slope = (x[-1] - x[0]) / (x.size - 1)
+    y = signal.resample_poly(x - (x[0] + slope * np.arange(x.size)), up, down)
+    return y + x[0] + slope * (np.arange(y.size) * (down / up))
 
 
 def resample_irregular(t: np.ndarray, x: np.ndarray, fs_out: float = FS) -> tuple[np.ndarray, np.ndarray]:
