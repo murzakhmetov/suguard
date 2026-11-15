@@ -13,7 +13,7 @@
 //     http_code=<n>  http_ms=<ms>   answer and duration of every HTTPS request (200, 300)
 //     proc_ms=<ms>        time the MCU needs per window (the PC needs none)
 //     vbat=<V>  usb=0|1   battery voltage / USB power
-//     wake=timer|gpio     this start is a wake-up from deep sleep
+//     wake=timer          this start is a wake-up from deep sleep
 //     rate=<scale>        sensor oscillator error (1.02 = 2 % fast)
 //     host=0              no PC is reading the USB port
 //     start_ms=<n>        value of millis() at start (wrap-around tests)
@@ -218,10 +218,6 @@ int esp_sleep_enable_timer_wakeup(uint64_t us) {
   sim_line("SIM sleep timer %llu s\n", (unsigned long long)(us / 1000000ULL));
   return 0;
 }
-int esp_deep_sleep_enable_gpio_wakeup(uint64_t mask, esp_deepsleep_gpio_wake_up_mode_t mode) {
-  sim_line("SIM sleep wake-up on gpio mask 0x%llx level %d\n", (unsigned long long)mask, (int)mode);
-  return 0;
-}
 esp_sleep_wakeup_cause_t esp_sleep_get_wakeup_cause() { return g_wake; }
 void esp_deep_sleep_start() {
   sim_line("SIM deep sleep at %.2f s: sensor shutdown=%d led1=%u led2=%u radio=%d\n", (double)g_el / 1000.0,
@@ -392,7 +388,6 @@ int main(int argc, char** argv) {
     else if (a.rfind("vbat=", 0) == 0) g_vbat = num(5);
     else if (a.rfind("usb=", 0) == 0) g_usb = a[4] == '1';
     else if (a == "wake=timer") g_wake = ESP_SLEEP_WAKEUP_TIMER;
-    else if (a == "wake=gpio") g_wake = ESP_SLEEP_WAKEUP_GPIO;
     else if (a.rfind("rate=", 0) == 0) g_sim.output_rate_scale = num(5);
     else if (a.rfind("host=", 0) == 0) g_host = a[5] == '1';
     else if (a.rfind("start_ms=", 0) == 0) g_ms = (uint32_t)strtoul(a.c_str() + 9, nullptr, 10);

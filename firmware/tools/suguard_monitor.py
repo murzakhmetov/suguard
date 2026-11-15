@@ -10,7 +10,7 @@ What it does
   * with --record DIR it switches raw streaming on and stores everything
     needed to train and validate models later (formats of ml/docs/DATA_COLLECTION.md):
         DIR/windows.jsonl      raw red/IR windows
-        DIR/vitals.jsonl       what the firmware computed for each window
+        DIR/vitals.jsonl       what the firmware computed for each window (with the PC time)
         DIR/fingersticks.csv   reference glucose values you type in
         DIR/events.jsonl       markers
   * with --check it re-computes every raw window on the PC with the Python
@@ -25,6 +25,10 @@ While it runs, type and press Enter:
 
 Replay a saved serial log instead of a live port (no hardware needed):
     python firmware/tools/suguard_monitor.py --replay log.txt --check
+
+Time: a bracelet without Wi-Fi has no clock, so its raw windows carry no time
+of their own, only their age. They are then dated with this PC's clock (the
+same clock that dates the fingersticks you type in). Keep the PC clock right.
 """
 
 from __future__ import annotations
@@ -62,12 +66,28 @@ def format_vitals(v: dict) -> str:
             f"T {temp}C  bat {v.get('bat', -1)}%  {v.get('proc_ms', 0)} ms  {why}")
 
 
-def window_record(raw: dict, user: str) -> dict:
-    """Firmware raw window -> record of windows.jsonl (see ml/suguard_ml/data/paired.py)."""
+def window_record(raw: dict, user: str, received_s: float | None = None) -> dict:
+    """Firmware raw window -> record of windows.jsonl (see ml/suguard_ml/data/paired.py).
+
+    ``ts`` is the unix time of the first sample: the bracelet's own if its
+    clock is set, else computed from the time the line was received
+    (``received_s``, PC clock) and the age the bracelet reports for the window.
+    """
     w = raw["w"]
-    return {"user_id": user, "device_id": w.get("device"), "ts": w["ts"], "fs": w["fs"], "seq": w.get("seq"),
+    fs = w.get("fs") or 50.0
+    ts, clock = w.get("ts"), "device"
+    if ts is None:
+        clock = "pc" if received_s is not None else None
+        if received_s is not None:
+            ts = round(received_s - w.get("age_ms", 0) / 1000.0 - len(w["ir"]) / fs, 3)
+    return {"user_id": user, "device_id": w.get("device"), "ts": ts, "clock": clock, "fs": fs, "seq": w.get("seq"),
             "temp_c": w.get("temp_c"), "led_red": w.get("ledRed"), "led_ir": w.get("ledIr"),
             "flags": w.get("flags", 0), "red": w["red"], "ir": w["ir"]}
+
+
+def iso_local(t: float) -> str:
+    stamp = time.strftime("%Y-%m-%dT%H:%M:%S%z", time.localtime(t))
+    return stamp[:-2] + ":" + stamp[-2:]                      # +0500 -> +05:00
 
 
 class Checker:
@@ -122,9 +142,7 @@ class Recorder:
         fh.flush()
 
     def fingerstick(self, mgdl: float):
-        stamp = time.strftime("%Y-%m-%dT%H:%M:%S%z")
-        stamp = stamp[:-2] + ":" + stamp[-2:]                  # +0500 -> +05:00
-        self.sticks.write(f"{self.user},{stamp},{mgdl:.1f},meter\n")
+        self.sticks.write(f"{self.user},{iso_local(time.time())},{mgdl:.1f},meter\n")
         self.sticks.flush()
 
 
@@ -143,23 +161,35 @@ def parse_glucose(text: str) -> float | None:
     return value if 20 <= value <= 600 else None
 
 
-def run(lines, send, recorder: Recorder | None, checker: Checker | None, user: str, out=print):
-    """Process bracelet output. ``lines`` yields text lines; ``send(text)`` writes to the console."""
+def run(lines, send, recorder: Recorder | None, checker: Checker | None, user: str, out=print, clock=time.time):
+    """Process bracelet output. ``lines`` yields text lines; ``send(text)`` writes to the console.
+    ``clock`` gives the PC time of a line (None when replaying a log: there is none)."""
     pending_vitals = {}
-    stats = {"windows": 0, "reliable": 0, "raw": 0, "mismatch": 0}
+    stats = {"windows": 0, "reliable": 0, "raw": 0, "mismatch": 0, "pc_dated": 0, "undated": 0}
     for line in lines:
         kind, msg = parse_line(line)
+        now = clock() if clock else None
         if kind == "vitals":
             stats["windows"] += 1
             stats["reliable"] += bool(msg.get("reliable"))
             out(format_vitals(msg))
             pending_vitals[msg.get("seq")] = msg
             if recorder:
-                recorder.write(recorder.vitals, msg)
+                recorder.write(recorder.vitals, {**msg, "pc_time": iso_local(now) if now else None})
         elif kind == "raw":
             stats["raw"] += 1
+            rec = window_record(msg, user, now)
+            if rec["clock"] == "pc" and not stats["pc_dated"]:
+                out("-- the bracelet's clock is not set (no Wi-Fi): windows are dated with this PC's clock")
+            elif rec["clock"] == "device" and now and abs(rec["ts"] + len(rec["ir"]) / rec["fs"] - now) > 30 \
+                    and not stats.get("clock_warned"):
+                stats["clock_warned"] = 1
+                out("   !! the bracelet's clock and this PC's clock differ by more than 30 s: check both "
+                    "(fingersticks are dated by the PC, windows by the bracelet)")
+            stats["pc_dated"] += rec["clock"] == "pc"
+            stats["undated"] += rec["clock"] is None
             if recorder:
-                recorder.write(recorder.windows, window_record(msg, user))
+                recorder.write(recorder.windows, rec)
             if checker:
                 fw = pending_vitals.pop(msg["w"].get("seq"), None)
                 pc = checker.analyze(msg)
@@ -221,7 +251,7 @@ def main():
 
     if a.replay:
         with open(a.replay, errors="replace") as fh:
-            stats = run(fh, lambda s: None, recorder, checker, a.user)
+            stats = run(fh, lambda s: None, recorder, checker, a.user, clock=None)
     else:
         import serial  # pyserial
 
@@ -252,6 +282,9 @@ def main():
     if stats:
         print(f"\n{stats['windows']} windows, {stats['reliable']} reliable, {stats['raw']} raw windows"
               + (f", {stats['mismatch']} firmware/PC mismatches" if checker else ""))
+        if stats.get("undated"):
+            print(f"{stats['undated']} raw windows have no time (log recorded without a clock): they cannot be "
+                  "paired with fingersticks")
     return 1 if stats and stats.get("mismatch") else 0
 
 

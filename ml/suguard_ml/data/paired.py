@@ -170,12 +170,17 @@ def build_from_device_logs(windows_jsonl: str | Path, fingersticks_csv: str | Pa
     profiles = pd.read_csv(profiles_csv).set_index("user_id") if profiles_csv else None
 
     by_user: dict[str, list[dict]] = {}
+    undated = 0
     with open(windows_jsonl) as fh:
         for line in fh:
             if line.strip():
                 w = json.loads(line)
                 # Accept both the documented keys and the firmware's JSON keys.
-                w["ts"] = float(w.get("ts", w.get("timestamp")))
+                ts = w.get("ts", w.get("timestamp"))
+                if ts is None:                       # recorded without any clock: cannot be paired
+                    undated += 1
+                    continue
+                w["ts"] = float(ts)
                 w["temp_c"] = w.get("temp_c", w.get("temperature_c"))
                 by_user.setdefault(str(w["user_id"]), []).append(w)
 
@@ -211,5 +216,7 @@ def build_from_device_logs(windows_jsonl: str | Path, fingersticks_csv: str | Pa
         rows.append(row)
     if skipped:
         print(f"build_from_device_logs: skipped {skipped} corrupt windows")
+    if undated:
+        print(f"build_from_device_logs: skipped {undated} windows without a time stamp")
     df = pd.DataFrame(rows)
     return add_time_features(df, tz_offset_h) if len(df) else df

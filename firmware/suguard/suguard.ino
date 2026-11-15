@@ -538,15 +538,18 @@ static float readPinMv(int pin) {
   return (float)sum / 8.0f;
 }
 
-// Deep sleep with the sensor shut down. Wakes after 10 minutes (an hour if
-// the cell is critically low) or when USB power appears, and looks again.
-static void deepSleep(bool long_sleep) {
-  esp_sleep_enable_timer_wakeup((long_sleep ? 3600ULL : 600ULL) * 1000000ULL);
-  esp_deep_sleep_enable_gpio_wakeup(1ULL << board::kPinVbusAdc, ESP_GPIO_WAKEUP_GPIO_HIGH);
+// Deep sleep; the caller has shut the sensor down. Wakes every 10 minutes to
+// look at the battery again (a wake-up costs far less than the board's own
+// sleep current). USB power cannot wake the chip on this board: the VBUS
+// divider gives 2.5 V at best, and the pull-down the core adds to a wake-up
+// pin halves that. After plugging in the charger the bracelet therefore
+// starts within 10 minutes, or at once with the reset button (S1).
+static void deepSleep() {
+  esp_sleep_enable_timer_wakeup(600ULL * 1000000ULL);
   esp_deep_sleep_start();
 }
 
-static void sleepOnEmptyBattery(bool long_sleep) {
+static void sleepOnEmptyBattery() {
   logLine("battery empty, sleeping");
   g_stopping = true;
   g_sampler.request_power_down();                                // LEDs off, sensor in shutdown (it stays powered)
@@ -554,7 +557,7 @@ static void sleepOnEmptyBattery(bool long_sleep) {
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
   delay(50);
-  deepSleep(long_sleep);
+  deepSleep();
 }
 
 static void batteryService(uint32_t now) {
@@ -563,8 +566,7 @@ static void batteryService(uint32_t now) {
   g_battery.update(readPinMv(board::kPinBatAdc), readPinMv(board::kPinVbusAdc));
   const SgBattery& b = g_battery.state();
   // Protect the cell (the board has no under-voltage cut-off of its own).
-  const SgPowerAction action = g_power.update(now, b.volts, b.usb_present);
-  if (action != SgPowerAction::kRun) sleepOnEmptyBattery(action == SgPowerAction::kSleepLong);
+  if (g_power.update(now, b.volts, b.usb_present) == SgPowerAction::kSleep) sleepOnEmptyBattery();
 }
 
 static void buttonService() {
@@ -667,7 +669,7 @@ void setup() {
     sensor.attach(bus);
     sensor.set_led(0, 0);
     sensor.set_shutdown(true);
-    deepSleep(boot == SgPowerAction::kSleepLong);
+    deepSleep();
   }
 
   sg_pipeline_init();

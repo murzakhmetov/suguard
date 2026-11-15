@@ -816,7 +816,7 @@ void test_power_guard() {
     for (int i = 0; i < 200; i++) CHECK(usb.update(t += 1000, 3.30f, true) == SgPowerAction::kRun);   // on USB: never
     SgPowerGuard deep(lim);                                                  // was: "below 3.0 V cannot be real"
     for (int i = 0; i < 60; i++) deep.update(t += 1000, 2.90f, false);
-    CHECK(deep.update(t += 1000, 2.90f, false) == SgPowerAction::kSleepLong);
+    CHECK(deep.update(t += 1000, 2.90f, false) == SgPowerAction::kSleep);
     SgPowerGuard none(lim);                                                  // no divider fitted: nothing to decide
     for (int i = 0; i < 200; i++) CHECK(none.update(t += 1000, 0.05f, false) == SgPowerAction::kRun);
   }
@@ -825,8 +825,8 @@ void test_power_guard() {
   CHECK(sg_power_at_boot(3.44f, false, false, lim) == SgPowerAction::kSleep);
   CHECK(sg_power_at_boot(3.50f, false, true, lim) == SgPowerAction::kSleep);       // rested, not recharged
   CHECK(sg_power_at_boot(3.60f, false, true, lim) == SgPowerAction::kRun);
-  CHECK(sg_power_at_boot(3.10f, false, true, lim) == SgPowerAction::kSleepLong);
-  CHECK(sg_power_at_boot(2.95f, false, false, lim) == SgPowerAction::kSleepLong);
+  CHECK(sg_power_at_boot(3.10f, false, true, lim) == SgPowerAction::kSleep);
+  CHECK(sg_power_at_boot(2.95f, false, false, lim) == SgPowerAction::kSleep);
   CHECK(sg_power_at_boot(3.10f, true, true, lim) == SgPowerAction::kRun);          // charger connected
   CHECK(sg_power_at_boot(0.0f, false, false, lim) == SgPowerAction::kRun);
   printf("PASS power_guard\n");

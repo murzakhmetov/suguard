@@ -299,6 +299,53 @@ def test_raw_windows_carry_their_own_time(fw_sim, clean):
     assert list(out["vitals"]) == list(range(1, len(out["vitals"]) + 1))        # no window was dropped meanwhile
 
 
+def test_usb_recording_session_can_be_paired(fw_sim, clean, tmp_path):
+    """The recommended way to collect data, without Wi-Fi: firmware -> PC recorder -> paired table.
+    (Windows used to be stamped with seconds since boot, so no fingerstick ever matched them.)"""
+    import sys
+
+    sys.path.insert(0, str(FW / "tools"))
+    import suguard_monitor as mon
+
+    from suguard_ml.data.paired import build_from_device_logs
+
+    path, _ = clean
+    res = subprocess.run([str(fw_sim), str(path), "130", "cmd=stream on", "proc_ms=1500"], capture_output=True,
+                         text=True, timeout=300)
+    assert res.returncode == 0
+    # The PC clock when each line arrives: window k ends 0.55 + 10.24 k s after the start of the
+    # session and its raw line is printed age_ms later.
+    t0 = 1_800_000_000.0
+    pc = {"now": t0}
+
+    def serial_lines():
+        for line in res.stdout.splitlines():
+            if line.startswith('{"t":"raw"'):
+                w = json.loads(line)["w"]
+                pc["now"] = t0 + 0.55 + 10.24 * w["seq"] + w["age_ms"] / 1000.0
+            yield line
+
+    said = []
+    session = tmp_path / "session"
+    recorder = mon.Recorder(session, "u01")
+    stats = mon.run(serial_lines(), lambda text: None, recorder, None, "u01", out=said.append, clock=lambda: pc["now"])
+    assert stats["raw"] >= 10 and stats["pc_dated"] == stats["raw"] and stats["undated"] == 0
+    assert sum("dated with this PC's clock" in str(x) for x in said) == 1
+    windows = [json.loads(x) for x in open(session / "windows.jsonl")]
+    assert all(w["clock"] == "pc" and abs(w["fs"] - 50.0) < 0.1 for w in windows)
+    assert [w["ts"] for w in windows] == pytest.approx([t0 + 0.55 + 10.24 * (w["seq"] - 1) for w in windows], abs=0.05)
+    assert all(v["pc_time"] for v in map(json.loads, open(session / "vitals.jsonl")))
+    # A fingerstick typed 100 s into the session is paired with the windows around it.
+    (session / "fingersticks.csv").write_text(f"user_id,ts,glucose_mgdl,source\nu01,{mon.iso_local(t0 + 100)},104.0,meter\n")
+    table = build_from_device_logs(session / "windows.jsonl", session / "fingersticks.csv", tz_offset_h=5)
+    assert len(table) == 1 and table.n_windows[0] >= 5 and table.glucose_mgdl[0] == 104.0
+    assert table.meta_source[0] == "suguard_max30102" and table.meta_tz_offset_h[0] == 5.0
+    # A replayed log has no clock at all: its windows stay undated and are left out, loudly.
+    stats = mon.run(res.stdout.splitlines(), lambda text: None, None, None, "u01", out=said.append, clock=None)
+    assert stats["undated"] == stats["raw"] and mon.window_record(json.loads(next(
+        x for x in res.stdout.splitlines() if x.startswith('{"t":"raw"'))), "u01")["ts"] is None
+
+
 def test_markers_survive_a_busy_main_loop(fw_sim, clean):
     """Short presses of the button while the pipeline or an upload is running are not lost."""
     path, _ = clean
@@ -425,7 +472,7 @@ def test_empty_battery_sleeps_with_everything_off(fw_sim, clean):
     assert line and "shutdown=1 led1=0 led2=0 radio=0" in line
     t = float(line.split()[4])
     assert 105 < t < 140              # a minute after the filtered voltage crossed 3.45 V, not at once
-    assert any("sleep timer 600 s" in s for s in out["sim"]) and any("gpio mask 0x10 level 1" in s for s in out["sim"])
+    assert any("sleep timer 600 s" in s for s in out["sim"])
     assert any("battery empty" in m for m in out["logs"])
     # A sag that recovers within the minute is ignored; on USB power nothing sleeps.
     assert sleep_line(run_sim(fw_sim, path, 200, "usb=0", "at=40:vbat:3.40", "at=75:vbat:3.80")) is None
@@ -438,8 +485,8 @@ def test_empty_battery_sleeps_with_everything_off(fw_sim, clean):
     (("vbat=3.50", "usb=0"), False, None),
     (("vbat=3.50", "usb=0", "wake=timer"), True, 600),      # rested but not recharged: sleep on
     (("vbat=3.65", "usb=0", "wake=timer"), False, None),
-    (("vbat=3.30", "usb=1", "wake=gpio"), False, None),     # woken by the charger
-    (("vbat=2.95", "usb=0"), True, 3600),                   # deeply discharged (was taken for a measurement fault)
+    (("vbat=3.30", "usb=1", "wake=timer"), False, None),    # the charger was plugged in meanwhile
+    (("vbat=2.95", "usb=0"), True, 600),                    # deeply discharged (was taken for a measurement fault)
 ])
 def test_start_up_with_a_low_battery(fw_sim, clean, args, sleeps, timer):
     path, _ = clean

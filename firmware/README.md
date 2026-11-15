@@ -11,16 +11,19 @@ What it does:
   no FPU needed) removes motion artefacts, then heart rate, SpO2 and nine signal-quality checks are
   computed; a value is reported only if the window passes every check;
 * USB console (115200 baud): live results as JSON lines, settings, raw-data streaming for the PC tools;
-* optional Wi-Fi upload of one averaged record per minute to Firebase.
+* optional upload to Firebase: one averaged record per minute, sent in a short Wi-Fi session every
+  five minutes; about four hours of records are kept while there is no connection.
 
 It does **not** output glucose. There is no validated glucose model for this sensor (see
 [../ml/README.md](../ml/README.md)); the firmware is built so that collecting the data needed for
 one is easy (`tools/suguard_monitor.py --record`).
 
-> **Read this first.** This firmware has never run on the real board: I had the KiCad files but no
-> hardware, and the ESP32 toolchain cannot be downloaded in the environment where it was written.
-> What was verified instead is listed under [Verification](#verification). Expect a first-flash
-> debugging session; the [bring-up checklist](#bring-up-checklist) is ordered to make it short.
+> **Read this first.** This firmware has never run on the real board and has never been compiled
+> with the ESP32 toolchain: I had the KiCad files but no hardware, and the toolchain could not be
+> installed where the firmware was written. What was verified instead is listed under
+> [Verification](#verification). Expect a first-build and first-flash debugging session; the
+> [bring-up checklist](#bring-up-checklist) is ordered to make it short. If the compiler reports
+> an error, send me its output.
 
 ## Build and flash
 
@@ -37,11 +40,12 @@ one is easy (`tools/suguard_monitor.py --record`).
 
 ```bash
 cd firmware/suguard
-pio run -t upload
+pio run -t upload            # Arduino core 2.0.17; or: pio run -e suguard-core3 -t upload  (core 3.x)
 pio device monitor
 ```
 
-No external libraries are needed (the MAX30102 driver is part of the firmware).
+No external libraries are needed (the MAX30102 driver is part of the firmware). The sketch only
+uses functions that exist in both Arduino core 2.0.17 and 3.x (checked against the cores' source).
 
 ## Bring-up checklist
 
@@ -51,12 +55,13 @@ and type `status`.
 | Step | Expected | If not |
 |---|---|---|
 | 1. `status` | `sensor: settling` or `active`, `part 0x15` | `no_sensor` + rising `i2c errors` → I²C level jumper on the sensor module must be on 3V3 ([HARDWARE.md](docs/HARDWARE.md) note 1) |
-| 2. `led red` | the sensor glows visibly red for 5 s | dark → `set swap_red_ir 1`, `save` |
-| 3. Bracelet on the wrist, keep still | every ~10 s a line `{"t":"vitals",...,"reliable":true,"hr":...}`; `dc` between 40 000 and 180 000 | `no_contact` → sensor not touching skin; `weak_pulse` → tighten the strap; `adc_saturated` → strong light on the sensor |
-| 4. `status` after a minute | `lost samples 0`, `fs` ≈ 50 Hz | lost samples growing → tell me, the task timing needs a look |
+| 2. `led red` | the sensor glows visibly red for 5 s | dark → `set swap_red_ir 1`, `save` (the firmware also prints a hint after a minute of wearing) |
+| 3. Bracelet on the wrist, keep still | every ~10 s a line `{"t":"vitals",...,"reliable":true,"hr":...}`; `dc` between 40 000 and 180 000 | `no_contact` → sensor not touching skin; `weak_pulse` → tighten the strap; `adc_saturated` → strong light on the sensor; `denoiser_mismatch` on most windows → tell me (the network does not fit your signal) |
+| 4. `status` after a minute | `lost samples 0`, `no-data timeouts 0`, `fs` ≈ 50 Hz; note `proc_ms` in the vitals lines | lost samples growing, or `proc_ms` above 5000 → tell me |
 | 5. Compare with a finger pulse oximeter at rest | heart rate within a few bpm | — |
-| 6. `wifi <ssid> <password>`, `user <e-mail of the app account>`, `save` | `status` shows `wifi: connected`, `cloud <uid>`, `uploads ok` counting up | `tls` errors → check the date/time (`time ok`) |
-| 7. Battery: `status` vs a multimeter | within ~3 % | `set bat_cal <multimeter / reported>`, `save` |
+| 6. `wifi <ssid> <password>`, `user <e-mail of the app account>`, `save` | within a minute or two `status` shows `time ok`, `delivered` counting up, `last http 200` | `last http 401`/`403` → database rules or `db_auth`; `last http -1` → no connection or TLS; then check `heap: ... lowest` (HARDWARE.md note 13) |
+| 7. Battery: `status` vs a multimeter (USB unplugged) | within ~3 % | `set bat_cal <multimeter / reported>`, `save` |
+| 8. Unplug USB, wear it until it stops | note the runtime (HARDWARE.md note 14) | — |
 
 SpO2 is computed with Maxim's generic calibration curve and is marked `spo2Calibrated: false`:
 treat it as indicative until it has been calibrated against a medical oximeter.
@@ -64,7 +69,7 @@ treat it as indicative until it has been calibrated against a medical oximeter.
 ## Console
 
 ```
-status                 sensor, battery, Wi-Fi and last readings
+status                 sensor, battery, Wi-Fi, uploads, memory
 get [key]              show settings
 set <key> <value>      change a setting (then 'save')
 wifi <ssid> [password] set the Wi-Fi network
@@ -75,9 +80,17 @@ mark [text]            store an event marker (the BOOT button does the same)
 save / defaults / reboot
 ```
 
-Settings (`get` lists them with explanations): `report_interval_s`, `cloud`, `upload_raw`,
-`use_nn`, `swap_red_ir`, `led_init`, `led_max`, `adc_range`, `ir_dc_min`, `bat_cal`,
-`tz_offset_min`, `device_id`, `db_url`, `db_auth`, `tls_insecure`.
+Settings (`get` lists them with explanations):
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `report_interval_s` | 60 | one averaged record per interval (20–600) |
+| `upload_interval_s` | 300 | the radio is switched on at most this often (0 = stay connected) |
+| `cloud`, `upload_raw` | 1, 0 | upload records / also every raw window (data collection; keeps Wi-Fi on) |
+| `use_nn` | 1 | 0 = classical signal processing only: for diagnostics, it cannot tell rhythmic motion from a pulse |
+| `sensor_sps`, `cpu_mhz` | 400, 160 | power options, see [HARDWARE.md](docs/HARDWARE.md) note 14 |
+| `swap_red_ir`, `led_init`, `led_max`, `adc_range`, `ir_dc_min` | 0, 63, 127, 1, 20000 | sensor |
+| `bat_cal`, `tz_offset_min`, `device_id`, `db_url`, `db_auth`, `tls_insecure` | | calibration, time zone (300 = UTC+5), cloud |
 
 ## Output
 
@@ -85,30 +98,40 @@ One line per window on USB:
 
 ```json
 {"t":"vitals","seq":12,"reliable":true,"hr":71.6,"spo2":97.1,"sqi":0.98,"pi":1.02,"motion":0.00,
- "reasons":"","nn":true,"dc":[88211,126034],"led":[35,38],"temp":31.50,"fs":50.012,"proc_ms":612,"bat":87,"usb":false}
+ "reasons":"","nn":true,"dc":[88211,126034],"led":[35,38],"temp":31.50,"fs":50.012,"proc_ms":1400,"bat":87,"usb":false}
 ```
 
 `reasons` says why a window was rejected: `no_contact`, `adc_saturated`, `led_current_too_high`,
 `weak_pulse`, `implausible_amplitude`, `motion`, `irregular_or_noisy`, `red_ir_inconsistent`,
-`no_heart_rate`. `hr` is corrected for the sensor's clock error (`fs` is the measured sample rate).
+`denoiser_mismatch` (the cleaned-up pulse is not supported by the measured signal). `hr` is
+corrected for the sensor's clock error (`fs` is the measured sample rate).
 
-Every `report_interval_s` (default 60 s), if at least one window was reliable, one record with the
-medians goes to USB (`"t":"record"`) and, if Wi-Fi and `user` are set, to Firebase:
+Every `report_interval_s`, if at least one window was reliable, one record with the medians goes to
+USB (`"t":"record"`) and, if Wi-Fi and `user` are set, to Firebase:
 
 ```
 PUT <db_url>/users/<uid>/vitals/hd_<unix ms>.json
-{"id":"hd_1794700060000","timestamp":"2026-11-15T04:47:40","ts":1794700060,"pulse":71.6,"spo2":97.1,
+{"id":"hd_1794700060050","timestamp":"2026-11-15T04:47:40","ts":1794700060,"pulse":71.6,"spo2":97.1,
  "sqi":0.98,"windows":6,"reliableWindows":5,"spo2Windows":5,"battery":87,"charging":false,
- "sensorTempC":31.5,"spo2Calibrated":false,"device":"SG-001","fw":"1.0.0","model":"edge-nn"}
+ "sensorTempC":31.5,"spo2Calibrated":false,"device":"SG-001","fw":"1.1.0","model":"edge-nn"}
 ```
 
 `<uid>` is derived from the e-mail exactly as the Flutter app does, so the records land under the
-user's own node. Up to 6 records are kept in RAM while offline.
+user's own node. Markers go to `users/<uid>/events`, raw windows (only with `upload_raw`) to
+`rawPpg/<uid>`.
+
+Uploads happen in sessions: Wi-Fi on, clock from NTP, send what is waiting, Wi-Fi off. Records
+and markers made while offline are kept in RAM (240 records = 4 h at one per minute, 16 markers;
+the oldest are dropped first, and a reboot or an empty battery loses them) and carry the time they
+were made, also those from before the clock was first set. If the server or the network fails, the
+next attempt comes after 15 s, 30 s, ... up to 10 minutes (immediately 10 minutes after HTTP
+401/403); a record the server rejects for good (other 4xx) is dropped so that it cannot block the
+queue. `status` shows all of this.
 
 **The current app does not show these records yet.** It reads `users/<uid>/healthData` and
 requires a `glucose` number in every entry, which this firmware will not invent. Updating the app
 to read `vitals` (or to accept entries without glucose) is a small change that I left for you to
-decide — see the question in the hand-over notes.
+decide.
 
 ## How it works
 
@@ -116,45 +139,71 @@ decide — see the question in the hand-over notes.
 sampler task (50 ms, high priority)            loop() (low priority)
   MAX30102 FIFO → 512-sample windows   ──►     sg_process_window()
   LED AGC, wear detection, recovery              sensor checks → DC removal + band-pass
-                                                 → integer U-Net denoiser (95 k weights)
+  BOOT button                                    → integer U-Net denoiser (95 k weights)
                                                  → beats, heart rate, SpO2, quality gates
-                                               → USB JSON, aggregation, Firebase
+                                               → USB JSON, aggregation, record store → upload sessions
 ```
 
 * `src/drivers/max30102.*` — register-level driver (no third-party library).
 * `src/app/sampler.*` — FIFO draining, window assembly, loss detection, automatic LED current,
-  standby when not worn, sample-rate measurement.
+  standby when not worn, rest when there is no pulse, sample-rate measurement.
 * `src/core/` — the portable signal core: `sg_dsp`/`sg_vitals` (C++ twin of the Python reference in
   `ml/suguard_ml`), `sg_nn` (integer network engine), `sg_model.h` (generated weights),
   `sg_pipeline` (the whole chain for one window). No Arduino dependencies, no heap.
-* `src/app/` — battery, settings, console, record formatting, aggregation.
+* `src/app/uplink.*`, `store.*`, `power.*` — when to use the radio, what is waiting to be sent,
+  when the battery is empty: pure logic, tested on the PC.
+* `src/app/` (rest) — battery, settings, console, record formatting, aggregation.
 * `suguard.ino` — board glue: Wire, Wi-Fi, HTTPS, flash storage, tasks.
 
 Because the sampler runs in its own higher-priority task, long work in `loop()` (the network, a
 slow HTTPS request) cannot make it miss samples; if it ever does, the chip's overflow counter
 reports it and the affected window is discarded rather than analysed with a gap.
 
+Behaviour worth knowing:
+
+* **Not worn** (too little light comes back even at full LED current): the sensor is shut down and
+  probed for 0.3 s every 3 s.
+* **No pulse for a minute** although light comes back (lying on a table, in a bag): the sensor
+  rests and looks again when the reflected level changes, or after 5 minutes.
+* **Battery empty** (≤ 3.45 V for a minute, no USB): sensor off, deep sleep. It looks again every
+  10 minutes and resumes above 3.60 V or when USB power is there (press S1 to start at once after
+  plugging in the charger).
+* **The denoiser is not trusted blindly.** A neural network can draw a pulse that is not there.
+  On the samples it calls clean, its output must match the measured signal (correlation ≥ 0.7,
+  size within 0.7–1.4) or the window (IR) / the SpO2 value (red) is withheld.
+
 ## Verification
 
-Everything below runs with `python -m pytest firmware/tests` (needs `g++`; the RV32 test also needs
-`gcc-riscv64-unknown-elf`, `picolibc-riscv64-unknown-elf` and `qemu-system-misc`).
+Everything below runs with `python -m pytest firmware/tests` (45 tests; needs `g++`; the RV32 tests
+also need `gcc-riscv64-unknown-elf`, `picolibc-riscv64-unknown-elf` and `qemu-system-misc`).
 
 | What | How | Result |
 |---|---|---|
-| Signal core = Python reference | C++ built for the host, compared on simulated windows (clean, every artefact type, edge cases) | RESULT_CORE |
-| Integer network = Python reference | bit-exact comparison of the C++ engine with the NumPy integer reference | RESULT_NN |
-| Whole pipeline per window | `sg_process_window` vs the Python pipeline, 304 windows × 2 modes | RESULT_PIPE |
-| Device layer | driver + sampler against a register-level MAX30102 simulator: bring-up, FIFO overflow, AGC, standby/wake, brown-out reset, bus errors, clock error, LED test — built with ASan/UBSan | 14 scenarios pass |
-| The sketch itself | `suguard.ino` compiled against a mock of the Arduino API and run end-to-end on simulated PPG: serial output, uploads, standby, missing sensor, empty battery | RESULT_SIM |
-| RISC-V target | core cross-compiled for RV32IMC (the ESP32-C3's instruction set, soft-float) and run under QEMU | RESULT_RV32 |
+| Signal core = Python reference | C++ built for the host, compared on simulated windows: 300 classical, 200 denoised, 37 degenerate inputs | every decision identical; double-precision values within 5·10⁻¹⁵ (relative), FFT-dependent ones within 6·10⁻⁷ |
+| Integer network = Python reference | the C++ engine against the NumPy integer reference, random models and the shipped one | bit-exact |
+| Whole pipeline per window | `sg_process_window` against the Python pipeline, 316 windows × 2 modes, incl. inputs where the network must be overruled | same decisions and reasons; heart rate and SpO2 within 10⁻⁶ |
+| Device layer | driver, sampler, record store, upload scheduler and battery guard against a register-level MAX30102 simulator, with ASan/UBSan | 24 scenarios pass |
+| The sketch itself | `suguard.ino` compiled against a mock of the Arduino API and run on simulated PPG for up to an hour of simulated time: vital signs against the Python pipeline, upload sessions, failing and refusing servers, an hour offline, slow processing and slow requests, button presses, sensor resets, empty battery, clock wrap-around, the USB recording path through the PC tool | 31 tests pass |
+| RISC-V target | core cross-compiled for RV32IMC (the ESP32-C3's instruction set, soft-float) and run under QEMU | same results as on the PC (differences ≤ 2·10⁻¹⁶) |
+
+Two independent reviews of the firmware (one against the toolchain and the hardware, one of its
+behaviour over time) found the defects that the second half of this list now tests for; the
+reviewers reproduced each in the simulator before it was fixed.
 
 Not verified: compilation with the real ESP32 Arduino core, anything that depends on the actual
-hardware (I²C timing, Wi-Fi/TLS, flash storage, ADC readings, power consumption), and signal
-quality on a real wrist.
+hardware (I²C timing, Wi-Fi/TLS, flash storage, ADC readings, memory head-room, power
+consumption), real pre-emption between the two tasks (the simulation runs them in turn), and
+signal quality on a real wrist.
 
 ### Cost on the ESP32-C3 (estimate)
 
-BENCH_TABLE
+| | Value | Source |
+|---|---|---|
+| Instructions per window, with the network | 132 million (median), 134 million (max) | counted exactly under QEMU for RV32IMC |
+| ... classical processing only | 77 million | same |
+| Time per 10.24-s window | about 1.2–2 s at 160 MHz (2.5–4 s at 80 MHz) | estimate: 1.5–2.5 cycles per instruction; **not measured on the chip** — read `proc_ms` |
+| Static RAM of the signal pipeline | 109 kB | size of the pipeline's memory block |
+| Code and constants of the signal core | 183 kB (94 kB of it network weights, in flash) | linker map of the RV32 build |
 
 ## Regenerating generated files
 
@@ -174,3 +223,5 @@ python firmware/tools/suguard_monitor.py --port /dev/ttyACM0 --record session1 -
 Stores raw windows, the firmware's results, typed-in fingersticks (`g 5.6`) and markers in the
 formats the training code reads ([../ml/docs/DATA_COLLECTION.md](../ml/docs/DATA_COLLECTION.md)).
 `--check` recomputes every window on the PC and reports any disagreement with the bracelet.
+A bracelet without Wi-Fi has no clock; its windows are then dated with the PC's clock, the same
+clock that dates the fingersticks, so keep the PC clock right.

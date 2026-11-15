@@ -6,7 +6,6 @@
 //   * after such a sleep the firmware only resumes above `resume_v` or on
 //     USB power: a resting cell recovers a little, and starting again at the
 //     same threshold would drain it in ever shorter cycles
-//   * at or below `critical_v` the sleep is as long as the timer allows
 //   * a reading below `min_valid_v` is no battery measurement at all
 //     (divider not populated, ADC fault): nothing can be decided from it
 //
@@ -18,15 +17,13 @@
 struct SgPowerLimits {
   float empty_v = 3.45f;        // the 3.3 V regulator starts to drop out below this
   float resume_v = 3.60f;
-  float critical_v = 3.20f;
   float min_valid_v = 1.0f;
   uint32_t confirm_ms = 60000;
 };
 
 enum class SgPowerAction : uint8_t {
   kRun,
-  kSleep,          // battery empty: sleep and look again later
-  kSleepLong,      // battery critically low: sleep as long as possible
+  kSleep,          // battery empty: everything off, sleep, look again later
 };
 
 // Decision right after start-up. `after_empty_sleep`: this start is a wake-up

@@ -51,7 +51,8 @@ These are observations from the schematic. None of them was measured — I do no
 
 3. **Red and IR can be exchanged on clone modules.** Type `led red` on the console: a visible
    red glow must appear for 5 s. If the sensor stays dark (IR is invisible), run
-   `set swap_red_ir 1`, `save`. A wrong assignment gives nonsense SpO2.
+   `set swap_red_ir 1`, `save`. With exchanged LEDs no window is accepted (the red/IR ratio is
+   not that of blood); after a minute of this the firmware prints a hint that names the setting.
 
 4. **IO2 is a strapping pin and carries the battery divider.** Espressif's boot-mode table asks
    for IO2 = high at reset; the divider holds it at 1.0–1.35 V, which is neither a valid high nor
@@ -64,9 +65,11 @@ These are observations from the schematic. None of them was measured — I do no
 5. **Charge current vs. cell size.** R1 = 5.1 kΩ sets ≈235 mA. That is right for cells of
    ~250 mAh and more; for a smaller cell raise R1 (10 kΩ → ≈120 mA).
 
-6. **No under-voltage cut-off on the board.** Use a cell with a built-in protection circuit. The
-   firmware goes to deep sleep at ≈3.45 V (below that the regulator drops out anyway), but the
-   regulator, the dividers and the sensor module still draw a little.
+6. **No under-voltage cut-off on the board.** Use a cell with a built-in protection circuit. At
+   ≈3.45 V (held for a minute, without USB) the firmware shuts the sensor down and goes to deep
+   sleep; it looks again every 10 minutes and resumes only above 3.60 V or on USB power. The regulator (≈55 µA), the dividers (≈30 µA) and the sleeping sensor and MCU
+   still draw about 0.1 mA, so a bracelet left empty for weeks will over-discharge an unprotected
+   cell.
 
 7. **3.3 V rail under Wi-Fi bursts.** There is 4.7 µF + 4.7 µF + 100 nF on 3V3. If you see
    resets when Wi-Fi transmits, add 10–22 µF close to U1.
@@ -79,19 +82,57 @@ These are observations from the schematic. None of them was measured — I do no
    still runs from the charger output (without a battery behind it).
 
 10. **No accelerometer and no MCU-controlled LED.** Motion is detected from the PPG itself (the
-    denoiser uses the two wavelengths). A 3-axis accelerometer on the same I²C bus would make
-    motion handling more robust in a later revision; a status LED would help pairing and debugging.
+    denoiser uses the two wavelengths). Rhythmic motion at a pulse-like rate is the one thing a PPG
+    sensor alone cannot always tell from a pulse (see the model card); a 3-axis accelerometer on
+    the same I²C bus (e.g. LIS2DH12, BMA400) is the standard remedy and the most valuable addition
+    for the next revision. A status LED would help pairing and debugging: today the only feedback
+    for a button press is the USB console.
+
+11. **No power path: the charger never finishes while the bracelet runs.** The 3.3 V regulator
+    hangs directly on the battery node, so on USB the running system draws its 20–100 mA through
+    the TP4056 together with the cell. The charger ends a charge when its current falls below
+    ≈1/10 of the programmed value (≈24 mA); with the system in parallel that never happens, and
+    the cell is held at 4.2 V for as long as USB is plugged in. This is harmless for an overnight
+    charge and bad for a cell that lives on the charger. The firmware cannot see the charger state
+    (`CHRG`/`STDBY` only drive the LEDs): it reports "USB power" and a percentage that only rises.
+    *Next revision:* route `CHRG` to a free pin (IO5) and add a power-path (e.g. a P-MOSFET +
+    Schottky load switch) so that the system runs from USB while charging.
+
+12. **USB power cannot wake the bracelet from the empty-battery sleep.** `VBUS_SENSE` is VBUS / 2
+    = 2.5 V, right at the ESP32-C3's logic-high threshold (0.75 × 3.3 V = 2.48 V), and the Arduino
+    core adds its internal pull-down (≈45 kΩ) to a wake-up pin, which pulls the divider down to
+    ≈1.2 V. The firmware therefore wakes by timer only: after plugging in the charger an empty
+    bracelet starts within 10 minutes, or at once when S1 (reset) is pressed. *Next revision:* a
+    stiffer divider on a wake-capable pin (IO0–IO5), e.g. 10 kΩ / 22 kΩ (3.4 V; still 2.9 V with
+    the pull-down), allows a wake-up on USB.
+
+13. **RAM head-room for HTTPS.** The firmware keeps about 135 kB of the ESP32-C3's RAM for
+    itself (signal pipeline 109 kB, windows and record store 17 kB, task and USB buffers 8 kB).
+    Wi-Fi needs roughly 50–60 kB of heap and a TLS handshake another 45–50 kB, which should fit
+    but was not measured. *Check:* after the first successful upload type `status` and read
+    `heap: ... lowest ... largest block`: the lowest value should stay above ≈15 kB. If uploads
+    fail with a low heap, tell me: the pipeline's buffers can be made smaller.
+
+14. **Battery life is hours to a day, not a week** (estimate from datasheet figures, nothing was
+    measured). The MCU runs continuously (≈20 mA at 160 MHz, ≈15 mA at 80 MHz), the sensor's LEDs
+    add 4–8 mA (two LEDs at 12.6–25.4 mA with 16 % duty at 400 conversions/s) and the 5-minute
+    Wi-Fi sessions about 1–2 mA on average: 25–30 mA in total, i.e. roughly 9 h from a 250 mAh
+    cell and 18 h from 500 mAh. Two settings trade signal quality or speed for runtime:
+    `set sensor_sps 100` (LED duty and power ÷ 4, twice the noise) and `set cpu_mhz 80`
+    (processing a window then takes about twice as long). Reaching several days needs light
+    sleep between sensor polls, which has to be developed on the real board.
 
 ## Sensor configuration used by the firmware
 
 | Setting | Value | Why |
 |---|---|---|
 | Mode | SpO2 (red + IR) | both wavelengths are needed for SpO2 and for motion rejection |
-| Sample rate / averaging | 400 sps ÷ 8 = **50 Hz** output | the pipeline's native rate; 8× averaging improves SNR and acts as the anti-alias filter |
+| Sample rate / averaging | 400 sps ÷ 8 = **50 Hz** output (`sensor_sps`: 200 ÷ 4, 100 ÷ 2, 50 ÷ 1) | the pipeline's native rate; 8× averaging gives the best SNR and acts as the anti-alias filter, fewer conversions save LED power |
 | Pulse width | 411 µs (18-bit) | best resolution |
 | ADC range | 4096 nA (`adc_range` setting) | |
-| LED current | starts at 12.6 mA; automatic 1.6–25.4 mA | keeps the DC level at 15–70 % of full scale; changes only between windows |
+| LED current | starts at 12.6 mA; automatic 1.6–25.4 mA | keeps the DC level at 15–70 % of full scale; changes only between windows; a dim signal is tried at full current before it counts as "not worn" |
 | FIFO | roll-over off, polled every 50 ms | lost samples are counted by the chip and the affected window is discarded |
+| Interrupts | only the ambient-light-overflow flag is enabled (read by polling) | a window recorded while sunlight overwhelmed the sensor is rejected |
 
 The sensor's sample clock is not crystal-accurate, so the firmware measures the real output rate
 against the ESP32 clock and corrects the heart rate with it (`fs` in the output).
