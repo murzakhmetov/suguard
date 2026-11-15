@@ -148,15 +148,18 @@ Numbers in this section without another source come from `scripts/check_model_ca
   `SpO2 = −45.060·R² + 30.354·R + 94.845`. **Not calibrated for the SuGuard enclosure**: calibrate
   against a medical pulse oximeter (`suguard_ml.signal.spo2.fit_spo2_calibration`). The estimator's
   own bias in simulation (the simulator uses the same curve, so the sensor's error is not in it):
-  being re-measured for the retrained networks (`scripts/check_model_card.py` → `spo2_bias`). Real accuracy below 90 % can only be established in a controlled desaturation
+  2,000 simulated windows per condition with true SpO2 82–95 % (`spo2_bias`): below 90 % the mean
+  signed error is between 0.0 and +0.3 points for every path, with and without motion (the
+  networks up to +0.5 at 82–84 %); at 90–95 % every path is within ±0.15 points except the
+  classical path with motion (−0.5). Real accuracy below 90 % can only be established in a controlled desaturation
   study (ISO 80601-2-61).
 * **Features** — morphology of the average beat, second-derivative (SDPPG) ratios, harmonics,
   red/IR ratios. The dicrotic notch is reported only when it stands out from the noise of the
   averaged beat by three standard errors. Clean simulated windows whose noise-free beat has no
   notch, at a perfusion of 1 / 0.3 / 0.1 %: beats without a reflected wave get a notch reported in
-  0 / 2 / 9 % of the windows with this rule and in 41 / 75 / 93 % without it; the simulator's whole
-  shape family in 2 / 3 / 11 % and 69 / 82 / 94 %. The price: a notch the noise-free beat does have
-  is missed in 10 / 20 / 28 % of those windows (about 20 each).
+  0 / 2 / 11 % of the windows with this rule and in 45 / 76 / 95 % without it; the simulator's
+  whole shape family in 3 / 3 / 17 % and 66 / 77 / 91 %. The price: a notch the noise-free beat
+  does have is missed in 6 / 14 / 13 % of those windows (30–35 each).
 
 ## 4. Diabetes risk — `models/risk_model.json` (v1.1.0)
 
