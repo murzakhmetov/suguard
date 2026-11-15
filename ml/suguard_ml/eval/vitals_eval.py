@@ -26,27 +26,26 @@ def vitals_from_bv(ir_bv: np.ndarray, red_bv: np.ndarray, fs: float = FS,
 
 
 def summarize_errors(rows: list[dict], hr_true: np.ndarray, spo2_true: np.ndarray, keep: np.ndarray | None = None,
-                     common: np.ndarray | None = None) -> dict:
+                     common: dict | None = None) -> dict:
     """Error summary that makes abstentions explicit.
 
-    ``n`` = windows selected by ``keep``; per vital, ``n_scored`` = windows
-    that produced an estimate, ``abstain_rate`` = 1 - n_scored / n, and the
-    "within" rates count an abstention as a miss. Pass ``common`` (windows
-    where *all* compared methods produced an estimate) to compare methods on
-    the same windows.
+    ``n`` = windows selected by ``keep``; per vital, ``n`` = windows the
+    vital is scored over, ``n_scored`` = those that produced an estimate,
+    ``abstain_rate`` = 1 - n_scored / n, and the "within" rate counts an
+    abstention as a miss. Pass ``common`` (from :func:`both_finite`) to
+    compare methods on the same windows: each vital is then scored only where
+    *every* compared method produced that vital.
     """
     hr = np.array([np.nan if r["hr"] is None else r["hr"] for r in rows], dtype=float)
     sp = np.array([np.nan if r["spo2"] is None else r["spo2"] for r in rows], dtype=float)
     keep = np.ones(hr.size, dtype=bool) if keep is None else np.asarray(keep, dtype=bool)
-    if common is not None:
-        keep = keep & np.asarray(common, dtype=bool)
-    n = int(keep.sum())
-    e_hr = np.abs(hr - hr_true)[keep]
-    e_sp = np.abs(sp - spo2_true)[keep]
 
-    def stat(e, thr):
+    def stat(est, truth, key, thr):
+        sel = keep if common is None else keep & np.asarray(common[key], dtype=bool)
+        e = np.abs(est - truth)[sel]
         f = np.isfinite(e)
-        out = {"n_scored": int(f.sum()), "abstain_rate": float(1 - f.sum() / max(n, 1))}
+        n = int(sel.sum())
+        out = {"n": n, "n_scored": int(f.sum()), "abstain_rate": float(1 - f.sum() / max(n, 1))}
         if f.any():
             out.update(mae=float(np.mean(e[f])), median=float(np.median(e[f])), p90=float(np.percentile(e[f], 90)))
         else:
@@ -54,14 +53,11 @@ def summarize_errors(rows: list[dict], hr_true: np.ndarray, spo2_true: np.ndarra
         out["within_tol_counting_abstentions"] = float(np.sum(e[f] <= thr) / max(n, 1))
         return out
 
-    return {"n": n, "selected_fraction": float(keep.mean()) if keep.size else 0.0,
-            "hr": stat(e_hr, 5.0), "spo2": stat(e_sp, 2.0)}
+    return {"n": int(keep.sum()), "selected_fraction": float(keep.mean()) if keep.size else 0.0,
+            "hr": stat(hr, hr_true, "hr", 5.0), "spo2": stat(sp, spo2_true, "spo2", 2.0)}
 
 
-def both_finite(*row_lists: list[dict]) -> np.ndarray:
-    """Windows where every method produced HR (for like-for-like HR comparison)."""
-    m = None
-    for rows in row_lists:
-        f = np.array([r["hr"] is not None for r in rows])
-        m = f if m is None else (m & f)
-    return m
+def both_finite(*row_lists: list[dict]) -> dict:
+    """Per vital, the windows where every method produced it (like-for-like comparison)."""
+    return {key: np.logical_and.reduce([[r[key] is not None for r in rows] for rows in row_lists])
+            for key in ("hr", "spo2")}

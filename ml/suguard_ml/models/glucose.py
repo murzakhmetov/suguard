@@ -27,6 +27,7 @@ import json
 import math
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+from typing import ClassVar
 
 import numpy as np
 
@@ -88,6 +89,20 @@ class GlucosePopulationModel:
 # Personal calibration
 # ---------------------------------------------------------------------------
 
+# Limits of a calibration state. update() never produces a state outside them
+# and from_dict() refuses one, so a state the server issued is always accepted
+# back, and a corrupted or hand-made one cannot yield absurd numbers.
+REFERENCE_RANGE_MGDL = (20.0, 600.0)   # fingerstick values a calibration accepts
+A_LIMIT = 500.0                        # |level offset|, mg/dL: spans the reference range around the prior mean
+B_RANGE = (0.0, 3.0)                   # scale of the model's deviations
+P_LIMIT = (1000.0**2, 10.0**2)         # variances of a and b
+RESID_VAR_RANGE = (4.0, 60.0**2)
+MAX_POINTS = 100_000
+MAX_DRIFT_DAYS = 365.0                 # a longer gap adds no further uncertainty
+UNIX_RANGE = (1.5e9, 4.1e9)            # unix seconds a new request may carry (rejects millisecond epochs)
+STATE_T_RANGE = (0.0, UNIX_RANGE[1])   # ... and a stored state (older research recordings are fine)
+
+
 @dataclass
 class PersonalCalibration:
     """Kalman filter on theta = (a, b) in  y = a + b * (f - f0) + f0.
@@ -95,22 +110,26 @@ class PersonalCalibration:
     With a population prediction f, b scales its deviations from f0 and a
     shifts the level. Without a model, f == f0 and only a is identified: the
     estimate becomes the user's own running glucose level.
+
+    The dataclass fields are the state a client stores between requests; the
+    reference level and the drift rates are constants of the algorithm.
     """
     a: float = 0.0
     b: float = 1.0
     P: list = field(default_factory=lambda: [[30.0**2, 0.0], [0.0, 0.3**2]])
-    f0: float = PRIOR_MEAN_MGDL
     resid_var: float = 15.0**2           # model error variance, updated online
     n_points: int = 0
-    last_t: float | None = None          # unix seconds of last update
-    drift_a_per_day: float = 6.0**2      # process noise (mg/dL)^2 / day
-    drift_b_per_day: float = 0.03**2
+    last_t: float | None = None          # unix seconds of the latest update
     model_version: str | None = None     # population model the state was fitted against
+
+    f0: ClassVar[float] = PRIOR_MEAN_MGDL
+    drift_a_per_day: ClassVar[float] = 6.0**2      # process noise (mg/dL)^2 / day
+    drift_b_per_day: ClassVar[float] = 0.03**2
 
     def _predict_state(self, t: float | None) -> np.ndarray:
         P = np.array(self.P, dtype=float)
         if t is not None and self.last_t is not None and math.isfinite(t) and math.isfinite(self.last_t):
-            days = max(t - self.last_t, 0.0) / 86400.0
+            days = min(max(t - self.last_t, 0.0) / 86400.0, MAX_DRIFT_DAYS)
             P = P + np.diag([self.drift_a_per_day * days, self.drift_b_per_day * days])
         return P
 
@@ -132,50 +151,77 @@ class PersonalCalibration:
         innov = y_ref - y_hat
         theta = np.array([self.a, self.b]) + k * innov
         P = (np.eye(2) - np.outer(k, h)) @ P
+        P = 0.5 * (P + P.T)                                  # rounding must not break the symmetry
+        P *= min(1.0, P_LIMIT[0] / max(P[0, 0], 1e-300), P_LIMIT[1] / max(P[1, 1], 1e-300))
         # Online estimate of the model's own error (bounded, slow).
         if self.n_points >= 2:
             excess = innov**2 - float(h @ P @ h) - (GLUCOMETER_CV * y_ref) ** 2
-            self.resid_var = float(np.clip(0.9 * self.resid_var + 0.1 * max(excess, 4.0), 4.0, 60.0**2))
-        self.a, self.b = float(theta[0]), float(np.clip(theta[1], 0.0, 3.0))
+            self.resid_var = float(np.clip(0.9 * self.resid_var + 0.1 * max(excess, RESID_VAR_RANGE[0]),
+                                           *RESID_VAR_RANGE))
+        self.a = float(np.clip(theta[0], -A_LIMIT, A_LIMIT))
+        self.b = float(np.clip(theta[1], *B_RANGE))
         self.P = P.tolist()
-        self.n_points += 1
-        if t is not None and math.isfinite(t):
-            self.last_t = t if self.last_t is None else max(self.last_t, t)  # clock never runs backwards
+        self.n_points = min(self.n_points + 1, MAX_POINTS)
+        if t is not None and STATE_T_RANGE[0] <= t <= STATE_T_RANGE[1]:
+            self.last_t = float(t) if self.last_t is None else max(self.last_t, float(t))  # never runs backwards
         return self
 
     def to_dict(self) -> dict:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, d: dict | None, model_version: str | None = None) -> "PersonalCalibration":
-        """Rebuild a state sent back by a client, validating every field.
+    def parse(cls, d: dict) -> "PersonalCalibration":
+        """A state sent back by a client, every field validated and brought to
+        its canonical type. Unknown keys are ignored; malformed or implausible
+        values raise ValueError."""
+        def real(v) -> float:
+            if isinstance(v, bool) or not isinstance(v, (int, float)):
+                raise ValueError("not a number")
+            x = float(v)                                      # OverflowError for integers beyond a double
+            if not math.isfinite(x):
+                raise ValueError("not finite")
+            return x
 
-        Unknown keys are ignored; malformed or implausible values raise
-        ValueError. A state fitted against a different population model
-        version is reset (its offsets do not apply to the new model).
-        """
+        try:
+            if not isinstance(d, dict):
+                raise ValueError("not an object")
+            rows = d.get("P", cls().P)
+            if not (isinstance(rows, (list, tuple)) and len(rows) == 2
+                    and all(isinstance(r, (list, tuple)) and len(r) == 2 for r in rows)):
+                raise ValueError("P must be 2 x 2")
+            P = np.array([[real(x) for x in r] for r in rows])
+            n = d.get("n_points", 0)
+            if isinstance(n, bool) or not isinstance(n, int):
+                raise ValueError("n_points must be an integer")
+            version = d.get("model_version")
+            if version is not None and not (isinstance(version, str) and len(version) <= 100):
+                raise ValueError("model_version must be a short string")
+            c = cls(a=real(d.get("a", 0.0)), b=real(d.get("b", 1.0)), P=P.tolist(),
+                    resid_var=real(d.get("resid_var", 15.0**2)), n_points=n,
+                    last_t=None if d.get("last_t") is None else real(d["last_t"]), model_version=version)
+        except (TypeError, ValueError, OverflowError) as e:
+            raise ValueError(f"invalid calibration state: {e}") from e
+        ok = bool(np.abs(P).max() <= max(P_LIMIT) * (1 + 1e-9) and np.allclose(P, P.T, rtol=1e-9, atol=1e-9))
+        if ok:
+            eig = np.linalg.eigvalsh(0.5 * (P + P.T))
+            ok = eig[0] >= -1e-9 * max(1.0, eig[-1])
+        ok = (ok and P[0, 0] <= P_LIMIT[0] * (1 + 1e-9) and P[1, 1] <= P_LIMIT[1] * (1 + 1e-9)
+              and -A_LIMIT <= c.a <= A_LIMIT and B_RANGE[0] <= c.b <= B_RANGE[1]
+              and RESID_VAR_RANGE[0] <= c.resid_var <= RESID_VAR_RANGE[1] and 0 <= c.n_points <= MAX_POINTS
+              and (c.last_t is None or STATE_T_RANGE[0] <= c.last_t <= STATE_T_RANGE[1]))
+        if not ok:
+            raise ValueError("invalid calibration state: value out of range")
+        return c
+
+    @classmethod
+    def from_dict(cls, d: dict | None, model_version: str | None = None) -> "PersonalCalibration":
+        """``parse`` plus the version rule: no state, or a state fitted against
+        a different population model, gives a fresh calibration (the old
+        offsets do not apply to the new model)."""
         if not d:
             return cls(model_version=model_version)
-        known = {f for f in cls.__dataclass_fields__}
-        d = {k: v for k, v in d.items() if k in known}
-        try:
-            c = cls(**d)
-            P = np.asarray(c.P, dtype=float)
-            nums = [c.a, c.b, c.f0, c.resid_var, c.drift_a_per_day, c.drift_b_per_day]
-        except (TypeError, ValueError) as e:
-            raise ValueError(f"invalid calibration state: {e}") from e
-        ok = (P.shape == (2, 2) and np.isfinite(P).all() and np.allclose(P, P.T, atol=1e-6)
-              and np.all(np.linalg.eigvalsh(P) >= -1e-9) and all(isinstance(x, (int, float)) and math.isfinite(x)
-                                                                  for x in nums)
-              and -400 <= c.a <= 400 and 0 <= c.b <= 3 and 40 <= c.f0 <= 400 and 4.0 <= c.resid_var <= 60.0**2
-              and 0 <= c.drift_a_per_day <= 1e4 and 0 <= c.drift_b_per_day <= 1.0
-              and isinstance(c.n_points, int) and 0 <= c.n_points <= 100_000
-              and (c.last_t is None or (isinstance(c.last_t, (int, float)) and math.isfinite(c.last_t))))
-        if not ok:
-            raise ValueError("invalid calibration state")
-        if c.model_version != model_version:
-            return cls(model_version=model_version)
-        return c
+        c = cls.parse(d)
+        return c if c.model_version == model_version else cls(model_version=model_version)
 
 
 # ---------------------------------------------------------------------------

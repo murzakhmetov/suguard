@@ -24,6 +24,15 @@ from ..config import FS
 from .beats import Beats, detect_beats, hrv_metrics
 
 N_T = 100  # samples per normalised beat
+# A dicrotic notch (or the late-systolic inflection that replaces it in stiff
+# arteries) must stand out from the ripple that noise leaves on the averaged
+# beat: by NOTCH_MIN_PROMINENCE of the pulse amplitude and by NOTCH_NOISE_FACTOR
+# standard errors of the averaged beat. An inflection is a relaxation of the
+# falling slope; it counts if, kept up over INFLECTION_SPAN of the beat, it
+# would lift the curve by that much.
+NOTCH_MIN_PROMINENCE = 0.01
+NOTCH_NOISE_FACTOR = 3.0
+INFLECTION_SPAN = 0.04
 
 
 def _good_beat_spans(beats: Beats, artifact_prob: np.ndarray | None, n: int) -> list[tuple[float, float]]:
@@ -43,10 +52,13 @@ def _good_beat_spans(beats: Beats, artifact_prob: np.ndarray | None, n: int) -> 
     return spans
 
 
-def ensemble_beat(x: np.ndarray, spans: list[tuple[float, float]], min_corr: float = 0.8) -> tuple[np.ndarray | None, np.ndarray]:
-    """Median of time-normalised beats that correlate with the provisional template."""
+def ensemble_beat(x: np.ndarray, spans: list[tuple[float, float]],
+                  min_corr: float = 0.8) -> tuple[np.ndarray | None, np.ndarray, float]:
+    """Median of time-normalised beats that correlate with the provisional
+    template, the correlations, and the standard error of the median beat
+    (typical value over the beat, in signal units)."""
     if len(spans) < 3:
-        return None, np.array([])
+        return None, np.array([]), np.nan
     grid = np.arange(x.size)
     segs = np.array([np.interp(np.linspace(a, b, N_T), grid, x) for a, b in spans])
     segs = segs - segs[:, :1]  # foot at zero
@@ -54,8 +66,11 @@ def ensemble_beat(x: np.ndarray, spans: list[tuple[float, float]], min_corr: flo
     corr = np.array([np.corrcoef(s, tmpl)[0, 1] if np.std(s) > 0 else 0 for s in segs])
     keep = corr >= min_corr
     if keep.sum() < 3:
-        return None, corr
-    return np.median(segs[keep], axis=0), corr
+        return None, corr, np.nan
+    kept = segs[keep]
+    # 1.2533 = sqrt(pi / 2): standard error of a median relative to that of a mean.
+    stderr = float(np.median(1.2533 * np.std(kept, axis=0, ddof=1) / np.sqrt(kept.shape[0])))
+    return np.median(kept, axis=0), corr, stderr
 
 
 def _sdppg_waves(t2: np.ndarray, i_sys: int) -> dict:
@@ -94,8 +109,9 @@ def _sdppg_waves(t2: np.ndarray, i_sys: int) -> dict:
     return out
 
 
-def template_features(tmpl: np.ndarray, ibi_s: float, prefix: str = "") -> dict:
-    """Shape features of a foot-aligned, time-normalised beat."""
+def template_features(tmpl: np.ndarray, ibi_s: float, prefix: str = "", stderr: float = 0.0) -> dict:
+    """Shape features of a foot-aligned, time-normalised beat. ``stderr`` is
+    the standard error of the averaged beat (same units as ``tmpl``)."""
     f: dict[str, float] = {}
     amp = float(tmpl.max() - tmpl.min())
     if amp <= 0 or not np.isfinite(amp):
@@ -113,20 +129,23 @@ def template_features(tmpl: np.ndarray, ibi_s: float, prefix: str = "") -> dict:
         above = np.flatnonzero(y >= lvl * y[i_sys])
         f[f"width{int(lvl * 100)}_ratio"] = (above[-1] - above[0]) / N_T if above.size else np.nan
 
-    # Dicrotic notch: first local minimum after the systolic peak; otherwise
-    # the flattest *interior* point of the descent (late-systolic inflection
-    # in stiff arteries); if neither exists the notch features are undefined.
+    # Dicrotic notch: first local minimum after the systolic peak that stands
+    # out from the noise; otherwise the most distinct relaxation of the
+    # falling slope (late-systolic inflection in stiff arteries); if neither
+    # exists the notch features are undefined.
+    prominence = max(NOTCH_MIN_PROMINENCE, NOTCH_NOISE_FACTOR * (stderr / amp if np.isfinite(stderr) else 0.0))
     lo, hi = i_sys + 3, int(0.85 * N_T)
-    mins, _ = signal.find_peaks(-y[lo:hi])
+    ys = signal.savgol_filter(y, 9, 3)
+    mins, _ = signal.find_peaks(-ys[lo:hi], prominence=prominence)
     i_n = None
     if mins.size:
         i_n, notch_type = lo + int(mins[0]), 1.0
     else:
         notch_type = 0.0
         d1s = signal.savgol_filter(d1, 9, 3)[lo:hi]
-        pk, _ = signal.find_peaks(d1s)            # never returns the slice ends
+        pk, props = signal.find_peaks(d1s, prominence=prominence / INFLECTION_SPAN)   # never returns the slice ends
         if pk.size:
-            i_n = lo + int(pk[int(np.argmax(d1s[pk]))])
+            i_n = lo + int(pk[int(np.argmax(props["prominences"]))])
     f["notch_present"] = notch_type
     if i_n is None:
         for k in ("notch_time_ratio", "notch_height", "dia_height", "dia_time_ratio", "delta_t_s", "ipa"):
@@ -180,12 +199,12 @@ def extract_features(ir_bv: np.ndarray, red_bv: np.ndarray | None = None, fs: fl
     feats["temperature_c"] = np.nan if temperature_c is None else float(temperature_c)
 
     spans = _good_beat_spans(beats, artifact_prob, ir_bv.size)
-    tmpl_ir, corr = ensemble_beat(ir_bv, spans)
+    tmpl_ir, corr, stderr_ir = ensemble_beat(ir_bv, spans)
     feats["n_beats"] = float(len(spans))
     feats["beat_corr"] = float(np.nanmedian(corr)) if corr.size else np.nan
     ibi_s = float(np.median(good_ibi)) if good_ibi.size else np.nan
     if tmpl_ir is not None and np.isfinite(ibi_s):
-        feats.update(template_features(tmpl_ir, ibi_s))
+        feats.update(template_features(tmpl_ir, ibi_s, stderr=stderr_ir))
 
     if red_bv is not None:
         red_bv = np.asarray(red_bv, dtype=np.float64)
@@ -197,7 +216,7 @@ def extract_features(ir_bv: np.ndarray, red_bv: np.ndarray | None = None, fs: fl
         feats["pi_red"] = float(np.percentile(red_bv, 97) - np.percentile(red_bv, 3)) * 100
         feats["red_dc"] = np.nan if red_dc is None else float(red_dc)
         feats["dc_red_ir"] = (red_dc / ir_dc) if (red_dc and ir_dc) else np.nan
-        tmpl_red, _ = ensemble_beat(red_bv, spans, min_corr=0.6)
+        tmpl_red, _, stderr_red = ensemble_beat(red_bv, spans, min_corr=0.6)
         if tmpl_red is not None and tmpl_ir is not None:
             si = np.fft.rfft(tmpl_ir - tmpl_ir.mean())
             sr = np.fft.rfft(tmpl_red - tmpl_red.mean())
@@ -205,5 +224,6 @@ def extract_features(ir_bv: np.ndarray, red_bv: np.ndarray | None = None, fs: fl
                 feats[f"r_h{h}"] = float(np.abs(sr[h]) / np.abs(si[h])) if np.abs(si[h]) > 0 else np.nan
             feats["red_ir_tmpl_corr"] = float(np.corrcoef(tmpl_ir, tmpl_red)[0, 1])
             feats["red_ir_peak_lag_ratio"] = float(np.argmax(tmpl_red) - np.argmax(tmpl_ir)) / N_T
-            feats.update(template_features(tmpl_red, ibi_s, prefix="red_") if np.isfinite(ibi_s) else {})
+            feats.update(template_features(tmpl_red, ibi_s, prefix="red_", stderr=stderr_red)
+                         if np.isfinite(ibi_s) else {})
     return feats

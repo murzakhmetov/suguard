@@ -23,14 +23,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from ..aggregation import FEATURE_AGGREGATION, LENGTH_DEPENDENT, aggregate_window_features  # noqa: F401
+
 RESERVED = {"subject_id", "timestamp", "t", "glucose_mgdl", "glucose_mmol", "n_windows"}
-# Features whose value depends on how long the analysed span was (beat counts,
-# HRV over a variable number of beats) rather than on physiology. They differ
-# between training tables and serving, so they never enter the model.
-LENGTH_DEPENDENT = {"n_beats", "sdnn_ms", "rmssd_ms", "pnn50"}
-# Every feature row is the median over >= MIN_WINDOWS reliable 10.24-s windows,
-# both when building training tables and when serving (/v1/glucose/estimate).
-FEATURE_AGGREGATION = {"window_s": 10.24, "statistic": "median", "min_windows": 3}
 
 _TZ_SUFFIX = r"(?:Z|[+-]\d{2}:?\d{2})$"
 
@@ -82,14 +77,6 @@ def load_paired(path: str | Path, tz_offset_h: float = 0.0) -> pd.DataFrame:
 def model_columns(df: pd.DataFrame) -> list[str]:
     return [c for c in df.columns if c not in RESERVED and c not in LENGTH_DEPENDENT
             and not c.startswith("meta_") and pd.api.types.is_numeric_dtype(df[c])]
-
-
-def aggregate_window_features(feature_dicts: list[dict]) -> dict:
-    """Median of per-window features (the FEATURE_AGGREGATION rule)."""
-    if not feature_dicts:
-        return {}
-    df = pd.DataFrame(feature_dicts).apply(pd.to_numeric, errors="coerce")
-    return {k: (None if not np.isfinite(v) else float(v)) for k, v in df.median().items()}
 
 
 # ---------------------------------------------------------------------------

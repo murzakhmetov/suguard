@@ -102,6 +102,35 @@ def test_hrv_ignores_removed_ectopic_intervals():
     assert h["rmssd_ms"] == pytest.approx(0.0, abs=1e-9) and h["pnn50"] == 0.0
 
 
+def test_hrv_edits_premature_beats_the_detector_accepts():
+    """Regression (review finding): a premature beat within +-30 % of the
+    median interval is 'valid' for the beat detector and used to multiply
+    RMSSD; it is recognised by its short-long pattern."""
+    from suguard_ml.signal.beats import hrv_metrics
+
+    rng = np.random.default_rng(4)
+    for coupling in (0.72, 0.78, 0.84):
+        ratios = []
+        for _ in range(40):
+            ibi = 0.83 + rng.normal(0, 0.013 / np.sqrt(2), 140)          # quiet sinus rhythm, RMSSD ~13 ms
+            clean = hrv_metrics(ibi)["rmssd_ms"]
+            for i in (20, 55, 90, 120):                                  # premature beat + compensatory pause
+                ibi[i], ibi[i + 1] = coupling * ibi[i], (2 - coupling) * ibi[i]
+            valid = np.abs(ibi - np.median(ibi)) <= 0.3 * np.median(ibi)   # what detect_beats calls valid
+            h = hrv_metrics(ibi, valid)
+            assert h["excluded_intervals"] >= 8
+            ratios.append(h["rmssd_ms"] / clean)
+        assert 0.9 < np.median(ratios) < 1.1 and max(ratios) < 1.3, (coupling, np.median(ratios), max(ratios))
+    # Normal rhythm is left alone, also with strong respiratory arrhythmia.
+    excluded = []
+    for k in range(60):
+        n = np.arange(140)
+        ibi = (0.9 + rng.normal(0, 0.02, 140) + 0.06 * np.sin(2 * np.pi * n / (3.0 + k % 3))
+               + 0.03 * np.sin(2 * np.pi * n / 12.0))
+        excluded.append(hrv_metrics(ibi)["excluded_intervals"])
+    assert np.mean(excluded) < 0.5
+
+
 def test_spo2_rejects_out_of_range_ratio():
     assert spo2_from_ratio(2.0) is None and spo2_from_ratio(0.1) is None
     assert spo2_from_ratio(0.3) == pytest.approx(spo2_from_ratio(0.34), abs=0.1)   # vertex, ~100 %
@@ -111,6 +140,40 @@ def test_notch_features_nan_without_inflection():
     from suguard_ml.signal.features import N_T, template_features
 
     x = np.linspace(0, 1, N_T)
-    tmpl = np.where(x < 0.2, x / 0.2, np.exp(-(x - 0.2) / 0.15))   # monotone decay: no notch
-    f = template_features(tmpl, 0.8)
-    assert f["notch_present"] == 0.0 and np.isnan(f["notch_height"])
+    rng = np.random.default_rng(0)
+    for tau in (0.15, 0.25, 0.4):
+        tmpl = np.where(x < 0.2, x / 0.2, np.exp(-(x - 0.2) / tau))   # monotone decay: no notch
+        f = template_features(tmpl, 0.8)
+        assert f["notch_present"] == 0.0 and np.isnan(f["notch_height"]) and np.isnan(f["ipa"])
+        # Regression (review finding): ripple from noise is not a notch either.
+        defined = 0
+        for _ in range(200):
+            noisy = tmpl + rng.normal(0, 0.002, N_T)
+            defined += np.isfinite(template_features(noisy, 0.8, stderr=0.002)["notch_time_ratio"])
+        assert defined <= 10, (tau, defined)                  # was 200 of 200
+    # A real notch is found where it is, with the same noise.
+    notched = tmpl + 0.25 * np.exp(-0.5 * ((x - 0.55) / 0.07) ** 2)
+    i_true = 20 + int(np.argmin(notched[20:55]))
+    hits = 0
+    for _ in range(200):
+        f = template_features(notched + rng.normal(0, 0.002, N_T), 0.8, stderr=0.002)
+        hits += f["notch_present"] == 1.0 and abs(f["notch_time_ratio"] - i_true / N_T) <= 0.03
+    assert hits >= 190
+
+
+def test_like_for_like_comparison_is_per_vital():
+    """Regression (review finding): SpO2 of two methods was compared on
+    different windows under the name 'common'."""
+    from suguard_ml.eval.vitals_eval import both_finite, summarize_errors
+
+    a = [{"hr": 70.0, "spo2": 97.0}, {"hr": None, "spo2": None}, {"hr": 80.0, "spo2": None}, {"hr": 60.0, "spo2": 95.0}]
+    b = [{"hr": 71.0, "spo2": None}, {"hr": 75.0, "spo2": 96.0}, {"hr": 82.0, "spo2": 98.0}, {"hr": 61.0, "spo2": 94.0}]
+    hr_true, spo2_true = np.array([70.0, 75.0, 80.0, 60.0]), np.array([97.0, 96.0, 97.0, 95.0])
+    common = both_finite(a, b)
+    ra, rb = (summarize_errors(rows, hr_true, spo2_true, common=common) for rows in (a, b))
+    for vital, n in (("hr", 3), ("spo2", 1)):
+        assert ra[vital]["n"] == rb[vital]["n"] == ra[vital]["n_scored"] == rb[vital]["n_scored"] == n
+    assert ra["spo2"]["mae"] == 0.0 and rb["spo2"]["mae"] == 1.0
+    assert summarize_errors(a, hr_true, spo2_true)["spo2"] == {
+        "n": 4, "n_scored": 2, "abstain_rate": 0.5, "mae": 0.0, "median": 0.0, "p90": 0.0,
+        "within_tol_counting_abstentions": 0.5}

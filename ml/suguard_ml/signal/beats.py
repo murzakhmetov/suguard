@@ -168,22 +168,64 @@ def beat_template(x: np.ndarray, beats: Beats, length: int = 64) -> tuple[np.nda
     return tmpl, float(np.nanmean(corr))
 
 
+# Detection of premature beats in the interval series, with the decision rule
+# of Lipponen & Tarvainen (2019): a successive difference far larger than the
+# typical one, flanked by differences of the opposite sign, is the short-long
+# (or long-short) signature of a premature beat with its compensatory pause,
+# or of one misplaced peak. "Far larger" is ECTOPIC_ALPHA x the median
+# |difference| (about 3 SD for normal rhythm; the median stays robust in
+# short recordings). On simulated rhythms 4.5 removes < 0.5 % of normal
+# intervals and brings RMSSD back to within a few per cent of the ectopy-free
+# value; a premature beat smaller than the rhythm's own variability cannot be
+# told apart and stays in. C1, C2 are the constants of the published rule.
+ECTOPIC_ALPHA = 4.5
+ECTOPIC_C1, ECTOPIC_C2 = 0.13, 0.17
+
+
+def _premature_pairs(ibi_ms: np.ndarray, nn: np.ndarray) -> np.ndarray:
+    """Mask of the intervals that form short-long / long-short pairs."""
+    bad = np.zeros(ibi_ms.size, dtype=bool)
+    d = np.diff(ibi_ms)                       # d[j]: change from interval j to j + 1
+    pair = nn[1:] & nn[:-1]
+    if pair.sum() < 4:
+        return bad
+    th = ECTOPIC_ALPHA * float(np.median(np.abs(d[pair])))
+    if th <= 0:
+        return bad
+    s = d / th
+    for j in np.flatnonzero(pair & (np.abs(s) > 1.0)):
+        neighbours = [s[k] for k in (j - 1, j + 1) if 0 <= k < s.size and pair[k]]
+        if not neighbours:
+            continue
+        if s[j] > 0:
+            hit = max(neighbours) < -ECTOPIC_C1 * s[j] - ECTOPIC_C2
+        else:
+            hit = min(neighbours) > -ECTOPIC_C1 * s[j] + ECTOPIC_C2
+        if hit:
+            bad[j] = bad[j + 1] = True
+    return bad
+
+
 def hrv_metrics(ibi_s: np.ndarray, valid: np.ndarray | None = None) -> dict[str, float | None]:
     """Time-domain HRV from inter-beat intervals (needs >= ~60 s).
 
     ``valid`` marks plausible intervals (Beats.valid_ibi). NN editing is done
-    on the full series: the interval after a rejected one is dropped too
-    (compensatory pause after an ectopic beat), and successive differences
-    are taken only between truly adjacent normal intervals, so removed beats
-    cannot create spurious jumps in RMSSD / pNN50.
+    on the full series: the intervals next to a rejected one are dropped too
+    (the other half of an ectopic beat's short-long pair), premature beats that stay
+    within the detector's plausibility band are found by their short-long
+    pattern, and successive differences are taken only between truly adjacent
+    normal intervals, so removed beats cannot create spurious jumps in
+    RMSSD / pNN50. ``excluded_intervals`` counts everything left out.
     """
     ibi = np.asarray(ibi_s, dtype=np.float64) * 1000.0
-    empty = {"sdnn_ms": None, "rmssd_ms": None, "pnn50": None, "mean_ibi_ms": None}
+    empty = {"sdnn_ms": None, "rmssd_ms": None, "pnn50": None, "mean_ibi_ms": None, "excluded_intervals": None}
     if ibi.size == 0:
         return empty
     v = np.ones(ibi.size, dtype=bool) if valid is None else np.asarray(valid, dtype=bool).copy()
     nn = v.copy()
-    nn[1:] &= v[:-1]
+    nn[1:] &= v[:-1]      # a rejected interval takes its neighbours with it: the other half of a
+    nn[:-1] &= v[1:]      # premature beat / compensatory pause pair may itself look plausible
+    nn &= ~_premature_pairs(ibi, nn)
     if nn.sum() < 5:
         return empty
     d = np.diff(ibi)
@@ -193,4 +235,5 @@ def hrv_metrics(ibi_s: np.ndarray, valid: np.ndarray | None = None) -> dict[str,
         "rmssd_ms": float(np.sqrt(np.mean(d[pair] ** 2))) if pair.sum() >= 3 else None,
         "pnn50": float(np.mean(np.abs(d[pair]) > 50.0)) if pair.sum() >= 3 else None,
         "mean_ibi_ms": float(np.mean(ibi[nn])),
+        "excluded_intervals": int(ibi.size - nn.sum()),
     }

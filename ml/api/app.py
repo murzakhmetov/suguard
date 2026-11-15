@@ -14,12 +14,19 @@ Endpoints
 
 The API is stateless: the per-user calibration state is returned to the
 client, which stores it (e.g. Firebase users/<uid>/mlCalibration) and sends
-it back. It is validated on every request.
+it back. It is validated on every request. Set the environment variable
+SUGUARD_STATE_KEY (any long random string, the same for every worker) to
+have the server sign the states it issues and refuse any other: without it
+a client can hand in a state it made up (the values are still range-checked).
 """
 
 from __future__ import annotations
 
+import hashlib
+import hmac
+import json
 import math
+import os
 import sys
 import time
 from pathlib import Path
@@ -34,15 +41,23 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from suguard_ml import __version__  # noqa: E402
 from suguard_ml.config import ADC_MAX  # noqa: E402
-from suguard_ml.data.paired import FEATURE_AGGREGATION, aggregate_window_features  # noqa: E402
-from suguard_ml.models.glucose import GlucoseEstimator, PersonalCalibration  # noqa: E402
+from suguard_ml.aggregation import FEATURE_AGGREGATION, aggregate_window_features  # noqa: E402
+from suguard_ml.models.glucose import (  # noqa: E402
+    REFERENCE_RANGE_MGDL,
+    UNIX_RANGE,
+    GlucoseEstimator,
+    PersonalCalibration,
+)
 from suguard_ml.models.risk import GlucoseEvidence, RiskInput, RiskModel  # noqa: E402
 from suguard_ml.pipeline import SuGuardPipeline  # noqa: E402
 
 MODELS = Path(__file__).resolve().parents[1] / "models"
 MAX_SAMPLES = 60_000            # per channel: 5 min at 200 Hz
 MAX_BODY_BYTES = 2_000_000      # ~2 x 60k samples x 9 chars, with margin
-UNIX_MIN, UNIX_MAX = 1.5e9, 4.1e9   # seconds; rejects millisecond epochs
+UNIX_MIN, UNIX_MAX = UNIX_RANGE     # seconds; rejects millisecond epochs
+STATE_KEY = os.environ.get("SUGUARD_STATE_KEY", "").encode() or None
+# Features every SpO2-grade /v1/analyze window carries; a window without them is a placeholder.
+CORE_FEATURES = ("hr_bpm", "pi_ir", "r_ratio")
 DISCLAIMER = "Research prototype, not a medical device. Do not use for diagnosis or treatment decisions."
 
 
@@ -150,7 +165,8 @@ class CalibrateRequest(GlucoseRequest):
     recent_features: list[dict] = Field(default_factory=list, max_length=120,
                                         description="window features around the fingerstick (needed once a "
                                                     "glucose model is installed)")
-    reference_mgdl: float = Field(..., ge=20, le=600, allow_inf_nan=False, description="glucometer reading")
+    reference_mgdl: float = Field(..., ge=REFERENCE_RANGE_MGDL[0], le=REFERENCE_RANGE_MGDL[1], allow_inf_nan=False,
+                                  description="glucometer reading")
 
 
 class RiskRequest(BaseModel):
@@ -175,11 +191,34 @@ class RiskRequest(BaseModel):
 
 # --- helpers -------------------------------------------------------------------
 
+def _signature(cal: PersonalCalibration) -> str:
+    """HMAC over the canonical form of a state (types fixed by PersonalCalibration.parse,
+    so 30 and 30.0 from a client's JSON library sign the same)."""
+    body = json.dumps(cal.to_dict(), sort_keys=True, separators=(",", ":"), allow_nan=False)
+    return hmac.new(STATE_KEY, body.encode(), hashlib.sha256).hexdigest()
+
+
+def _issue(cal: PersonalCalibration) -> dict:
+    """The state as sent to the client, signed if a key is configured."""
+    state = cal.to_dict()
+    if STATE_KEY is not None:
+        state["sig"] = _signature(cal)
+    return state
+
+
 def _calibration(state: dict | None) -> PersonalCalibration:
+    if not state:
+        return PersonalCalibration(model_version=MODEL_VERSION)
     try:
-        return PersonalCalibration.from_dict(state, model_version=MODEL_VERSION)
+        cal = PersonalCalibration.parse(state)
     except ValueError as e:
         raise HTTPException(422, str(e)) from e
+    if STATE_KEY is not None:
+        sig = state.get("sig")
+        if not isinstance(sig, str) or not hmac.compare_digest(sig.encode(), _signature(cal).encode()):
+            raise HTTPException(422, "calibration state was not issued by this server")
+    # A state fitted against another population model does not apply to this one.
+    return cal if cal.model_version == MODEL_VERSION else PersonalCalibration(model_version=MODEL_VERSION)
 
 
 def _model_features(windows: list[dict], ctx: Context | None, t: float, tz_offset_h: float) -> dict:
@@ -193,14 +232,25 @@ def _model_features(windows: list[dict], ctx: Context | None, t: float, tz_offse
 
 
 def _check_windows(windows: list[dict]) -> None:
+    """The 'features' of >= 3 distinct SpO2-grade /v1/analyze windows."""
     need = FEATURE_AGGREGATION["min_windows"]
     if len(windows) < need:
         raise HTTPException(422, f"need features of >= {need} reliable 10.24-s windows (got {len(windows)})")
+
+    def number(v) -> bool:
+        try:
+            return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+        except OverflowError:                       # an integer beyond the range of a double
+            return False
+
     for w in windows:
-        if not isinstance(w, dict) or len(w) > 200 or not all(
-                v is None or (isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v))
-                for v in w.values()):
+        if not isinstance(w, dict) or len(w) > 200 or not all(v is None or number(v) for v in w.values()):
             raise HTTPException(422, "each window's features must be a flat dict of finite numbers")
+        if not all(number(w.get(k)) for k in CORE_FEATURES):
+            raise HTTPException(422, f"each window needs the features {', '.join(CORE_FEATURES)} "
+                                     "(send the 'features' object of a reliable /v1/analyze result)")
+    if len({json.dumps(w, sort_keys=True) for w in windows}) < need:
+        raise HTTPException(422, f"need >= {need} different windows, not copies of one")
 
 
 # --- endpoints ---------------------------------------------------------------
@@ -213,6 +263,7 @@ def health():
         "glucose_model": None if GLUCOSE.model is None else {
             "version": GLUCOSE.model.version, "validated_on_this_device": GLUCOSE.model.validated},
         "risk_model": None if RISK is None else RISK.spec.get("version"),
+        "calibration_states_signed": STATE_KEY is not None,
     }
 
 
@@ -254,7 +305,7 @@ def calibrate(req: CalibrateRequest):
         f = cal.f0
     before = cal.predict(f, req.timestamp)[0]
     cal.update(f, req.reference_mgdl, req.timestamp)
-    return _finite({"calibration": cal.to_dict(), "n_points": cal.n_points,
+    return _finite({"calibration": _issue(cal), "n_points": cal.n_points,
                     "estimate_before_mgdl": round(before, 1), "reference_mgdl": req.reference_mgdl})
 
 

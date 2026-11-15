@@ -39,6 +39,7 @@ measurement) requires ALL of:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -312,7 +313,9 @@ def main():
 
     out = Path(a.out)
     (out / "metrics").mkdir(parents=True, exist_ok=True)
-    meta = {"version": "1.0.0", "validated": validated, "validated_on_device": sources[0] if device_ok else sources,
+    # Unique per trained model: calibration states carry it and are reset when it changes.
+    digest = hashlib.sha256("".join(b.model_to_string() for b in final_boosters.values()).encode()).hexdigest()
+    meta = {"version": f"1.0.0+{digest[:12]}", "validated": validated, "validated_on_device": sources[0] if device_ok else sources,
             "not_validated_because": reasons, "trained_on": a.table, "n_pairs": int(len(dev)),
             "n_subjects": int(dev.subject_id.nunique()), "feature_aggregation": FEATURE_AGGREGATION,
             "hour_features": {"tz_offset_h": tz},

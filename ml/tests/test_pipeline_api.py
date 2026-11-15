@@ -234,7 +234,7 @@ def test_api_endpoints():
     assert h["status"] == "ok"
 
     windows, ts = [], 1.7e9
-    for k in range(3):
+    for k in range(5):
         w, red, ir = raw_at_100hz(5 + k, kinds=[])
         r = client.post("/v1/analyze", json={"fs": 100.0, "red": red.round().tolist(), "ir": ir.round().tolist(),
                                              "timestamp": ts + 11 * k})
@@ -242,8 +242,9 @@ def test_api_endpoints():
         body = r.json()
         if body["reliable"]:
             assert abs(body["heart_rate"]["bpm"] - w.hr_bpm) < 5
+        if body["features"] is not None:
             windows.append(body["features"])
-    assert len(windows) >= 2
+    assert len(windows) >= 3
 
     # Input validation: too short, NaN (JSON allows it), millisecond epoch, oversized body.
     assert client.post("/v1/analyze", json={"fs": 100.0, "red": [1.0] * 10, "ir": [1.0] * 10}).status_code == 422
@@ -259,11 +260,17 @@ def test_api_endpoints():
     assert huge.status_code == 413
 
     # Glucose: with no trained model there is no number, only the fingerstick average after calibration.
-    feats = (windows * 3)[:3]
+    feats = windows[:3]
     g = client.post("/v1/glucose/estimate", json={"recent_features": feats, "timestamp": ts + 60}).json()
     if h["glucose_model"] is None:
         assert g["status"] == "unavailable" and g["mg_dl"] is None
     assert client.post("/v1/glucose/estimate", json={"recent_features": feats[:1], "timestamp": ts}).status_code == 422
+    # Placeholders, copies of one window and numbers beyond a double are refused, not passed on.
+    for bad in ([{}] * 3, [feats[0]] * 3, [dict(f, hr_bpm=None) for f in feats]):
+        assert client.post("/v1/glucose/estimate", json={"recent_features": bad, "timestamp": ts}).status_code == 422
+    huge_int = _json.dumps({"recent_features": feats, "timestamp": ts}).replace('"hr_bpm": ', '"hr_bpm": 1' + "0" * 400, 1)
+    assert client.post("/v1/glucose/estimate", content=huge_int,
+                       headers={"content-type": "application/json"}).status_code == 422
     cal = None
     for i, v in enumerate([110, 118, 115]):
         c = client.post("/v1/glucose/calibrate", json={"reference_mgdl": v, "timestamp": ts + i * 3600,
@@ -281,6 +288,11 @@ def test_api_endpoints():
                                                      "calibration": bad_cal}).status_code == 422
     assert client.post("/v1/glucose/calibrate", json={"reference_mgdl": 100, "timestamp": ts,
                                                       "calibration": {"b": "x"}}).status_code == 422
+    for field, value in (("a", "1" + "0" * 400), ("last_t", "1.7e12"), ("last_t", "-1e308"), ("P", "[[1e308,0],[0,1]]")):
+        body = _json.dumps({"reference_mgdl": 100, "timestamp": ts, "calibration": {"n_points": 3, field: 0}})
+        body = body.replace(f'"{field}": 0', f'"{field}": {value}')
+        r_bad = client.post("/v1/glucose/calibrate", content=body, headers={"content-type": "application/json"})
+        assert r_bad.status_code == 422, (field, r_bad.text)
 
     if h["risk_model"]:
         rk = client.post("/v1/risk", json={"age": 55, "height_cm": 170, "weight_kg": 92, "resting_hr_bpm": 80,
@@ -290,6 +302,134 @@ def test_api_endpoints():
         assert 0 < body["p_prediabetes_or_diabetes"] < 1 and "smoker" in body["inputs_not_used"]
         assert client.post("/v1/risk", json={"age": 55}).status_code == 422
         assert client.post("/v1/risk", json={"age": 55, "bmi": 25, "ancestry": "martian"}).status_code == 422
+
+
+def test_calibration_state_always_round_trips():
+    """Regression (review finding): the server issued states its own validation
+    refused (level offset beyond the limit), locking the user out."""
+    from fastapi.testclient import TestClient
+
+    import api.app as appmod
+    from suguard_ml.models.glucose import PersonalCalibration
+
+    client = TestClient(appmod.app)
+    for level in (600, 20):
+        cal = None
+        for i in range(40):                                   # extreme readings every 6 h
+            r = client.post("/v1/glucose/calibrate", json={"reference_mgdl": level, "timestamp": 1.7e9 + i * 21600,
+                                                            "calibration": cal})
+            assert r.status_code == 200, (level, i, r.text)
+            cal = r.json()["calibration"]
+        g = client.post("/v1/glucose/estimate", json={"recent_features": [{"hr_bpm": 60.0 + k, "pi_ir": 1.0,
+                                                                            "r_ratio": 0.5} for k in range(3)],
+                                                      "timestamp": 1.7e9 + 41 * 21600, "calibration": cal})
+        assert g.status_code == 200
+        if appmod.GLUCOSE.model is None:
+            assert abs(g.json()["fingerstick_average_mgdl"] - level) < 0.03 * level
+    rng = np.random.default_rng(0)
+    for trial in range(100):                                  # random extremes, out-of-order and huge time gaps
+        cal, t = PersonalCalibration(), 1.7e9
+        for _ in range(int(rng.integers(1, 40))):
+            t = float(np.clip(t + rng.choice([-30 * 86400, 0, 60, 21600, 400 * 86400]), 1.5e9, 4.1e9))
+            cal.update(float(rng.uniform(20, 600)) if trial % 2 else cal.f0, float(rng.choice([20, 600, 150])), t)
+            assert PersonalCalibration.from_dict(cal.to_dict()).to_dict() == cal.to_dict()
+            assert all(np.isfinite(cal.predict(105.0, t + 3600)))
+
+
+def test_calibration_state_signature(monkeypatch):
+    """With SUGUARD_STATE_KEY set, only states issued by the server are accepted."""
+    from fastapi.testclient import TestClient
+
+    import api.app as appmod
+
+    monkeypatch.setattr(appmod, "STATE_KEY", b"test-key")
+    client = TestClient(appmod.app)
+    assert client.get("/health").json()["calibration_states_signed"] is True
+    cal = None
+    for i, v in enumerate([110, 118, 115]):
+        r = client.post("/v1/glucose/calibrate", json={"reference_mgdl": v, "timestamp": 1.7e9 + i * 3600,
+                                                        "calibration": cal})
+        assert r.status_code == 200, r.text
+        cal = r.json()["calibration"]
+    assert isinstance(cal["sig"], str) and cal["n_points"] == 3
+    feats = [{"hr_bpm": 60.0 + k, "pi_ir": 1.0, "r_ratio": 0.5} for k in range(3)]
+
+    def estimate(state):
+        return client.post("/v1/glucose/estimate", json={"recent_features": feats, "timestamp": 1.7e9 + 5 * 3600,
+                                                         "calibration": state})
+
+    assert estimate(cal).status_code == 200
+    # A client library that writes 900.0 as 900 (or reorders keys) must still verify.
+    as_ints = {k: (int(v) if isinstance(v, float) and v == int(v) else v) for k, v in reversed(list(cal.items()))}
+    as_ints["P"] = [[int(x) if x == int(x) else x for x in row] for row in cal["P"]]
+    assert estimate(as_ints).status_code == 200
+    # Forged, altered or unsigned states are refused.
+    assert estimate({"n_points": 3}).status_code == 422
+    assert estimate({**cal, "a": cal["a"] + 50.0}).status_code == 422
+    assert estimate({k: v for k, v in cal.items() if k != "sig"}).status_code == 422
+    assert estimate({**cal, "sig": "0" * 64}).status_code == 422
+    assert estimate(None).status_code == 200                 # no state at all is a fresh calibration
+
+
+class _StubGlucoseModel:
+    """A population model that reads 150 mg/dL for everyone."""
+    version, validated, meta = "stub-1", False, {"version": "stub-1"}
+
+    def predict(self, feats):
+        assert feats["hr_bpm"] is not None and "hour_sin" in feats
+        return 150.0, 130.0, 170.0
+
+
+def test_glucose_endpoints_with_a_model(monkeypatch):
+    """The calibration must be fitted against the model's prediction for the
+    same moment, and belongs to that model version."""
+    from fastapi.testclient import TestClient
+
+    import api.app as appmod
+
+    monkeypatch.setattr(appmod.GLUCOSE, "model", _StubGlucoseModel())
+    monkeypatch.setattr(appmod, "MODEL_VERSION", "stub-1")
+    client = TestClient(appmod.app)
+    feats = [{"hr_bpm": 60.0 + k, "pi_ir": 1.0, "r_ratio": 0.5} for k in range(3)]
+    g = client.post("/v1/glucose/estimate", json={"recent_features": feats, "timestamp": 1.7e9}).json()
+    assert g["status"] == "experimental" and g["mg_dl"] == 150.0 and g["interval_80"] == [130.0, 170.0]
+    cal = None
+    for i, v in enumerate([120, 121, 119, 120]):
+        body = {"reference_mgdl": v, "timestamp": 1.7e9 + i * 3600, "calibration": cal}
+        assert client.post("/v1/glucose/calibrate", json=body).status_code == 422          # features are required
+        assert client.post("/v1/glucose/calibrate", json={**body, "recent_features": [{}] * 3}).status_code == 422
+        r = client.post("/v1/glucose/calibrate", json={**body, "recent_features": feats})
+        assert r.status_code == 200, r.text
+        cal = r.json()["calibration"]
+    assert cal["model_version"] == "stub-1" and cal["n_points"] == 4 and -31 < cal["a"] < -20
+    g = client.post("/v1/glucose/estimate", json={"recent_features": feats, "timestamp": 1.7e9 + 5 * 3600,
+                                                  "calibration": cal}).json()
+    assert g["status"] == "experimental" and 118 < g["mg_dl"] < 130 and g["calibrations"] == 4
+    # The same state against another model version starts from scratch.
+    monkeypatch.setattr(appmod, "MODEL_VERSION", "stub-2")
+    g = client.post("/v1/glucose/estimate", json={"recent_features": feats, "timestamp": 1.7e9 + 5 * 3600,
+                                                  "calibration": cal}).json()
+    assert g["mg_dl"] == 150.0 and g["calibrations"] == 0
+
+
+def test_api_needs_no_pandas():
+    """requirements-api.txt has no pandas, torch or scikit-learn: the service must start without them."""
+    import subprocess
+    import sys
+
+    code = (
+        "import importlib.abc, sys\n"
+        "class Block(importlib.abc.MetaPathFinder):\n"
+        "    def find_spec(self, name, path=None, target=None):\n"
+        "        if name.split('.')[0] in ('pandas', 'torch', 'sklearn'):\n"
+        "            raise ModuleNotFoundError(name)\n"
+        "sys.meta_path.insert(0, Block())\n"
+        "import api.app\n"
+        "from suguard_ml.aggregation import aggregate_window_features as agg\n"
+        "assert agg([{'a': 1.0, 'b': None}, {'a': 3.0}, {'a': float('nan'), 'b': 'x'}]) == {'a': 2.0, 'b': None}\n"
+        "print('ok')\n")
+    run = subprocess.run([sys.executable, "-c", code], cwd=ML, capture_output=True, text=True)
+    assert run.returncode == 0 and run.stdout.strip().endswith("ok"), run.stderr[-2000:]
 
 
 def _fake_bigideas(root: Path):

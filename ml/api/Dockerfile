@@ -9,4 +9,5 @@ COPY suguard_ml suguard_ml
 COPY api api
 COPY models models
 EXPOSE 8000
+# Run with -e SUGUARD_STATE_KEY=<long random string> so that calibration states are signed (see api/app.py).
 CMD ["uvicorn", "api.app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
