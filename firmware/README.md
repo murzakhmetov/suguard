@@ -99,16 +99,20 @@ Settings (`get` lists them with explanations):
 One line per window on USB:
 
 ```json
-{"t":"vitals","seq":12,"reliable":true,"hr":71.6,"spo2":97.1,"sqi":0.98,"pi":1.02,"motion":0.00,
- "reasons":"","nn":true,"dc":[88211,126034],"led":[35,38],"temp":31.50,"fs":50.012,"proc_ms":1400,"bat":87,"usb":false}
+{"t":"vitals","seq":12,"reliable":true,"hr":71.6,"spo2":97.1,"sqi":0.98,"pi":1.020,"motion":0.00,
+ "reasons":"","spo2_why":"","nn":true,"dc":[88211,126034],"led":[35,38],"temp":31.50,"fs":50.012,
+ "proc_ms":1400,"bat":87,"usb":false}
 ```
 
-`reasons` says why a window was rejected: `no_contact`, `adc_saturated`, `weak_pulse`,
-`implausible_amplitude`, `motion`, `irregular_or_noisy`, `red_ir_inconsistent`,
-`denoiser_mismatch` (the cleaned-up pulse is not supported by the measured signal).
-`led_current_too_high` is a note, not a rejection: the level is near the top of the ADC range and
-the LED control lowers the current. `hr` is corrected for the sensor's clock error (`fs` is the
-measured sample rate). The rules behind each reason are listed in
+`reasons` is filled only for a rejected window and says why: `no_contact`, `adc_saturated`,
+`weak_pulse`, `implausible_amplitude`, `motion`, `irregular_or_noisy`, `red_ir_inconsistent`,
+`denoiser_mismatch` (the cleaned-up pulse is not supported by the measured signal), and
+`led_current_too_high` as an extra note (the level is near the top of the ADC range; the LED
+control lowers the current). `spo2_why` is filled only for an accepted window without an SpO2
+value: `no_common_pulse`, `spo2_low_red_ir_agreement`, `red_ir_inconsistent` (the two
+wavelengths do not agree well enough) or `red_denoiser_mismatch` (the cleaned-up red pulse is not
+supported by the measurement). `hr` is corrected for the sensor's clock error (`fs` is the measured
+sample rate). The rules behind each reason are listed in
 [../ml/docs/MODEL_CARD.md](../ml/docs/MODEL_CARD.md#2-the-decision-to-report-a-value).
 
 Every `report_interval_s`, if at least one window was reliable, one record with the medians goes to
@@ -118,7 +122,7 @@ USB (`"t":"record"`) and, if Wi-Fi and `user` are set, to Firebase:
 PUT <db_url>/users/<uid>/vitals/hd_<unix ms>.json
 {"id":"hd_1794700060050","timestamp":"2026-11-15T04:47:40","ts":1794700060,"pulse":71.6,"spo2":97.1,
  "sqi":0.98,"windows":6,"reliableWindows":5,"spo2Windows":5,"battery":87,"charging":false,
- "sensorTempC":31.5,"spo2Calibrated":false,"device":"SG-001","fw":"1.1.0","model":"edge-nn"}
+ "sensorTempC":31.5,"spo2Calibrated":false,"device":"SG-001","fw":"1.2.0","model":"edge-nn"}
 ```
 
 `<uid>` is derived from the e-mail exactly as the Flutter app does, so the records land under the
@@ -130,8 +134,8 @@ and markers made while offline are kept in RAM (240 records = 4 h at one per min
 the oldest are dropped first, and a reboot or an empty battery loses them) and carry the time they
 were made, also those from before the clock was first set. If the server or the network fails, the
 next attempt comes after 15 s, 30 s, ... up to 10 minutes (immediately 10 minutes after HTTP
-401/403); a record the server rejects for good (other 4xx) is dropped so that it cannot block the
-queue. `status` shows all of this.
+401/403); a record the server rejects for good (a 4xx other than 401, 403, 408 and 429) is
+dropped so that it cannot block the queue. `status` shows all of this.
 
 **The current app does not show these records yet.** It reads `users/<uid>/healthData` and
 requires a `glucose` number in every entry, which this firmware will not invent. Updating the app
@@ -182,7 +186,8 @@ Behaviour worth knowing:
 Everything below except the first row runs with `python -m pytest firmware/tests` (45 tests; needs
 `g++`; the RV32 tests also need `gcc-riscv64-unknown-elf`, `picolibc-riscv64-unknown-elf` and
 `qemu-system-misc`). The first row is a 46th test that runs when `SG_ARDUINO_CACHE` names a folder
-for the downloaded headers (it needs `arm-none-eabi-g++` and access to GitHub).
+that `tools/typecheck_arduino.sh <folder>` has filled once (that first run downloads the Arduino
+packages from GitHub, about 370 MB); it needs `arm-none-eabi-g++`.
 
 | What | How | Result |
 |---|---|---|
@@ -216,7 +221,7 @@ signal quality on a real wrist.
 ## Regenerating generated files
 
 ```bash
-python ml/scripts/export_edge_model.py     # src/core/sg_model.h from the trained edge model
+python ml/scripts/export_edge_model.py     # src/core/sg_model.h from ml/data/edge_s/denoiser_edge.pt
 python firmware/tools/gen_tables.py        # src/core/sg_tables.h (filter coefficients, FFT table)
 python firmware/tools/gen_certs.py         # src/certs.h (TLS root certificates)
 ```

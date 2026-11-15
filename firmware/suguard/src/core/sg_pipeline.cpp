@@ -92,6 +92,12 @@ void sg_process_window(const uint32_t* red, const uint32_t* ir, bool use_nn, dou
   }
 }
 
+const char* sg_spo2_reason_name(uint8_t reason) {
+  static const char* const kNames[] = {"", "no_common_pulse", "spo2_low_red_ir_agreement",
+                                       "r_out_of_calibration_range", "red_denoiser_mismatch", "red_ir_inconsistent"};
+  return reason < sizeof(kNames) / sizeof(kNames[0]) ? kNames[reason] : "";
+}
+
 void sg_reason_names(uint16_t reasons, char* out, size_t out_len) {
   static const char* const kNames[] = {"no_contact", "adc_saturated", "led_current_too_high",
                                        "weak_pulse", "implausible_amplitude", "motion",

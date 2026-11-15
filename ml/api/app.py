@@ -18,6 +18,13 @@ it back. It is validated on every request. Set the environment variable
 SUGUARD_STATE_KEY (any long random string, the same for every worker) to
 have the server sign the states it issues and refuse any other: without it
 a client can hand in a state it made up (the values are still range-checked).
+
+Glucose numbers. Without a glucose model the estimate endpoint returns no
+number (status "unavailable" or "calibration_only"). With a model that has
+not passed validation on this bracelet it returns none either (status
+"not_validated") unless the operator sets SUGUARD_EXPERIMENTAL_GLUCOSE=1,
+which is meant for research with informed participants only; the status is
+then "experimental". Only a validated model is presented as a measurement.
 """
 
 from __future__ import annotations
@@ -56,6 +63,8 @@ MAX_SAMPLES = 60_000            # per channel: 5 min at 200 Hz
 MAX_BODY_BYTES = 2_000_000      # ~2 x 60k samples x 9 chars, with margin
 UNIX_MIN, UNIX_MAX = UNIX_RANGE     # seconds; rejects millisecond epochs
 STATE_KEY = os.environ.get("SUGUARD_STATE_KEY", "").encode() or None
+# Output of a glucose model that has not passed validation on this bracelet: withheld unless switched on.
+EXPERIMENTAL_GLUCOSE = os.environ.get("SUGUARD_EXPERIMENTAL_GLUCOSE", "") == "1"
 # Features every SpO2-grade /v1/analyze window carries; a window without them is a placeholder.
 CORE_FEATURES = ("hr_bpm", "pi_ir", "r_ratio")
 DISCLAIMER = "Research prototype, not a medical device. Do not use for diagnosis or treatment decisions."
@@ -264,6 +273,7 @@ def health():
             "version": GLUCOSE.model.version, "validated_on_this_device": GLUCOSE.model.validated},
         "risk_model": None if RISK is None else RISK.spec.get("version"),
         "calibration_states_signed": STATE_KEY is not None,
+        "experimental_glucose_output": EXPERIMENTAL_GLUCOSE,
     }
 
 
@@ -287,6 +297,11 @@ def glucose_estimate(req: GlucoseRequest):
     cal = _calibration(req.calibration)
     feats = _model_features(req.recent_features, req.context, req.timestamp, req.tz_offset_h)
     out = GLUCOSE.estimate(feats, cal, req.timestamp)
+    if out["status"] == "experimental" and not EXPERIMENTAL_GLUCOSE:
+        out = {"status": "not_validated", "mg_dl": None, "model_version": out.get("model_version"),
+               "calibrations": out.get("calibrations"),
+               "message": "A glucose model is installed, but it has not passed validation on this bracelet; "
+                          "its output is not shown."}
     out["windows_used"] = len(req.recent_features)
     out["disclaimer"] = DISCLAIMER
     return _finite(out)

@@ -159,7 +159,7 @@ def main():
     report = {"cohort": {"source": "NHANES 2017-2018 (nhanes PyPI package)", "n": len(df),
                          "definition": "age>=18, no diabetes diagnosis/medication, HbA1c and BMI measured"},
               "variants": {}}
-    oof_full = {}
+    oof_full, oof_no_ancestry = {}, {}
     for vname, cols in VARIANTS.items():
         idx = [DESIGN_NAMES.index(c) for c in cols]
         report["variants"][vname] = {}
@@ -168,6 +168,8 @@ def main():
             report["variants"][vname][tname] = res
             if vname == FINAL:
                 oof_full[tname] = p
+            if vname == "app_no_ancestry":
+                oof_no_ancestry[tname] = p
             print(f"{vname:20s} {tname:12s} AUC {res['auc']:.3f} [{res['auc_95ci'][0]:.3f}-{res['auc_95ci'][1]:.3f}] "
                   f"AP {res['average_precision']:.3f} Brier {res['brier']:.4f} (null {res['brier_null']:.4f}) "
                   f"cal slope {res['calibration_slope']:.2f}")
@@ -187,6 +189,9 @@ def main():
     for t, groups in report["subgroup_calibration"].items():
         for g, v in groups.items():
             print(f"  {t:12s} {g:45s} n={v['n']:4d} pred {v['mean_predicted']:.3f} obs {v['observed']:.3f} AUC {v['auc']:.2f}")
+    # The same table for the variant without ancestry: what the ancestry terms are there to correct.
+    report["subgroup_calibration_without_ancestry"] = {
+        t: subgroup_calibration(df, oof_no_ancestry[t], TARGETS[t]) for t in TARGETS}
 
     # Final fit on all data.
     imp = fit_imputers(df)

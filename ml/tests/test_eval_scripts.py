@@ -57,7 +57,8 @@ def test_eval_dalia_counts_and_labels():
     # an inverted recording is turned upright
     d = {"signal": {"wrist": {"BVP": resample(-x, FS, E.BVP_FS)[:, None]}}, "label": np.arange(10.0), "activity": np.r_[
         np.ones(40), 7 * np.ones(200)]}
-    assert np.corrcoef(E.pulse_signal(d)[100:x.size - 100], x[100:-100])[0, 1] > 0.95
+    upright, sign = E.pulse_signal(d)
+    assert sign == -1 and np.corrcoef(upright[100:x.size - 100], x[100:-100])[0, 1] > 0.95
     # label i describes [2 i, 2 i + 8] s: centre 4 + 2 i
     hr, act = E.labels_at(d, np.array([4.0, 5.2, 12.0, 21.9, 30.0]))
     assert hr[:4].tolist() == [0.0, 1.0, 4.0, 9.0] and np.isnan(hr[4])

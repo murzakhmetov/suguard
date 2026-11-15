@@ -5,8 +5,10 @@ of daily activities (sitting, stairs, table soccer, cycling, driving, lunch,
 walking, working) with an Empatica E4 on the wrist and ECG-derived reference
 heart rate for 8-s windows (2-s shift).
 
-    wget https://archive.ics.uci.edu/static/public/495/ppg+dalia.zip && unzip ppg+dalia.zip && unzip -q PPG_FieldStudy.zip
-    python scripts/eval_dalia.py --root PPG_FieldStudy --out models/metrics
+    python scripts/eval_dalia.py --root <folder that holds S1/S1.pkl ... S15/S15.pkl> --out models/metrics
+
+(The UCI download is an archive that contains another archive; the Colab
+notebook unpacks both and finds the folder.)
 
 Two evaluations, written to dalia_hr_eval.json:
 
@@ -18,9 +20,11 @@ Two evaluations, written to dalia_hr_eval.json:
     shown can be trusted" on motion that was not simulated.
 
 ``spectral_tracking``  Heart rate of every window from the spectral peak,
-    with and without the denoiser, no checks. For comparison with published
-    results on this dataset: ~15-20 bpm MAE for classical spectral trackers
-    without accelerometer, ~7.7 bpm for DeepPPG with accelerometer (Reiss 2019).
+    with and without the denoiser, no checks, every window scored. For a
+    rough comparison only: the dataset paper (Reiss et al. 2019) reports a
+    mean absolute error of about 7.7 bpm for its CNN ensemble and of 15-20
+    bpm for two earlier spectral methods; all of those also use the wrist
+    accelerometer, which this pipeline does not have.
 
 Caveats. The E4 records one (green) channel in arbitrary units, not raw
 red/IR counts, so the recording is turned into MAX30102-like counts with
@@ -28,8 +32,10 @@ assumptions: the red channel is a copy of the IR one at a fixed ratio (so the
 checks that compare the two wavelengths pass trivially and the network
 cannot use the red/IR motion cue it was built around), and the quietest
 quarter of each recording is given a pulse amplitude of 1 % of the light
-level (which the amplitude checks then refer to). Read the result as a lower
-bound on what the two-wavelength sensor can reject.
+level (which the amplitude checks then refer to). Which way up the E4 signal
+is, is decided per subject with the ECG reference (the way in which the beat
+detector agrees with it in more windows) and written to the report. Read
+the result as a lower bound on what the two-wavelength sensor can reject.
 """
 
 from __future__ import annotations
@@ -47,7 +53,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from suguard_ml.config import ADC_MAX, FS, WINDOW  # noqa: E402
 from suguard_ml.models.denoiser import Denoiser  # noqa: E402
 from suguard_ml.pipeline import SuGuardPipeline  # noqa: E402
-from suguard_ml.signal.beats import spectral_hr  # noqa: E402
+from suguard_ml.signal.beats import pulse_polarity, spectral_hr  # noqa: E402
 from suguard_ml.signal.filters import bandpass, resample  # noqa: E402
 
 ACTIVITIES = {0: "transient", 1: "sitting", 2: "stairs", 3: "table_soccer", 4: "cycling", 5: "driving",
@@ -67,30 +73,41 @@ def load_subject(pkl: Path) -> dict:
         return pickle.load(fh, encoding="latin1")
 
 
-def pulse_signal(d: dict) -> np.ndarray:
-    """The wrist BVP at FS, band-limited, systolic peaks pointing up."""
-    bvp = np.asarray(d["signal"]["wrist"]["BVP"], dtype=float).ravel()
-    x = resample(bandpass(bvp, BVP_FS, 0.4, 12.0), BVP_FS, FS)
-    # A pulse rises faster than it falls: most samples of an upright pulse wave are falling.
-    return -x if np.mean(np.diff(x) > 0) > 0.5 else x
-
-
 def labels_at(d: dict, centres_s: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """Reference heart rate and activity for windows centred at ``centres_s``."""
-    label = np.asarray(d["label"], dtype=float).ravel()
-    act = np.asarray(d.get("activity", np.zeros(1)), dtype=float).ravel()
+    """Reference heart rate (NaN where there is none) and activity for windows centred at ``centres_s``."""
+    centres_s = np.asarray(centres_s, dtype=float)
+    label = np.asarray(d.get("label", np.zeros(0)), dtype=float).ravel()
+    act = np.asarray(d.get("activity", np.zeros(0)), dtype=float).ravel()
     i = np.round((centres_s - LABEL_CENTRE_S) / LABEL_SHIFT_S).astype(int)
     ok = (i >= 0) & (i < label.size)
-    hr = np.where(ok, label[np.clip(i, 0, label.size - 1)], np.nan)
-    a = act[np.clip((centres_s * ACTIVITY_FS).astype(int), 0, act.size - 1)] if act.size > 1 else np.zeros(i.size)
+    hr = np.full(centres_s.size, np.nan)
+    hr[ok] = label[i[ok]]
+    a = act[np.clip((centres_s * ACTIVITY_FS).astype(int), 0, act.size - 1)] if act.size > 1 else np.zeros(centres_s.size)
     return hr, a
+
+
+def pulse_signal(d: dict) -> tuple[np.ndarray, int]:
+    """The wrist BVP at FS, band-limited, systolic peaks pointing up; and the
+    sign that was applied to get it that way (see suguard_ml.signal.beats.pulse_polarity)."""
+    bvp = np.asarray(d["signal"]["wrist"]["BVP"], dtype=float).ravel()
+    bad = ~np.isfinite(bvp)
+    if bvp.size < 2 or bad.all():
+        return np.zeros(int(bvp.size * FS / BVP_FS)), 1
+    if bad.any():                               # one NaN would spread over the whole zero-phase filter
+        idx = np.arange(bvp.size)
+        bvp = np.interp(idx, idx[~bad], bvp[~bad])
+    x = resample(bandpass(bvp, BVP_FS, 0.4, 12.0), BVP_FS, FS)
+    n = x.size // WINDOW
+    ref, _ = labels_at(d, (np.arange(n) * WINDOW + WINDOW / 2) / FS)
+    sign = pulse_polarity(x, FS, ref_bpm=ref, window=WINDOW)
+    return sign * x, sign
 
 
 def to_counts(x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Raw red and IR counts (as the MAX30102 would deliver them) from the pulse signal."""
     n = x.size // WINDOW
     amp = np.array([np.percentile(w, 97) - np.percentile(w, 3) for w in x[:n * WINDOW].reshape(n, WINDOW)])
-    rest = float(np.percentile(amp[amp > 0], 25)) if np.any(amp > 0) else 1.0
+    rest = float(np.percentile(amp[amp > 0], 25)) if np.any(amp > 0) else 1.0   # nothing to scale: any value will do
     bv = np.clip(REST_PI * x / rest, -0.95, 0.95)             # more blood, less light
     ir = np.clip(np.round(IR_DC * (1.0 - bv)), 0, ADC_MAX)
     red = np.clip(np.round(RED_DC * (1.0 - R_RATIO * bv)), 0, ADC_MAX)
@@ -100,16 +117,20 @@ def to_counts(x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 def gated_windows(d: dict, pipes: dict[str, SuGuardPipeline]) -> dict:
     """Per path: absolute heart-rate error of every consecutive 10.24-s window
     (NaN where the pipeline gave no value), with the activity of the window."""
-    red, ir = to_counts(pulse_signal(d))
+    x, sign = pulse_signal(d)
+    red, ir = to_counts(x)
     starts = np.arange(0, ir.size - WINDOW + 1, WINDOW)
     ref, act = labels_at(d, (starts + WINDOW / 2) / FS)
     keep = np.isfinite(ref)
     starts, ref, act = starts[keep], ref[keep], act[keep]
-    out = {"activity": act}
+    out = {"activity": act, "polarity": sign}
     for name, pipe in pipes.items():
         err = np.full(starts.size, np.nan)
         for k, s in enumerate(starts):
-            hr = pipe.analyze(red[s:s + WINDOW], ir[s:s + WINDOW], fs=FS)["heart_rate"]["bpm"]
+            try:
+                hr = pipe.analyze(red[s:s + WINDOW], ir[s:s + WINDOW], fs=FS)["heart_rate"]["bpm"]
+            except ValueError:                  # a window the pipeline refuses to analyse gives no value
+                hr = None
             if hr is not None:
                 err[k] = abs(hr - ref[k])
         out[name] = err
@@ -128,7 +149,8 @@ def coverage_and_error(err: np.ndarray) -> dict:
 
 def summarise_gated(per_subject: dict[str, dict], paths: list[str]) -> dict:
     out = {"assumptions": {"rest_pulse_amplitude_ac_dc": REST_PI, "red_ir_ratio": R_RATIO,
-                           "note": "single green channel: red is a copy of IR, red/IR checks pass trivially"}}
+                           "note": "single green channel: red is a copy of IR, red/IR checks pass trivially"},
+           "polarity_by_subject": {s: int(r["polarity"]) for s, r in per_subject.items()}}
     act = np.concatenate([r["activity"] for r in per_subject.values()]) if per_subject else np.zeros(0)
     for p in paths:
         err = np.concatenate([r[p] for r in per_subject.values()]) if per_subject else np.zeros(0)
@@ -145,11 +167,11 @@ def summarise_gated(per_subject: dict[str, dict], paths: list[str]) -> dict:
 
 def spectral_errors(d: dict, den: Denoiser | None) -> dict:
     """Spectral heart rate of every reference window, no reliability checks."""
-    x = pulse_signal(d)
-    label = np.asarray(d["label"], dtype=float).ravel()
-    y_hat = {"spectral": [], "spectral_tracked": [], "denoised_tracked": []}
+    x, _ = pulse_signal(d)
+    label = np.asarray(d.get("label", np.zeros(0)), dtype=float).ravel()
+    dn = den.denoise_bv(x, R_RATIO * x, FS) if (den is not None and x.size >= WINDOW) else None
+    y_hat = {k: [] for k in ["spectral", "spectral_tracked"] + (["denoised_tracked"] if dn is not None else [])}
     p_s, p_d = None, None
-    dn = den.denoise_bv(x, R_RATIO * x, FS) if den is not None else None
     for i in range(label.size):
         c = (LABEL_CENTRE_S + LABEL_SHIFT_S * i) * FS
         a, b = int(c - WINDOW / 2), int(c + WINDOW / 2)
@@ -180,6 +202,16 @@ def spectral_errors(d: dict, den: Denoiser | None) -> dict:
     return out
 
 
+def gated_line(name: str, r: dict) -> str:
+    if not r["windows"]:
+        return f"{name:10s} no window with a reference heart rate"
+    if r["hr_mae"] is None:
+        return f"{name:10s} no heart rate given in any of {r['windows']} windows"
+    return (f"{name:10s} heart rate given in {100 * r['hr_coverage']:.0f} % of {r['windows']} windows; "
+            f"MAE {r['hr_mae']:.2f} bpm, p95 {r['hr_p95']:.1f}, errors > 10 bpm: {r['hr_errors_over_10bpm']} "
+            f"({100 * r['share_of_given_values_over_10bpm']:.1f} % of the given values)")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", required=True, help="PPG_FieldStudy folder with S1..S15")
@@ -204,9 +236,10 @@ def main():
         d = load_subject(pkl)
         gated[pkl.stem] = gated_windows(d, pipes)
         spectral[pkl.stem] = spectral_errors(d, den)
-        line = {p: "%.0f %% given, MAE %s" % (100 * np.isfinite(gated[pkl.stem][p]).mean(),
-                                               "%.1f" % np.nanmean(gated[pkl.stem][p])
-                                               if np.isfinite(gated[pkl.stem][p]).any() else "-") for p in pipes}
+        line = {p: ("%.0f %% given, MAE %s" % (100 * np.isfinite(gated[pkl.stem][p]).mean(),
+                                                "%.1f" % np.nanmean(gated[pkl.stem][p])
+                                                if np.isfinite(gated[pkl.stem][p]).any() else "-")
+                    if gated[pkl.stem][p].size else "no window") for p in pipes}
         print(pkl.stem, "gated:", line, "| spectral MAE:", {k: round(v["mae"], 1) for k, v in spectral[pkl.stem].items()},
               flush=True)
 
@@ -216,15 +249,12 @@ def main():
         "spectral_tracking": {**spectral, "mean_mae": {
             m: float(np.mean([r[m]["mae"] for r in spectral.values() if m in r])) for m in methods}},
     }
-    for p in pipes:
-        r = report["gated_pipeline"][p]
-        print(f"{p:10s} heart rate given in {100 * r['hr_coverage']:.0f} % of {r['windows']} windows; "
-              + (f"MAE {r['hr_mae']:.2f} bpm, p95 {r['hr_p95']:.1f}, errors > 10 bpm: {r['hr_errors_over_10bpm']} "
-                 f"({100 * r['share_of_given_values_over_10bpm']:.1f} % of the given values)"
-                 if r["hr_mae"] is not None else "no value given"))
-    print("spectral tracking, mean MAE (bpm):", report["spectral_tracking"]["mean_mae"])
-    Path(a.out).mkdir(parents=True, exist_ok=True)
+    Path(a.out).mkdir(parents=True, exist_ok=True)              # written first: nothing below can lose the run
     (Path(a.out) / "dalia_hr_eval.json").write_text(json.dumps(report, indent=2))
+    print("polarity by subject:", report["gated_pipeline"]["polarity_by_subject"])
+    for p in pipes:
+        print(gated_line(p, report["gated_pipeline"][p]))
+    print("spectral tracking, mean MAE (bpm):", report["spectral_tracking"]["mean_mae"])
 
 
 if __name__ == "__main__":

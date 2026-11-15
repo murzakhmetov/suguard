@@ -185,10 +185,7 @@ static void validate_intervals(SgBeats* b, double* tmp) {
   }
   b->has_hr = b->n_valid >= 2;
   b->hr_bpm = 0.0;
-  if (b->has_hr) {
-    sg_sort(tmp, b->n_valid);
-    b->hr_bpm = 60.0 / sg_median_sorted(tmp, b->n_valid);
-  }
+  if (b->has_hr) b->hr_bpm = 60.0 / sg_mean(tmp, b->n_valid);   // the valid intervals, in order (np.mean)
 }
 
 // beats._find_onsets: the beat foot is the minimum within 0.6 s before each peak.
@@ -658,4 +655,11 @@ void sg_vitals_from_signals(const double* ir_bv, const double* red_bv, const dou
   out->has_r = sp.ratio.valid;
   out->r_ratio = sp.ratio.r;
   out->spo2_reason = sp.reason;
+  if (out->reliable && !out->has_spo2) {
+    if (sp.reason != SG_SPO2_OK) {
+      out->spo2_withheld = sp.reason;
+    } else {
+      out->spo2_withheld = red_supported ? SG_SPO2_RED_IR_INCONSISTENT : SG_SPO2_RED_DENOISER_MISMATCH;
+    }
+  }
 }

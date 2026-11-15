@@ -413,5 +413,187 @@
         "auc": 0.791036329644788
       }
     }
+  },
+  "subgroup_calibration_without_ancestry": {
+    "dysglycemia": {
+      "ethnicity:Non-Hispanic Black": {
+        "n": 977,
+        "mean_predicted": 0.3640810917036234,
+        "observed": 0.45752302968270214,
+        "calibration_slope": 0.879639782519678,
+        "calibration_intercept": 0.41545853513530023,
+        "auc": 0.7417859102612806
+      },
+      "ethnicity:Non-Hispanic Asian": {
+        "n": 608,
+        "mean_predicted": 0.27626894540016655,
+        "observed": 0.3832236842105263,
+        "calibration_slope": 1.3505497394497463,
+        "calibration_intercept": 0.8757766770993678,
+        "auc": 0.7912331902718168
+      },
+      "ethnicity:Mexican American": {
+        "n": 586,
+        "mean_predicted": 0.3082590487647511,
+        "observed": 0.29180887372013653,
+        "calibration_slope": 1.009841118233097,
+        "calibration_intercept": -0.0875856786779415,
+        "auc": 0.747579792855633
+      },
+      "ethnicity:Non-Hispanic White": {
+        "n": 1514,
+        "mean_predicted": 0.36700497380170133,
+        "observed": 0.2767503302509908,
+        "calibration_slope": 1.1388857085517243,
+        "calibration_intercept": -0.4630722542476049,
+        "auc": 0.7587504495373852
+      },
+      "ethnicity:Other Race - Including Multi-Racial": {
+        "n": 219,
+        "mean_predicted": 0.30774440056128466,
+        "observed": 0.2968036529680365,
+        "calibration_slope": 1.1474620950991072,
+        "calibration_intercept": 0.02212315671446902,
+        "auc": 0.7788211788211788
+      },
+      "ethnicity:Other Hispanic": {
+        "n": 414,
+        "mean_predicted": 0.3385472170367998,
+        "observed": 0.321256038647343,
+        "calibration_slope": 1.3231966758658928,
+        "calibration_intercept": 0.037014260865447235,
+        "auc": 0.7978487143124715
+      },
+      "age:18-39": {
+        "n": 1671,
+        "mean_predicted": 0.1422870278848052,
+        "observed": 0.1436265709156194,
+        "calibration_slope": 1.094357605962257,
+        "calibration_intercept": 0.1618641871499483,
+        "auc": 0.7287561146051712
+      },
+      "age:40-59": {
+        "n": 1341,
+        "mean_predicted": 0.39673860660190324,
+        "observed": 0.39671886651752425,
+        "calibration_slope": 1.132687218020348,
+        "calibration_intercept": 0.05218694765927279,
+        "auc": 0.66263348420495
+      },
+      "age:60-80": {
+        "n": 1306,
+        "mean_predicted": 0.534250041988634,
+        "observed": 0.5329249617151608,
+        "calibration_slope": 0.6841921382141264,
+        "calibration_intercept": 0.03637968880332885,
+        "auc": 0.5760622762389298
+      },
+      "sex:male": {
+        "n": 2029,
+        "mean_predicted": 0.3547786924657914,
+        "observed": 0.35485460818137016,
+        "calibration_slope": 0.9056561744720945,
+        "calibration_intercept": -0.040186426092340854,
+        "auc": 0.7278960826754944
+      },
+      "sex:female": {
+        "n": 2289,
+        "mean_predicted": 0.3266372576988759,
+        "observed": 0.32678025338575795,
+        "calibration_slope": 1.092141715358702,
+        "calibration_intercept": 0.04848686833624073,
+        "auc": 0.7683790996193179
+      }
+    },
+    "diabetes": {
+      "ethnicity:Non-Hispanic Black": {
+        "n": 977,
+        "mean_predicted": 0.04254481791551851,
+        "observed": 0.05424769703172978,
+        "calibration_slope": 0.8571173031854488,
+        "calibration_intercept": -0.12405328335366744,
+        "auc": 0.742097525116393
+      },
+      "ethnicity:Non-Hispanic Asian": {
+        "n": 608,
+        "mean_predicted": 0.02420816348292508,
+        "observed": 0.04276315789473684,
+        "calibration_slope": 1.2532770781115499,
+        "calibration_intercept": 1.450483310879571,
+        "auc": 0.7648691514670897
+      },
+      "ethnicity:Mexican American": {
+        "n": 586,
+        "mean_predicted": 0.03115377067755143,
+        "observed": 0.03754266211604096,
+        "calibration_slope": 1.1893588053100248,
+        "calibration_intercept": 0.7689126731335444,
+        "auc": 0.7888459058671824
+      },
+      "ethnicity:Non-Hispanic White": {
+        "n": 1514,
+        "mean_predicted": 0.038248875088440465,
+        "observed": 0.0178335535006605,
+        "calibration_slope": 1.1719678287817803,
+        "calibration_intercept": -0.3271510273837278,
+        "auc": 0.7667438790505366
+      },
+      "ethnicity:Other Race - Including Multi-Racial": {
+        "n": 219,
+        "mean_predicted": 0.03320742399992277,
+        "observed": 0.0365296803652968,
+        "calibration_slope": 1.0631529927568588,
+        "calibration_intercept": 0.2879228646236214,
+        "auc": 0.7914691943127962
+      },
+      "ethnicity:Other Hispanic": {
+        "n": 414,
+        "mean_predicted": 0.035541273728716925,
+        "observed": 0.043478260869565216,
+        "calibration_slope": 1.139503790041475,
+        "calibration_intercept": 0.6219841122599418,
+        "auc": 0.7745510662177328
+      },
+      "age:18-39": {
+        "n": 1671,
+        "mean_predicted": 0.01192177229055099,
+        "observed": 0.011370436864153202,
+        "calibration_slope": 1.1369623175940105,
+        "calibration_intercept": 0.48687644768727334,
+        "auc": 0.8009748948642793
+      },
+      "age:40-59": {
+        "n": 1341,
+        "mean_predicted": 0.046430135767355454,
+        "observed": 0.049962714392244596,
+        "calibration_slope": 0.9344552080564669,
+        "calibration_intercept": -0.10491385056343211,
+        "auc": 0.6853136202816373
+      },
+      "age:60-80": {
+        "n": 1306,
+        "mean_predicted": 0.05532325928036872,
+        "observed": 0.05206738131699847,
+        "calibration_slope": 0.9375239173199813,
+        "calibration_intercept": -0.23358405964458193,
+        "auc": 0.6729069656941937
+      },
+      "sex:male": {
+        "n": 2029,
+        "mean_predicted": 0.03165232979677302,
+        "observed": 0.031542631838344014,
+        "calibration_slope": 0.8514657628985545,
+        "calibration_intercept": -0.4627491187934687,
+        "auc": 0.7296517175572519
+      },
+      "sex:female": {
+        "n": 2289,
+        "mean_predicted": 0.03941183618350523,
+        "observed": 0.039318479685452164,
+        "calibration_slope": 1.0864640315506466,
+        "calibration_intercept": 0.23757183164320975,
+        "auc": 0.7696629781213682
+      }
+    }
   }
 }

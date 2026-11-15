@@ -1,6 +1,8 @@
 """Generate simulated MAX30102 windows for the denoiser.
 
-    python scripts/make_denoiser_dataset.py --out data/denoiser --train 150000 --val 4000 --test 4000
+    python scripts/make_denoiser_dataset.py --out data/denoiser --train 200000 --val 4000 --test 4000
+
+(the defaults; the shipped models were trained on exactly this set)
 
 Each split uses a disjoint seed range, so no window appears twice.
 """
@@ -49,7 +51,7 @@ def make_split(name: str, n: int, out: Path, workers: int):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="data/denoiser")
-    ap.add_argument("--train", type=int, default=150_000)
+    ap.add_argument("--train", type=int, default=200_000)
     ap.add_argument("--val", type=int, default=4_000)
     ap.add_argument("--test", type=int, default=4_000)
     ap.add_argument("--workers", type=int, default=4)

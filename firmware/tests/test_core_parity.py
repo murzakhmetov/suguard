@@ -49,11 +49,12 @@ with warnings.catch_warnings():  # the marker is not registered in conftest.py
 REASON_BITS = {"no_contact": 0, "adc_saturated": 1, "led_current_too_high": 2, "weak_pulse": 3,
                "implausible_amplitude": 4, "motion": 5, "irregular_or_noisy": 6, "red_ir_inconsistent": 7,
                "denoiser_mismatch": 8}
-SPO2_REASONS = {None: 0, "no_common_pulse": 1, "spo2_low_red_ir_agreement": 2, "r_out_of_calibration_range": 3}
+SPO2_REASONS = {None: 0, "no_common_pulse": 1, "spo2_low_red_ir_agreement": 2, "r_out_of_calibration_range": 3,
+                "red_denoiser_mismatch": 4, "red_ir_inconsistent": 5}
 
 # Outputs of core_cli by the precision they must reach.
 EXACT = ["n", "finger_detected", "sensor_reasons", "reliable", "reasons", "has_hr", "n_beats", "n_valid_ibi",
-         "has_spo2", "has_r", "spo2_reason", "q_usable", "q_usable_spo2", "q_reasons"]
+         "has_spo2", "has_r", "spo2_reason", "spo2_withheld", "q_usable", "q_usable_spo2", "q_reasons"]
 # Double-precision arithmetic in the same order as numpy/scipy: 1e-9 relative.
 TIGHT = ["saturated_fraction", "ir_dc", "red_dc", "pi_in", "hr_bpm", "spo2", "r_ratio", "q_perfusion_index",
          "q_template_corr", "q_red_ir_corr", "q_beat_amp_cv", "q_valid_ibi_fraction", "q_r_spread",
@@ -128,7 +129,7 @@ def reference(case: Case) -> dict:
         reliable=v.reliable, reasons=reason_mask(v.reasons), has_hr=v.hr_bpm is not None, hr_bpm=num(v.hr_bpm),
         n_beats=v.beats.peaks.size, n_valid_ibi=int(v.beats.valid_ibi.sum()),
         has_spo2=v.spo2_ok, spo2=num(v.spo2), has_r=v.sp.r_ratio is not None,
-        r_ratio=num(v.sp.r_ratio), spo2_reason=SPO2_REASONS[v.sp.reason],
+        r_ratio=num(v.sp.r_ratio), spo2_reason=SPO2_REASONS[v.sp.reason], spo2_withheld=SPO2_REASONS[v.spo2_reason],
         support_ir_corr=support[0], support_ir_gain=support[1], support_red_corr=support[2],
         support_red_gain=support[3], denoised=case.denoised is not None,
         q_perfusion_index=q.perfusion_index, q_template_corr=q.template_corr, q_spectral_purity=q.spectral_purity,

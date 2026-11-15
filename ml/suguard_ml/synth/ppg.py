@@ -11,8 +11,12 @@ Model of one channel (counts):
 
 * ``bv``: pulsatile blood-volume signal (AC/DC units): a train of beats with
   respiratory sinus arrhythmia, Mayer waves, jitter and occasional ectopic
-  beats; each beat is a skewed systolic wave plus a reflected/diastolic wave
-  and a windkessel decay, with respiratory amplitude and baseline modulation.
+  beats, with respiratory amplitude and baseline modulation. The shape of a
+  beat comes from a deliberately wide family (``sample_morphology``): a
+  skewed systolic wave plus a reflected/diastolic wave and a windkessel decay
+  (a fingertip-like pulse), the same pulse low-passed down to little more
+  than its fundamental (as the tissue does at the wrist), or a smooth
+  harmonic series with one dominant peak per beat.
   The red channel's pulsatile part is the IR one scaled by the ratio of
   ratios R that corresponds to the simulated SpO2.
 * ``m``: motion modulation of the detected light (periodic arm swing / gait,
@@ -31,7 +35,7 @@ import numpy as np
 from scipy import ndimage, signal
 
 from ..config import ADC_MAX, FS, HR_MAX_BPM, HR_MIN_BPM, SPO2_COEFFS, WINDOW
-from ..signal.filters import bandpass, preprocess
+from ..signal.filters import bandpass, lowpass, preprocess
 
 
 # ---------------------------------------------------------------------------
@@ -76,6 +80,8 @@ class Morphology:
     s2: float          # width of the reflected wave (s)
     a3: float          # windkessel decay amplitude
     tau: float         # windkessel time constant (s)
+    lp_hz: float | None = None       # cut-off of a low-pass on the pulse train (None: the wave model as it is)
+    harmonics: tuple | None = None   # (sign, amplitudes, phases) of harmonics 2..4: a harmonic-series pulse instead
 
 
 @dataclass
@@ -104,13 +110,53 @@ def _loguniform(rng, lo, hi):
     return float(np.exp(rng.uniform(np.log(lo), np.log(hi))))
 
 
-def sample_morphology(rng: np.random.Generator) -> Morphology:
+# Shares of the three pulse-shape families: the wave model as it is, the wave
+# model behind a low-pass, a harmonic series.
+SHAPE_SHARES = (0.40, 0.45, 0.15)
+PULSE_PAD_S = 1.0          # margin simulated around the window for the low-pass (beat_train covers 2 s)
+
+
+def _sample_harmonics(rng: np.random.Generator) -> tuple:
+    """A smooth pulse as fundamental + harmonics 2..4 with random phases:
+    ``sign * (sin(th) + sum a_k sin(k th + p_k))``. Drawn until the shape has
+    one dominant peak per beat; oriented so that the steeper flank rises
+    (systole)."""
+    th = np.linspace(0.0, 2 * np.pi, 240, endpoint=False)
+    for _ in range(30):
+        amps = np.array([rng.uniform(0, 0.45), rng.uniform(0, 0.2), rng.uniform(0, 0.08)])
+        phases = rng.uniform(0, 2 * np.pi, 3)
+        x = np.sin(th) + sum(a * np.sin((k + 2) * th + p) for k, (a, p) in enumerate(zip(amps, phases)))
+        d = np.diff(np.concatenate([x, x[:1]]))
+        sign = 1.0 if d.max() >= -d.min() else -1.0
+        x = sign * x
+        # local maxima of the periodic shape, by height above the minimum
+        peaks = np.flatnonzero((x > np.roll(x, 1)) & (x >= np.roll(x, -1)))
+        heights = np.sort(x[peaks] - x.min())[::-1]
+        if heights.size == 1 or heights[1] < 0.6 * heights[0]:
+            return sign, amps, phases
+    return 1.0, np.array([0.2, 0.0, 0.0]), np.array([np.pi, 0.0, 0.0])
+
+
+def sample_morphology(rng: np.random.Generator, hr_bpm: float = 75.0) -> Morphology:
+    """Shape of the pulse in one window.
+
+    The shape matters to a model that has to tell a pulse from motion. A
+    fingertip pulse has a sharp systolic peak and a visible reflected wave; a
+    wrist reflectance pulse at red/IR is often little more than a fundamental
+    with a weak second harmonic, which is also what periodic motion looks
+    like. Networks trained on the sharp kind alone took the smooth kind for
+    motion: they accepted 100 % of clean windows of the wave model, 28-68 %
+    with the content above 3.5 Hz removed and 1-12 % above 2.5 Hz, where the
+    classical path kept 100 %. So the family is wide on purpose, and what is
+    left to tell motion from a pulse is what does not depend on the shape:
+    the red/IR proportion and the regularity over the window.
+    """
     # "stiffness" in [0, 1]: young/compliant (0) -> old/stiff (1). Stiff
     # arteries bring the reflected wave forward and make it larger, which
     # blurs the dicrotic notch, as in real ageing.
     stiff = rng.beta(2.0, 2.0)
     s1l = rng.uniform(0.03, 0.06)
-    return Morphology(
+    m = Morphology(
         c1=max(rng.uniform(0.08, 0.14), 3.0 * s1l),
         s1l=s1l,
         s1r=rng.uniform(0.07, 0.14),
@@ -120,6 +166,13 @@ def sample_morphology(rng: np.random.Generator) -> Morphology:
         a3=rng.uniform(0.0, 0.3),
         tau=rng.uniform(0.2, 0.6),
     )
+    u = rng.random()
+    if u >= SHAPE_SHARES[0] + SHAPE_SHARES[1]:
+        m.harmonics = _sample_harmonics(rng)
+    elif u >= SHAPE_SHARES[0]:
+        # From "the second harmonic is still there" (1.25 x the pulse rate) to "nearly the wave model" (8 Hz).
+        m.lp_hz = _loguniform(rng, max(1.25 * hr_bpm / 60.0, 1.2), 8.0)
+    return m
 
 
 def beat_train(t0: float, t1: float, hr_bpm: float, rng: np.random.Generator, *,
@@ -155,26 +208,40 @@ def beat_train(t0: float, t1: float, hr_bpm: float, rng: np.random.Generator, *,
 
 def pulse_signal(t: np.ndarray, onsets: np.ndarray, rrs: np.ndarray, morph: Morphology,
                  rng: np.random.Generator, *, resp_hz: float, am_resp: float) -> np.ndarray:
-    """Sum of per-beat waveforms, normalised to unit median beat amplitude."""
-    p = np.zeros_like(t)
-    ph = rng.uniform(0, 2 * np.pi)
+    """The pulse waveform at times ``t``, normalised to unit median beat amplitude."""
     fs = 1.0 / (t[1] - t[0])
-    for t_on, rr in zip(onsets, rrs):
-        amp = 1.0 + am_resp * np.sin(2 * np.pi * resp_hz * t_on + ph) + 0.03 * rng.standard_normal()
-        j = 1.0 + 0.03 * rng.standard_normal(4)  # per-beat shape jitter
-        mu1 = morph.c1 * j[0] + 0.05 * rr
-        mu2 = mu1 + morph.dtr * j[1] * (0.75 + 0.25 * min(rr / 0.8, 1.5))
-        i0 = max(int((t_on - t[0] - 0.05) * fs), 0)
-        i1 = min(int((t_on - t[0] + 3.0) * fs) + 1, t.size)
-        if i1 <= i0:
-            continue
-        tau = t[i0:i1] - t_on
-        s1 = np.where(tau < mu1, morph.s1l, morph.s1r * j[2])
-        g1 = np.exp(-0.5 * ((tau - mu1) / s1) ** 2)
-        g2 = morph.a2 * j[3] * np.exp(-0.5 * ((tau - mu2) / morph.s2) ** 2)
-        gate = 1.0 / (1.0 + np.exp(-(tau - mu1) / 0.02))
-        g3 = morph.a3 * gate * np.exp(-np.clip(tau - mu1, 0, None) / morph.tau)
-        p[i0:i1] += amp * (g1 + g2 + g3)
+    pad = int(round(PULSE_PAD_S * fs)) if (morph.lp_hz or morph.harmonics) else 0
+    tt = t[0] + (np.arange(t.size + 2 * pad) - pad) / fs
+    ph = rng.uniform(0, 2 * np.pi)
+    if morph.harmonics is not None:
+        sign, amps, phases = morph.harmonics
+        amp = 1.0 + am_resp * np.sin(2 * np.pi * resp_hz * onsets + ph) + 0.03 * rng.standard_normal(onsets.size)
+        th = 2 * np.pi * np.interp(tt, onsets, np.arange(onsets.size))          # one turn per beat
+        p = np.sin(th)
+        for k, (a, q) in enumerate(zip(amps, phases)):
+            p = p + a * np.sin((k + 2) * th + q)
+        p = sign * p * np.interp(tt, onsets, amp)
+    else:
+        p = np.zeros_like(tt)
+        for t_on, rr in zip(onsets, rrs):
+            amp = 1.0 + am_resp * np.sin(2 * np.pi * resp_hz * t_on + ph) + 0.03 * rng.standard_normal()
+            j = 1.0 + 0.03 * rng.standard_normal(4)  # per-beat shape jitter
+            mu1 = morph.c1 * j[0] + 0.05 * rr
+            mu2 = mu1 + morph.dtr * j[1] * (0.75 + 0.25 * min(rr / 0.8, 1.5))
+            i0 = max(int((t_on - tt[0] - 0.05) * fs), 0)
+            i1 = min(int((t_on - tt[0] + 3.0) * fs) + 1, tt.size)
+            if i1 <= i0:
+                continue
+            tau = tt[i0:i1] - t_on
+            s1 = np.where(tau < mu1, morph.s1l, morph.s1r * j[2])
+            g1 = np.exp(-0.5 * ((tau - mu1) / s1) ** 2)
+            g2 = morph.a2 * j[3] * np.exp(-0.5 * ((tau - mu2) / morph.s2) ** 2)
+            gate = 1.0 / (1.0 + np.exp(-(tau - mu1) / 0.02))
+            g3 = morph.a3 * gate * np.exp(-np.clip(tau - mu1, 0, None) / morph.tau)
+            p[i0:i1] += amp * (g1 + g2 + g3)
+        if morph.lp_hz:
+            p = lowpass(p, fs, morph.lp_hz, order=2)
+    p = p[pad:pad + t.size]
     bp = bandpass(p, fs, 0.4, 12.0)
     scale = np.percentile(bp, 97) - np.percentile(bp, 3)
     return p / max(scale, 1e-9)
@@ -364,7 +431,7 @@ def simulate_window(rng: np.random.Generator | int | None = None, *, n: int = WI
     if hr_bpm is None:
         hr_bpm = float(np.clip(rng.normal(75, 15) if rng.random() < 0.8 else rng.uniform(45, 170), 40, 185))
     resp_hz = rng.uniform(0.12, 0.45)
-    morph = sample_morphology(rng)
+    morph = sample_morphology(rng, hr_bpm)
     onsets, rrs = beat_train(
         t[0], t[-1], hr_bpm, rng, resp_hz=resp_hz,
         rsa=rng.uniform(0.0, 0.06) * (75.0 / hr_bpm), lf=rng.uniform(0.0, 0.04),

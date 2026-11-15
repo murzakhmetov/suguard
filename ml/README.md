@@ -110,11 +110,13 @@ cross-validation; `models/metrics/risk_cv.json`):
 
 Inputs: age, sex, BMI, resting pulse (from the bracelet), physical activity, ancestry (Asian /
 European / other). Without ancestry the model under-estimated Asian participants (0.28 predicted
-vs 0.38 observed) and over-estimated European ones (0.35 vs 0.28); with it both are calibrated
-(0.382 vs 0.383 and 0.277 vs 0.277). A systematic error remains for Black (0.40 vs 0.46) and
-Mexican-American participants (0.34 vs 0.29). The result is in the range reported for screening
-questionnaires (ADA risk test, FINDRISC) and is **not a diagnosis**. NHANES is a US sample: for
-Kazakhstan the calibration has to be confirmed on local data with HbA1c.
+vs 0.38 observed) and over-estimated White ones (0.37 vs 0.28); with it both are calibrated
+(0.382 vs 0.383 and 0.277 vs 0.277; `risk_cv.json` → `subgroup_calibration` and
+`subgroup_calibration_without_ancestry`). Systematic errors of 4–6 points remain for Black
+(0.40 vs 0.46), Mexican-American (0.34 vs 0.29), other Hispanic (0.37 vs 0.32) and multiracial
+participants (0.34 vs 0.30). The result is in the range reported for screening questionnaires
+(ADA risk test, FINDRISC) and is **not a diagnosis**. NHANES is a US sample: for Kazakhstan the
+calibration has to be confirmed on local data with HbA1c.
 
 ## Glucose: what is real and what is not
 
@@ -129,8 +131,8 @@ Kazakhstan the calibration has to be confirmed on local data with HbA1c.
 
   | Cohort (real CGM) | "Population mean" for everyone | Last fingerstick carried forward | Kalman calibration on fingersticks only |
   |---|---|---|---|
-  | 19 people without a diabetes diagnosis, normal to diabetic on testing (Hall 2018) | MARD **16.9 %** | 17.8–20.4 % | **15.1–16.1 %** |
-  | 5 people, type 2 diabetes (Broll 2021) | MARD 35 % | 21.5–27.7 % | **21.6–21.8 %** |
+  | 19 people without a diabetes diagnosis, normal to diabetic on testing (Hall 2018) | MARD **16.8–16.9 %** | 17.8–20.4 % | **15.3–16.4 %** |
+  | 5 people, type 2 diabetes (Broll 2021) | MARD 35 % | 21.5–27.7 % | **21.7–22.7 %** |
 
   An "accuracy of 83 %" (100 − MARD) in people without marked diabetes is what a constant gives.
 * `scripts/train_glucose.py` therefore reports three protocols (a random split, only to show how
@@ -138,13 +140,18 @@ Kazakhstan the calibration has to be confirmed on local data with HbA1c.
   days, scored on later days), baselines without PPG (level from fingersticks, last fingerstick,
   personal time-of-day profile), two controls ("context only" and "PPG shuffled within a person"),
   bootstrap confidence intervals over people and a locked hold-out group. A model is marked
-  `validated` **only** if: the data come from the SuGuard bracelet; ≥ 20 people; at least 80 % of
-  them could be scored; ≥ 10 % better than the best baseline with the lower confidence bound above
-  zero; PPG beats both controls; MARD ≤ 15 % and Clarke A+B ≥ 99 % after calibration; and the same
-  holds on the locked hold-out people. A check that cannot be run counts as failed.
-* Without a validated model the API **gives no glucose number**: status `unavailable`, or, after
-  three fingersticks, `calibration_only` with the explicit note "the average of your fingerstick
-  readings, not a reading from the bracelet".
+  `validated` **only** if: the table is labelled as data from the SuGuard bracelet; ≥ 20 people;
+  at least 80 % of them could be scored; ≥ 10 % better than the best baseline with the lower
+  confidence bound above zero; PPG beats both controls; MARD ≤ 15 % and Clarke A+B ≥ 99 % after
+  calibration; and, on the locked hold-out people, the same MARD and Clarke bar, at least 80 % of
+  them scored and a gain over the best baseline (the controls and the confidence bound are not
+  repeated there: the group is small). A check that cannot be run counts as failed.
+* **No glucose number without a validated model.** With no model installed (today) the API answers
+  `unavailable`, or, after three fingersticks, `calibration_only` with the note "this is the
+  average of your recent fingerstick readings, not a reading from the bracelet". A model that is
+  installed but not validated answers `not_validated`, without a number; only with
+  `SUGUARD_EXPERIMENTAL_GLUCOSE=1` set on the server (research with informed participants) does it
+  return its estimate, as status `experimental`.
 * A positive and a negative control (`tests/test_models.py`) prove that this logic finds a real
   signal and does not mistake time of day or noise for one.
 
@@ -219,8 +226,9 @@ Limits: body ≤ 2 MB, ≤ 60,000 samples per channel, sample rates from 25 to 1
 50 Hz), times in unix seconds.
 Set `SUGUARD_STATE_KEY` (a long random string) in production: the server then signs the calibration
 states it hands out and refuses any other; without it a client can send a state it made up
-(values are still range-checked). The API has no user authentication of its own — put it behind
-your backend.
+(values are still range-checked). Leave `SUGUARD_EXPERIMENTAL_GLUCOSE` unset unless you run a
+study (see above); `/health` shows both settings. The API has no user authentication of its
+own — put it behind your backend.
 
 ## Recommendations for the app and the website
 

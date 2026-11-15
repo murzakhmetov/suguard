@@ -41,3 +41,6 @@ size_t sg_pipeline_static_bytes(void);
 
 // Human-readable names of the SgReason bits set in `reasons`, comma separated.
 void sg_reason_names(uint16_t reasons, char* out, size_t out_len);
+
+// Name of an SgSpo2Reason as the Python reference spells it; "" for SG_SPO2_OK.
+const char* sg_spo2_reason_name(uint8_t reason);

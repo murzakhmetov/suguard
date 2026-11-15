@@ -16,9 +16,12 @@ supplies a prior, and a few fingerstick readings per user calibrate it.
   the population prediction (or a constant if there is none). Each
   fingerstick updates (a, b); process noise lets them drift as the strap
   moves or physiology changes.
-* ``GlucoseEstimator`` - combines both and returns a status that the app must
-  respect: "unavailable" (no model, no calibration -> no number),
-  "experimental" (model not validated), "uncalibrated", "calibrated".
+* ``GlucoseEstimator`` - combines both and returns a status that the caller
+  must respect: "unavailable" (no model, no calibration -> no number),
+  "calibration_only" (no model: the level of the user's own fingersticks, no
+  number from the bracelet), "experimental" (a model that has not passed
+  validation on this bracelet: a number for research use; the API withholds
+  it unless the operator switches it on), "uncalibrated", "calibrated".
 """
 
 from __future__ import annotations
@@ -97,6 +100,16 @@ A_LIMIT = 500.0                        # |level offset|, mg/dL: spans the refere
 B_RANGE = (0.0, 3.0)                   # scale of the model's deviations
 P_LIMIT = (1000.0**2, 10.0**2)         # variances of a and b
 RESID_VAR_RANGE = (4.0, 60.0**2)
+# What is not explained by the level (and the model, if there is one), before anything is known
+# about the person: glucose moves by tens of mg/dL around its running level over a day. Too small
+# a start makes the first intervals too narrow for exactly the people whose glucose varies most.
+RESID_PRIOR_SD = 30.0
+# Before the first fingerstick nothing is known about the person's level: someone with diabetes may
+# run at twice the prior mean. A narrow prior (it was 30 mg/dL) made the filter explain the first,
+# large innovations as noise and then converge slowly (40 readings of 600 mg/dL gave 581).
+LEVEL_PRIOR_SD = 100.0
+RESID_PRIOR_WEIGHT = 3                 # the start value counts as this many fingersticks
+RESID_MIN_WEIGHT = 0.1                 # later on: a slow running average
 MAX_POINTS = 100_000
 MAX_DRIFT_DAYS = 365.0                 # a longer gap adds no further uncertainty
 UNIX_RANGE = (1.5e9, 4.1e9)            # unix seconds a new request may carry (rejects millisecond epochs)
@@ -116,8 +129,8 @@ class PersonalCalibration:
     """
     a: float = 0.0
     b: float = 1.0
-    P: list = field(default_factory=lambda: [[30.0**2, 0.0], [0.0, 0.3**2]])
-    resid_var: float = 15.0**2           # model error variance, updated online
+    P: list = field(default_factory=lambda: [[LEVEL_PRIOR_SD**2, 0.0], [0.0, 0.3**2]])
+    resid_var: float = RESID_PRIOR_SD**2  # variance of what the state does not explain, updated online
     n_points: int = 0
     last_t: float | None = None          # unix seconds of the latest update
     model_version: str | None = None     # population model the state was fitted against
@@ -161,11 +174,16 @@ class PersonalCalibration:
         P = (np.eye(2) - np.outer(k, h)) @ P
         P = 0.5 * (P + P.T)                                  # rounding must not break the symmetry
         P *= min(1.0, P_LIMIT[0] / max(P[0, 0], 1e-300), P_LIMIT[1] / max(P[1, 1], 1e-300))
-        # Online estimate of the model's own error: E[innovation^2] = predicted variance + meter
-        # variance + model error, so the excess estimates the last term (slow, bounded average).
+        # Online estimate of what the state does not explain: E[innovation^2] = predicted variance
+        # + meter variance + that, so the excess estimates the last term. The first fingersticks
+        # count fully against the start value, later ones enter a slow running average. (The
+        # estimate is right if the level drifts as assumed; for a level that does not drift it
+        # comes out low and the predicted variance high by the same amount, so the interval keeps
+        # its coverage: see tests/test_models.py::test_calibration_interval_coverage.)
         if self.n_points >= 2 and not late:
             excess = innov**2 - predicted_var - (GLUCOMETER_CV * y_ref) ** 2
-            self.resid_var = float(np.clip(0.9 * self.resid_var + 0.1 * excess, *RESID_VAR_RANGE))
+            w = max(RESID_MIN_WEIGHT, 1.0 / (RESID_PRIOR_WEIGHT + self.n_points - 1))
+            self.resid_var = float(np.clip((1.0 - w) * self.resid_var + w * excess, *RESID_VAR_RANGE))
         self.a = float(np.clip(theta[0], -A_LIMIT, A_LIMIT))
         self.b = float(np.clip(theta[1], *B_RANGE))
         self.P = P.tolist()
@@ -205,7 +223,7 @@ class PersonalCalibration:
             if version is not None and not (isinstance(version, str) and len(version) <= 100):
                 raise ValueError("model_version must be a short string")
             c = cls(a=real(d.get("a", 0.0)), b=real(d.get("b", 1.0)), P=P.tolist(),
-                    resid_var=real(d.get("resid_var", 15.0**2)), n_points=n,
+                    resid_var=real(d.get("resid_var", RESID_PRIOR_SD**2)), n_points=n,
                     last_t=None if d.get("last_t") is None else real(d["last_t"]), model_version=version)
         except (TypeError, ValueError, OverflowError) as e:
             raise ValueError(f"invalid calibration state: {e}") from e

@@ -113,6 +113,37 @@ def test_risk_model_behaviour():
     assert m.predict(RiskInput(age=50, bmi=29, diagnosed_diabetes=True))["applicable"] is False
 
 
+@pytest.mark.parametrize("sd_true,drift", [(20.0, 0.0), (20.0, 6.0), (40.0, 0.0), (40.0, 6.0)])
+def test_calibration_interval_coverage(sd_true, drift):
+    """Without a population model the filter tracks a person's level from fingersticks alone. Its
+    80 % interval has to hold about 80 % of the true values that follow, early (6 fingersticks) and
+    late (30), whether the level drifts as the filter assumes or not at all; and the spread it
+    learns has to be the person's. (Glucose that scatters by sd_true around the level, a meter with
+    5 % error, two fingersticks a day.)"""
+    from suguard_ml.models.glucose import GLUCOMETER_CV
+
+    rng = np.random.default_rng(int(sd_true) * 10 + int(drift))
+    cover = {6: [], 30: []}
+    learnt = []
+    for _ in range(250):
+        level = rng.normal(110, 20.0)
+        cal = PersonalCalibration()
+        t = 1.7e9
+        for i in range(1, 31):
+            t += 43200.0
+            level += rng.normal(0, drift / np.sqrt(2.0)) if drift else 0.0
+            y = level + rng.normal(0, sd_true)
+            cal.update(cal.f0, y * (1 + GLUCOMETER_CV * rng.standard_normal()), t)
+            if i in cover:
+                est, sd = cal.predict(cal.f0, t + 3600.0)
+                new = level + rng.normal(0, sd_true, 20)
+                cover[i].append(np.mean(np.abs(new - est) <= 1.2816 * sd))
+        learnt.append(np.sqrt(cal.resid_var))
+    assert 0.66 <= np.mean(cover[6]) <= 0.93, np.mean(cover[6])
+    assert 0.72 <= np.mean(cover[30]) <= 0.88, np.mean(cover[30])
+    assert 0.8 * sd_true <= np.median(learnt) <= 1.15 * sd_true, np.median(learnt)
+
+
 def _run_train(table: Path, out: Path, *extra):
     cmd = [sys.executable, str(ML / "scripts" / "train_glucose.py"), "--table", str(table), "--out", str(out),
            "--name", "ctrl", "--tz-offset-h", "0", "--min-subjects", "10", *extra]

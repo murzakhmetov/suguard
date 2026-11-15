@@ -2,6 +2,8 @@
 
     python scripts/export_edge_model.py --ckpt data/edge_s/denoiser_edge.pt --data data/denoiser
 
+(these are the defaults, taken relative to the ml/ folder wherever the script is started)
+
 Writes
     models/denoiser_edge_int.npz               integer model (Python reference format)
     models/denoiser_edge.onnx                  the float model, for comparison
@@ -26,13 +28,15 @@ from suguard_ml.models import edge_int as E  # noqa: E402
 from suguard_ml.models.denoiser_net import build_model  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
+ML = ROOT / "ml"            # the defaults do not depend on the directory the script is started from
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--ckpt", default="data/edge_s/denoiser_edge.pt")
-    ap.add_argument("--data", default="data/denoiser")
-    ap.add_argument("--out", default="models")
+    ap.add_argument("--ckpt", default=str(ML / "data" / "edge_s" / "denoiser_edge.pt"),
+                    help="checkpoint written by train_denoiser.py --arch edge")
+    ap.add_argument("--data", default=str(ML / "data" / "denoiser"), help="dataset the model was trained on")
+    ap.add_argument("--out", default=str(ML / "models"))
     ap.add_argument("--header", default=str(ROOT / "firmware" / "suguard" / "src" / "core" / "sg_model.h"))
     ap.add_argument("--calib", type=int, default=2000, help="training windows used for calibration")
     a = ap.parse_args()
@@ -80,9 +84,13 @@ def main():
     (out / "metrics").mkdir(parents=True, exist_ok=True)
     E.save(im, out / "denoiser_edge_int.npz")
     E.write_c_header(im, a.header)
+    # What belongs to this checkpoint travels with it: the float model and the training summary.
     onnx = Path(a.ckpt).with_suffix(".onnx")
     if onnx.exists():
         shutil.copyfile(onnx, out / "denoiser_edge.onnx")
+    summary = Path(a.ckpt).parent / "metrics" / (Path(a.ckpt).stem + "_train.json")
+    if summary.exists() and summary.resolve() != (out / "metrics" / summary.name).resolve():
+        shutil.copyfile(summary, out / "metrics" / summary.name)
     (out / "metrics" / "denoiser_edge_export.json").write_text(json.dumps(report, indent=2))
     print(json.dumps(report, indent=1))
     print("wrote", out / "denoiser_edge_int.npz", "and", a.header)

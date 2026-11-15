@@ -191,7 +191,7 @@ def extract_features(ir_bv: np.ndarray, red_bv: np.ndarray | None = None, fs: fl
     beats = detect_beats(ir_bv, fs)
     feats: dict[str, float] = {}
     good_ibi = beats.ibi_s[beats.valid_ibi]
-    feats["hr_bpm"] = float(60.0 / np.median(good_ibi)) if good_ibi.size >= 2 else np.nan
+    feats["hr_bpm"] = beats.hr_bpm if beats.hr_bpm is not None else np.nan     # the pipeline's heart rate
     hrv = hrv_metrics(beats.ibi_s, beats.valid_ibi)
     feats.update({k: (np.nan if v is None else v) for k, v in hrv.items()})
     feats["pi_ir"] = float(np.percentile(ir_bv, 97) - np.percentile(ir_bv, 3)) * 100
@@ -202,7 +202,7 @@ def extract_features(ir_bv: np.ndarray, red_bv: np.ndarray | None = None, fs: fl
     tmpl_ir, corr, stderr_ir = ensemble_beat(ir_bv, spans)
     feats["n_beats"] = float(len(spans))
     feats["beat_corr"] = float(np.nanmedian(corr)) if corr.size else np.nan
-    ibi_s = float(np.median(good_ibi)) if good_ibi.size else np.nan
+    ibi_s = float(np.mean(good_ibi)) if good_ibi.size else np.nan              # the same beat duration
     if tmpl_ir is not None and np.isfinite(ibi_s):
         feats.update(template_features(tmpl_ir, ibi_s, stderr=stderr_ir))
 

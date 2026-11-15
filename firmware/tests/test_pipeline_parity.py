@@ -90,6 +90,7 @@ def test_process_window_matches_python(cli, build_dir, use_nn):
         assert bool(c["has_hr"]) == (v.hr_bpm is not None)
         assert bool(c["has_spo2"]) == v.spo2_ok == (v.spo2 is not None)
         assert sorted(filter(None, c["reasons"].split(","))) == sorted(set(v.reasons))
+        assert c["spo2_why"] == (v.spo2_reason or "")          # why an accepted window has no SpO2
         assert bool(c["finger"]) == sensor.finger_detected
         assert c["sat"] == pytest.approx(sensor.saturated_fraction, abs=1e-12)
         assert c["pi_in"] == pytest.approx(v.pi_in, rel=1e-9, abs=1e-12)

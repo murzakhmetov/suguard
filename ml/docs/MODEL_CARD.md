@@ -98,23 +98,39 @@ window by itself (the firmware's LED control then lowers the current).
 
 ## 3. Heart rate, HRV, SpO2, pulse-shape features
 
+Numbers in this section without another source come from `scripts/check_model_card.py`
+(`models/metrics/model_card_checks.json`), which states the simulation behind each one.
+
 * **Heart rate** — beat detection after Elgendi (two moving averages) with refinement of the
-  peak positions; the rate is the median of the plausible beat intervals. There is no fall-back to
-  a spectral estimate or to a previous value.
-* **HRV** (windows of ≥ 60 s) — premature beats and their compensatory pauses are removed with the
-  decision rule of Lipponen & Tarvainen before SDNN/RMSSD are computed; the output states how many
-  intervals were excluded. With four premature beats in a simulated minute, RMSSD stays within a
-  few per cent (3–12 times too high without the rule).
+  peak positions. The rate is the mean of the beat intervals that lie within 30 % of their median:
+  the band keeps missed and extra beats out, and the mean cancels the jitter of the peak times
+  (a peak found late lengthens one interval and shortens the next), which the median used before
+  did not (simulated clean windows: mean error 0.55 → 0.32 bpm). There is no fall-back to a
+  spectral estimate or to a previous value.
+* **HRV** (Python and API only, from ≥ 60 s of signal; the firmware works on 10.24-s windows and
+  has none) — premature beats and their compensatory pauses are removed with the decision rule of
+  Lipponen & Tarvainen before SDNN/RMSSD are computed; the output states how many intervals were
+  excluded. One simulated minute with four premature beats: with the rule the median RMSSD is
+  within 5 % of the value without them for every rhythm tested when they come at up to 80 % of the
+  normal interval; late ones (88 %) in a variable rhythm (RMSSD 60 ms, or strong respiratory
+  variation) are not recognised and RMSSD comes out 1.3–1.4 times too high. Single minutes
+  scatter: 5th–95th percentile 0.85–1.1 in most settings, up to 1.5 for premature beats at 80–88 %
+  in a variable rhythm. Without any editing RMSSD is 1.4–15 times too high, the more the steadier
+  the rhythm.
 * **SpO2** — ratio of ratios R from a total-least-squares fit of red on IR in the cardiac band
   (0.7–5 Hz), weighted by the network's artefact mask; Maxim's reference curve
   `SpO2 = −45.060·R² + 30.354·R + 94.845`. **Not calibrated for the SuGuard enclosure**: calibrate
-  against a medical pulse oximeter (`suguard_ml.signal.spo2.fit_spo2_calibration`). In simulation
-  the estimate reads 0.3–0.5 points high below 90 %; real accuracy below 90 % can only be
-  established in a controlled desaturation study (ISO 80601-2-61).
+  against a medical pulse oximeter (`suguard_ml.signal.spo2.fit_spo2_calibration`). The estimator's
+  own bias in simulation (the simulator uses the same curve, so the sensor's error is not in it):
+  being re-measured for the retrained networks (`scripts/check_model_card.py` → `spo2_bias`). Real accuracy below 90 % can only be established in a controlled desaturation
+  study (ISO 80601-2-61).
 * **Features** — morphology of the average beat, second-derivative (SDPPG) ratios, harmonics,
   red/IR ratios. The dicrotic notch is reported only when it stands out from the noise of the
-  averaged beat (three standard errors); in simulation that lowers falsely reported notches from
-  93–98 % to 1 % (13 % at 0.1 % perfusion).
+  averaged beat by three standard errors. Clean simulated windows whose noise-free beat has no
+  notch, at a perfusion of 1 / 0.3 / 0.1 %: beats without a reflected wave get a notch reported in
+  0 / 2 / 9 % of the windows with this rule and in 41 / 75 / 93 % without it; the simulator's whole
+  shape family in 2 / 3 / 11 % and 69 / 82 / 94 %. The price: a notch the noise-free beat does have
+  is missed in 10 / 20 / 28 % of those windows (about 20 each).
 
 ## 4. Diabetes risk — `models/risk_model.json` (v1.1.0)
 
@@ -128,9 +144,9 @@ window by itself (the firmware's LED control then lowers the current).
 | HbA1c ≥ 5.7 % | AUC 0.770 [0.756–0.783], average precision 0.594, Brier 0.180 (0.224 without a model), calibration slope 1.00 |
 | HbA1c ≥ 6.5 % | AUC 0.789 [0.749–0.815], average precision 0.113 (prevalence 0.036), Brier 0.033 (0.034), slope 0.97 |
 | For comparison | age + BMI only: 0.748 / 0.749; without ancestry: 0.749 / 0.756 |
-| Calibration by subgroup (predicted / observed, HbA1c ≥ 5.7 %) | Asian 0.382 / 0.383; White 0.277 / 0.277; age 18–39 0.141 / 0.144; age 60–80 0.538 / 0.533; **Black 0.40 / 0.46 and Mexican American 0.34 / 0.29: a systematic error remains** |
+| Calibration by subgroup (predicted / observed, HbA1c ≥ 5.7 %) | Asian 0.382 / 0.383; White 0.277 / 0.277; age 18–39 0.141 / 0.144; age 60–80 0.538 / 0.533. **A systematic error of 4–6 points remains** for Black (0.400 / 0.458), Mexican-American (0.337 / 0.292), other Hispanic (0.370 / 0.321) and multiracial participants (0.338 / 0.297). Without the ancestry terms: Asian 0.276 / 0.383, White 0.367 / 0.277 (`subgroup_calibration_without_ancestry`) |
 | Categories (out-of-fold) | low: 32 % of people, HbA1c ≥ 5.7 % in 9 %; moderate: 27 % / 30 %; elevated: 27 % / 50 %; high: 14 % / 66 % (HbA1c ≥ 6.5 % in 11 %, three times the average) |
-| Left out on purpose | Waist (correlation 0.91 with BMI, unstable sign) and smoking (gets a spurious "protective" sign in cross-sectional data): they do not improve the AUC and should not explain a risk. If sent, the API returns them under `inputs_not_used` |
+| Left out on purpose | Waist (correlation 0.91 with BMI, unstable sign) and smoking (gets a spurious "protective" sign in cross-sectional data): with them the AUC is 0.771 / 0.792 instead of 0.770 / 0.789, well inside the confidence intervals, and they should not explain a risk. If sent, the API returns them under `inputs_not_used` |
 | Glucose from the bracelet | Off. It would be used only with a glucose model validated on this bracelet (the server then knows its error): HbA1c from the ADAG relation (mean glucose + 46.7) / 28.7 and a Bayesian update with the NHANES HbA1c distributions. GMI is not used: in normoglycaemia it reads high (about 5.7 % at a mean of 100 mg/dL) |
 | Limits | US population, unweighted sample (survey-weighted variant: `--weights DEMO_J.xpt`, in the Colab notebook). The ancestry groups are those of a US survey; how they carry over to Kazakhstan is an assumption to be checked on local data with HbA1c. Family history, gestational diabetes and blood pressure — strong factors of the ADA and FINDRISC questionnaires — are missing and worth adding to the profile. Discrimination is weaker within the oldest group (AUC 0.63 for age 60–80) |
 
@@ -140,10 +156,10 @@ window by itself (the firmware's LED control then lowers the current).
 |---|---|
 | Intended purpose | Estimate glucose from PPG features and context, personalised with fingersticks |
 | Model class | LightGBM: median and 10 %/90 % quantiles; input = median of the features of ≥ 3 reliable 10.24-s windows (the same aggregation in training and in the API) + context (time of day, meals) |
-| State | **Not trained**: none of the available sources has paired PPG and glucose from this sensor. The API answers `unavailable`, or `calibration_only` after ≥ 3 fingersticks (their filtered average, `mg_dl` = null). The firmware has no glucose output |
-| Criteria for `validated` (`scripts/train_glucose.py`) | data from the SuGuard bracelet; ≥ 20 people, of whom ≥ 80 % can be scored in the personalised protocol; on new people better than predicting the mean; after calibration ≥ 10 % better (MARD) than the best baseline without PPG — fingerstick level, last fingerstick, personal time-of-day profile — with the lower bootstrap bound above zero; PPG beats the controls "context only" and "PPG shuffled within a person"; MARD ≤ 15 % and Clarke A+B ≥ 99 %; all of it again on a locked hold-out group. A check that cannot be run (no PPG features, a control missing, too few people scored) fails |
-| The bar (real CGM, no bracelet) | 19 people without diagnosed diabetes: a constant gives MARD 16.9 %, fingerstick calibration alone 15.1–16.1 %; 5 people with type 2 diabetes: 35 % and 21.6–21.8 % (`models/metrics/calibration_baselines_cgm.json`) |
-| Check of the logic | synthetic positive and negative controls (`tests/synthetic_paired.py`): a real signal passes every evidential criterion, time-of-day effects and noise do not; synthetic data can never become `validated` (not bracelet data) |
+| State | **Not trained**: none of the available sources has paired PPG and glucose from this sensor. The API answers `unavailable`, or `calibration_only` after ≥ 3 fingersticks (their filtered average, `mg_dl` = null). A model that is installed but not `validated` answers `not_validated` without a number, unless the server runs with `SUGUARD_EXPERIMENTAL_GLUCOSE=1` (research only; status `experimental`). The firmware has no glucose output |
+| Criteria for `validated` (`scripts/train_glucose.py`) | data from the SuGuard bracelet; ≥ 20 people, of whom ≥ 80 % can be scored in the personalised protocol; on new people better than predicting the mean; after calibration ≥ 10 % better (MARD) than the best baseline without PPG — fingerstick level, last fingerstick, personal time-of-day profile — with the lower bootstrap bound above zero; PPG beats the controls "context only" and "PPG shuffled within a person"; MARD ≤ 15 % and Clarke A+B ≥ 99 %; on a locked hold-out group (20 % of the people): the same MARD and Clarke bar, ≥ 80 % of them scored and a gain over the best baseline without PPG (the 10 % margin, the bootstrap bound and the controls are not repeated on this small group). A check that cannot be run (no PPG features, a control missing, too few people scored) fails |
+| The bar (real CGM, no bracelet) | 19 people without diagnosed diabetes: a constant gives MARD 16.8–16.9 %, fingerstick calibration alone 15.3–16.4 %; 5 people with type 2 diabetes: 35 % and 21.7–22.7 % (`models/metrics/calibration_baselines_cgm.json`) |
+| Check of the logic | synthetic positive and negative controls (`tests/synthetic_paired.py`): a real signal passes every evidential criterion, time-of-day effects and noise do not; the synthetic tables are labelled as not coming from the bracelet and so are not `validated`. The label (`meta_source`) is trusted, not verified: a table must only be labelled as bracelet data if it is (one test labels the positive control that way to show that a strong signal then passes) |
 | Time base | every paired table carries its own UTC offset per row (`meta_tz_offset_h`), so "days" and "time of day" are local for every participant |
 
 ## 6. Personal calibration filter
@@ -157,8 +173,20 @@ population model's output, or a constant while there is no model), with slow dri
 * Reference values are accepted from 20 to 600 mg/dL; entries that arrive late (older than the
   newest one) are used with extra noise instead of moving the clock backwards; the drift is
   limited to a year.
-* The residual variance is estimated from the prediction errors without the bias of the filter's
-  own uncertainty: with a true residual SD of 5 mg/dL the estimate is 5.4–7.2 and the 80 %
-  interval covers 78–83 % of new readings (simulation).
+* The level prior is broad (SD 100 mg/dL around 105): someone with diabetes may run at twice that.
+  With the narrow prior used before (30 mg/dL) the filter took the first, large deviations for
+  noise and then converged slowly (40 readings of 600 mg/dL ended at 581).
+* The spread around the level that the state does not explain starts at 30 mg/dL, counts as three
+  fingersticks at first and then becomes a slow running average of the excess of the prediction
+  errors over the filter's own uncertainty and the meter's error.
+* Simulation without a population model (`models/metrics/model_card_checks.json` →
+  `calibration_filter`: 300 people per setting, two fingersticks a day, 5 % meter error): when a
+  person's glucose scatters by 20–40 mg/dL around the level, the 80 % interval holds 78–79 % of the
+  next true values after 30 fingersticks (71–85 % after 6, while the start value still counts),
+  and the learnt spread is 18.5–19.9 and 38.5–39.7 mg/dL. For a very steady person (5 mg/dL) the
+  learnt spread comes out low (3.4 for a level that does not drift, 5.2 for one that drifts as the
+  filter assumes) and the interval holds 76–80 % of the true values but only 64–72 % of new meter
+  readings, because the meter's own error is then larger than the glucose spread.
+* Fingerstick calibration alone on real CGM data: see section 5.
 * Without a population model its output is only the smoothed level of the user's own
   fingersticks, and the API says so.

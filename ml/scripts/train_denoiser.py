@@ -1,6 +1,6 @@
 """Train the motion-artefact denoiser and export it to ONNX.
 
-    python scripts/train_denoiser.py --data data/denoiser --steps 12000 --out models
+    python scripts/train_denoiser.py --data data/denoiser --steps 16000 --out models
 
 Runs on CPU (about an hour for the default settings on 4 cores) or GPU
 (Colab: a few minutes). Writes models/denoiser.onnx, models/denoiser.pt and
@@ -100,7 +100,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default="data/denoiser")
     ap.add_argument("--out", default="models")
-    ap.add_argument("--steps", type=int, default=12000)
+    ap.add_argument("--steps", type=int, default=16000)
     ap.add_argument("--bs", type=int, default=128)
     ap.add_argument("--lr", type=float, default=2e-3)
     ap.add_argument("--eval-every", type=int, default=1000)

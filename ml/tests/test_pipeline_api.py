@@ -416,6 +416,12 @@ def test_glucose_endpoints_with_a_model(monkeypatch):
     monkeypatch.setattr(appmod, "MODEL_VERSION", "stub-1")
     client = TestClient(appmod.app)
     feats = [{"hr_bpm": 60.0 + k, "pi_ir": 1.0, "r_ratio": 0.5} for k in range(3)]
+    # A model that has not passed validation gives no number ...
+    g = client.post("/v1/glucose/estimate", json={"recent_features": feats, "timestamp": 1.7e9}).json()
+    assert g["status"] == "not_validated" and g["mg_dl"] is None and "mmol_l" not in g and "interval_80" not in g
+    assert client.get("/health").json()["experimental_glucose_output"] is False
+    # ... unless the operator has switched experimental output on (SUGUARD_EXPERIMENTAL_GLUCOSE=1).
+    monkeypatch.setattr(appmod, "EXPERIMENTAL_GLUCOSE", True)
     g = client.post("/v1/glucose/estimate", json={"recent_features": feats, "timestamp": 1.7e9}).json()
     assert g["status"] == "experimental" and g["mg_dl"] == 150.0 and g["interval_80"] == [130.0, 170.0]
     cal = None

@@ -49,6 +49,7 @@
   X(has_r, v.has_r)                                           \
   X(r_ratio, v.r_ratio)                                       \
   X(spo2_reason, v.spo2_reason)                               \
+  X(spo2_withheld, v.spo2_withheld)                           \
   X(support_ir_corr, v.support_ir_corr)                       \
   X(support_ir_gain, v.support_ir_gain)                       \
   X(support_red_corr, v.support_red_corr)                     \

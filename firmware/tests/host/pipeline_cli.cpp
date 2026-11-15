@@ -23,11 +23,11 @@ int main(int argc, char** argv) {
     sg_reason_names(v.reasons, reasons, sizeof reasons);
     printf("{\"reliable\":%d,\"has_hr\":%d,\"hr\":%.17g,\"has_spo2\":%d,\"spo2\":%.17g,"
            "\"has_r\":%d,\"r\":%.17g,\"sqi\":%.17g,\"pi_in\":%.17g,\"motion\":%.17g,\"reasons\":\"%s\","
-           "\"finger\":%d,\"sat\":%.17g,\"support\":[%.17g,%.17g,%.17g,%.17g]}\n",
+           "\"finger\":%d,\"sat\":%.17g,\"support\":[%.17g,%.17g,%.17g,%.17g],\"spo2_why\":\"%s\"}\n",
            (int)v.reliable, (int)v.has_hr, v.has_hr ? v.hr_bpm : 0.0, (int)v.has_spo2, v.has_spo2 ? v.spo2 : 0.0,
            (int)v.has_r, v.has_r ? v.r_ratio : 0.0, v.quality.sqi, v.pi_in, v.quality.motion_fraction, reasons,
            (int)out.sensor.finger_detected, out.sensor.saturated_fraction, v.support_ir_corr, v.support_ir_gain,
-           v.support_red_corr, v.support_red_gain);
+           v.support_red_corr, v.support_red_gain, sg_spo2_reason_name(v.spo2_withheld));
   }
   fclose(in);
   return 0;

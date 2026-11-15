@@ -41,7 +41,7 @@
 #include "src/certs.h"
 #include "src/core/sg_pipeline.h"
 
-#define SG_FW_VERSION "1.1.0"
+#define SG_FW_VERSION "1.2.0"
 
 // ----------------------------------------------------------------------------
 // State
@@ -407,10 +407,11 @@ static void printWindowLine(const SgWindow& w, const SgPipelineOutput& o, double
   const int n = snprintf(
       line, sizeof line,
       "{\"t\":\"vitals\",\"seq\":%lu,\"reliable\":%s,\"hr\":%s,\"spo2\":%s,\"sqi\":%.2f,\"pi\":%.3f,"
-      "\"motion\":%.2f,\"reasons\":\"%s\",\"nn\":%s,\"dc\":[%.0f,%.0f],\"led\":[%u,%u],\"temp\":%s,"
+      "\"motion\":%.2f,\"reasons\":\"%s\",\"spo2_why\":\"%s\",\"nn\":%s,\"dc\":[%.0f,%.0f],\"led\":[%u,%u],\"temp\":%s,"
       "\"fs\":%.3f,\"proc_ms\":%lu,\"bat\":%d,\"usb\":%s}\n",
       (unsigned long)w.seq, o.vitals.reliable ? "true" : "false", hr, spo2, o.vitals.quality.sqi, o.vitals.pi_in,
-      o.vitals.quality.motion_fraction, reasons, o.used_nn ? "true" : "false", o.sensor.red_dc, o.sensor.ir_dc,
+      o.vitals.quality.motion_fraction, reasons, sg_spo2_reason_name(o.vitals.spo2_withheld),
+      o.used_nn ? "true" : "false", o.sensor.red_dc, o.sensor.ir_dc,
       (unsigned)w.led_red, (unsigned)w.led_ir, temp, (double)w.fs_hz, (unsigned long)proc_ms,
       g_battery.state().percent, g_battery.state().usb_present ? "true" : "false");
   if (n > 0 && n < (int)sizeof line) serialWrite(line, (size_t)n);

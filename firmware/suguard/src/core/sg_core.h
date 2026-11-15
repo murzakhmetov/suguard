@@ -47,12 +47,16 @@ enum SgReason : uint16_t {
   SG_R_DENOISER_MISMATCH = 1u << 8,      // "denoiser_mismatch": the denoised pulse is not in the measurement
 };
 
-// Outcome of the SpO2 estimate itself (SpO2Estimate.reason in Python).
+// Outcome of the SpO2 estimate itself (SpO2Estimate.reason in Python: values 0-3), and why a
+// reliable window carries no SpO2 value (SignalVitals.spo2_reason: all values but 3, because a
+// ratio out of range rejects the whole window).
 enum SgSpo2Reason : uint8_t {
   SG_SPO2_OK = 0,
   SG_SPO2_NO_COMMON_PULSE = 1,          // "no_common_pulse"
   SG_SPO2_LOW_RED_IR_AGREEMENT = 2,     // "spo2_low_red_ir_agreement"
   SG_SPO2_R_OUT_OF_RANGE = 3,           // "r_out_of_calibration_range"
+  SG_SPO2_RED_DENOISER_MISMATCH = 4,    // "red_denoiser_mismatch": the denoised red pulse is not in the measurement
+  SG_SPO2_RED_IR_INCONSISTENT = 5,      // "red_ir_inconsistent": the two wavelengths disagree (quality components)
 };
 
 // Order of SgQuality::comp[], identical to the `components` dict in assess_quality().
@@ -111,6 +115,7 @@ struct SgVitals {
   bool has_r;                  // SpO2Estimate.r_ratio is not None
   double r_ratio;              // ratio of ratios (valid if has_r), reported regardless of gating
   uint8_t spo2_reason;         // SgSpo2Reason of the raw estimate
+  uint8_t spo2_withheld;       // SgSpo2Reason: why a reliable window has no SpO2 (SG_SPO2_OK: it has one, or was rejected)
 
   double pi_in;                // peak-to-peak IR perfusion (%) of the measured signal
   // InputSupport of the IR and red signals; all zero on the classical path.
