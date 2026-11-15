@@ -5,7 +5,10 @@ tests/host/core_cli.cpp is compiled with the host g++ and fed the same raw
 windows as the reference: decisions (booleans, reason masks, counts) must be
 identical, numbers must agree to the precision of the arithmetic that
 produced them. The same program, cross-built for RV32IMC and run under QEMU,
-must reproduce the host results (test marked ``rv32``).
+must reproduce the host results (test marked ``rv32``; it is skipped when the
+cross toolchain or QEMU is not installed).
+
+    python -m pytest tests/test_core_parity.py -q -s      # -s prints the largest errors
 """
 from __future__ import annotations
 
@@ -192,7 +195,12 @@ def edge_cases() -> list[Case]:
         """A clean raw window whose vitals are computed from the given signals."""
         return Case(name, clean.red_raw, clean.ir_raw, denoised=(c_ir, c_red, np.zeros(n)))
 
+    def tone(hz):
+        return np.sin(2 * np.pi * hz * t)
+
     ir_bv, red_bv, _ = as_denoised(clean, np.zeros(n))
+    doublet = np.zeros(n)             # +1, -1: its spectrum rises monotonically through the cardiac band
+    doublet[255:257] = 1.0, -1.0
     cases = [
         Case("no_contact", counts(800 + 15 * rng.standard_normal(n)), counts(1000 + 20 * rng.standard_normal(n))),
         Case("red_no_contact", counts(2_000 * (1 - 0.006 * beat)), clean.ir_raw),
@@ -220,11 +228,10 @@ def edge_cases() -> list[Case]:
              denoised=as_denoised(clean, np.where(np.arange(n) < 9, 0.0, 1.0))),
         Case("with_prior", clean.red_raw, clean.ir_raw, prior_hr=150.0),
         with_signals("constant_signals", np.full(n, 0.5), np.full(n, 0.25)),
-        with_signals("tone_above_cardiac_band", 0.01 * np.sin(2 * np.pi * 5.0 * t), 0.006 * np.sin(2 * np.pi * 5.0 * t)),
-        with_signals("tone_at_cardiac_band_edge", 0.01 * np.sin(2 * np.pi * 4.0 * t), 0.006 * np.sin(2 * np.pi * 4.0 * t)),
-        with_signals("tone_below_cardiac_band", 0.01 * np.sin(2 * np.pi * 0.3 * t), 0.006 * np.sin(2 * np.pi * 0.3 * t)),
-        with_signals("spectrum_without_peak", np.where(np.arange(n) == 255, 1.0, 0.0) - (np.arange(n) == 256),
-                     0.6 * (np.where(np.arange(n) == 255, 1.0, 0.0) - (np.arange(n) == 256))),
+        with_signals("tone_above_cardiac_band", 0.01 * tone(5.0), 0.006 * tone(5.0)),
+        with_signals("tone_at_cardiac_band_edge", 0.01 * tone(4.0), 0.006 * tone(4.0)),
+        with_signals("tone_below_cardiac_band", 0.01 * tone(0.3), 0.006 * tone(0.3)),
+        with_signals("spectrum_without_peak", doublet, 0.6 * doublet),
         with_signals("red_signal_zero", ir_bv, np.zeros(n)),
         with_signals("red_signal_not_finite", ir_bv, np.where(np.arange(n) == 100, np.nan, red_bv)),
         with_signals("r_below_plausible_range", ir_bv, 0.1 * ir_bv),
@@ -444,30 +451,31 @@ def dsp_calls() -> list[tuple]:
         pos = np.concatenate([[-1.0, 0.0, n - 1.0, n - 0.5, n + 3.0], rng.uniform(0, n - 1, 40),
                               rng.integers(0, n, 10).astype(float)])
         add(f"interp[{n}]", "interp", np.interp(pos, np.arange(n), x), x, pos)
+        y = np.clip(x, 0, None) ** 2
         for size in (1, 2, 5, 6, 33, 34):                       # odd and even windows, also longer than the signal
-            y = np.clip(x, 0, None) ** 2
             add(f"uniform[{n}, {size}]", "uniform", ndimage.uniform_filter1d(y, size, mode="nearest"), y, param=size)
     for n in (2, 3, 100, 101, 256, 400, 512):
         add(f"hann[{n}]", "hann", signal.windows.hann(n), param=n, tol=1e-15)
 
     # find_peaks: flat tops, plateaus at the edges, monotonic and constant signals.
     shapes = [[], [1], [1, 2], [2, 1], [1, 2, 1], [1, 2, 2, 1], [1, 2, 2, 2, 1], [1, 2, 2, 3], [3, 2, 2, 1],
-              [2, 2, 1], [1, 2, 2], [1, 1, 1, 1], [1, 3, 2, 3, 3, 1, 4, 4, 4, 4, 0, 5], list(range(20)), list(range(20, 0, -1))]
+              [2, 2, 1], [1, 2, 2], [1, 1, 1, 1], [1, 3, 2, 3, 3, 1, 4, 4, 4, 4, 0, 5], list(range(20)),
+              list(range(20, 0, -1))]
     shapes += [rng.integers(0, 3, int(rng.integers(3, 60))).tolist() for _ in range(300)]
-    shapes += [rng.standard_normal(239).tolist() for _ in range(5)]
+    shapes += [rng.standard_normal(239).astype(np.float32).tolist() for _ in range(5)]   # the C++ scans floats
     for i, shape in enumerate(shapes):
         add(f"peaks[{i}]", "peaks", signal.find_peaks(np.asarray(shape, dtype=float))[0], shape)
 
     for i, (kind, cutoff, order) in enumerate(FILTERS):
         for n in (100, 101, 256, 400, 512):
             x = rng.standard_normal(n) * 0.01 + 0.3 * np.sin(np.arange(n) / 7.0)
-            add(f"filtfilt[{kind} {cutoff}, {n}]", "filtfilt", filters._filtfilt(filters._sos(kind, cutoff, FS, order), x),
-                x, param=i)
+            expected = filters._filtfilt(filters._sos(kind, cutoff, FS, order), x)
+            add(f"filtfilt[{kind} {cutoff}, {n}]", "filtfilt", expected, x, param=i)
 
     # The FFT is single precision: compare with the double-precision spectrum of the same float32 samples.
     t = np.arange(512) / FS
-    for i, x in enumerate([np.sin(2 * np.pi * 1.2 * t) * np.hanning(512), rng.standard_normal(512), rng.standard_normal(100),
-                           np.eye(1, 4096, 5)[0], rng.standard_normal(4096)]):
+    for i, x in enumerate([np.sin(2 * np.pi * 1.2 * t) * np.hanning(512), rng.standard_normal(512),
+                           rng.standard_normal(100), np.eye(1, NFFT, 5)[0], rng.standard_normal(NFFT)]):
         x = x.astype(np.float32).astype(np.float64)
         power = np.abs(np.fft.rfft(x, NFFT)) ** 2
         add(f"fft[{i}]", "fft", power, x, tol=2e-6 * power.max())
@@ -505,8 +513,8 @@ def rv32_toolchain():
     cxx, qemu = shutil.which("riscv64-unknown-elf-g++"), shutil.which("qemu-system-riscv32")
     if not (cxx and qemu and shutil.which("bash")):
         return None
-    probe = subprocess.run([cxx, "--specs=picolibc.specs", "-march=rv32imc", "-mabi=ilp32", "-print-file-name=libc.a"],
-                           capture_output=True, text=True)
+    probe = subprocess.run([cxx, "--specs=picolibc.specs", "-march=rv32imc", "-mabi=ilp32",
+                            "-print-file-name=libc.a"], capture_output=True, text=True)
     return (cxx, qemu) if probe.returncode == 0 else None
 
 

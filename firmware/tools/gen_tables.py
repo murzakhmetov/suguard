@@ -227,7 +227,8 @@ def render() -> str:
     const("int", "SG_MA_PEAK_LEN", ma_peak, "beats.detect_beats: max(int(round(0.111 * fs)), 1)")
     const("int", "SG_MA_BEAT_LEN", ma_beat, "beats.detect_beats: max(int(round(0.667 * fs)), 1)")
     const("int", "SG_ONSET_LOOKBACK", lookback, "beats._find_onsets: int(0.6 * fs)")
-    const("int", "SG_MAX_BEATS", max_beats, f"peaks of a window are >= fs * 60 / HR_MAX_BPM = {min_dist:.3f} samples apart")
+    const("int", "SG_MAX_BEATS", max_beats,
+          f"peaks of a window are >= fs * 60 / HR_MAX_BPM = {min_dist:.3f} samples apart")
     const("int", "SG_TEMPLATE_LEN", TEMPLATE_LEN, "the default length of beats.beat_template")
     add("")
     add("// ---- zero-phase Butterworth filters ----------------------------------------------------")
@@ -243,8 +244,9 @@ def render() -> str:
         add(f"static const SgBiquad SG_{name}_SECTIONS[{sections}] = {{")
         for row, zi in zip(f["sos"], f["zi"]):
             b, a = row[:3], row[4:]
-            add("    // b = " + ", ".join(repr(float(v)) for v in b))
-            add("    // a = 1, " + ", ".join(repr(float(v)) for v in a) + "; zi = " + ", ".join(repr(float(v)) for v in zi))
+            shown = [", ".join(repr(float(v)) for v in part) for part in (b, a, zi)]
+            add(f"    // b = {shown[0]}")
+            add(f"    // a = 1, {shown[1]}; zi = {shown[2]}")
             add("    {" + ", ".join(hexfloat(v) for v in b) + ",")
             add("     " + ", ".join(hexfloat(v) for v in (*a, *zi)) + "},")
         add("};")
