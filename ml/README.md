@@ -256,17 +256,21 @@ The models are only as honest as the way they are shown:
 
 ```bash
 python scripts/train_risk.py --out models                          # NHANES, ~2 min
+python scripts/risk_extra_inputs.py --out models/metrics           # further inputs tested for the risk model
 python scripts/benchmark_calibration.py --out models/metrics       # real CGM baselines
-python scripts/make_denoiser_dataset.py --out data/denoiser        # 150,000 windows, ~15 min on 4 CPUs
+python scripts/make_denoiser_dataset.py --out data/denoiser        # 200,000 windows, ~20 min on 4 CPUs
 
-# server model (~45 min on a CPU, minutes on a GPU)
-python scripts/train_denoiser.py --data data/denoiser --steps 12000 --out models
+# server model (16,000 steps: ~70 min on 4 CPU cores, minutes on a GPU)
+python scripts/train_denoiser.py --data data/denoiser --out models
 python scripts/eval_denoiser.py --data data/denoiser --out models/metrics
 
 # bracelet model: train, convert to integers, write the firmware header, evaluate the integer model
-python scripts/train_denoiser.py --data data/denoiser --arch edge --steps 12000 --out data/edge_s
+python scripts/train_denoiser.py --data data/denoiser --arch edge --out data/edge_s       # ~40 min on 4 cores
 python scripts/export_edge_model.py --ckpt data/edge_s/denoiser_edge.pt --data data/denoiser
 python scripts/eval_denoiser.py --data data/denoiser --edge-int models/denoiser_edge_int.npz --name denoiser_edge_eval
+
+# statements of the model card not covered above (HRV, notch, SpO2 bias, calibration filter)
+python scripts/check_model_card.py --out models/metrics
 
 # glucose, once paired data exists (docs/DATA_COLLECTION.md)
 python scripts/train_glucose.py --table data/suguard_paired.parquet --out models --name suguard
