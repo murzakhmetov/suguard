@@ -237,37 +237,48 @@ static bool pulse_spectrum(const double* x, int n, SgWork* w) {
   return band_power(w->fft, SG_K_HR_LO, SG_K_HR_HI) > 0;
 }
 
-// Second half of spectral_hr (without a prior) on the spectrum p: the strongest
-// peak of the cardiac band and its purity.
+// beats._harmonic_power: the strongest bin within SG_K_HARMONIC_SPAN bins of h * k
+// (gen_tables.py checks that these bins never leave the spectrum).
+static double harmonic_power(const float* p, int k, int h) {
+  double best = p[h * k - SG_K_HARMONIC_SPAN];
+  for (int j = h * k - SG_K_HARMONIC_SPAN + 1; j <= h * k + SG_K_HARMONIC_SPAN; ++j) {
+    if (p[j] > best) best = p[j];
+  }
+  return best;
+}
+
+// Second half of spectral_hr (without a prior) on the spectrum p: among the
+// peaks of the cardiac band with at least SG_HARMONIC_MIN_SHARE of the
+// strongest one's power, the one with the most power in itself and its 2nd
+// and 3rd harmonic; and its purity.
 static SpectralHr spectral_peak(const float* p) {
   const float* band = p + SG_K_HR_LO;
   const int n_band = SG_K_HR_HI - SG_K_HR_LO + 1;
-  int best = -1;
-  double best_score = 0.0;
+  double strongest = -1.0;
   int scan = 1;
   for (int c = sg_next_peak(band, n_band, &scan); c >= 0; c = sg_next_peak(band, n_band, &scan)) {
-    if (best < 0 || band[c] > best_score) {
-      best = c;
-      best_score = band[c];
-    }
+    if (band[c] > strongest) strongest = band[c];
   }
-  if (best < 0) {  // no local maximum in the band: take the largest bin
+  int best = -1;
+  if (strongest >= 0) {
+    double best_score = 0.0;
+    scan = 1;
+    for (int c = sg_next_peak(band, n_band, &scan); c >= 0; c = sg_next_peak(band, n_band, &scan)) {
+      if (!(band[c] >= SG_HARMONIC_MIN_SHARE * strongest)) continue;
+      const int k = SG_K_HR_LO + c;
+      const double score = (double)band[c] + harmonic_power(p, k, 2) + harmonic_power(p, k, 3);
+      if (best < 0 || score > best_score) {
+        best = c;
+        best_score = score;
+      }
+    }
+  } else {  // no local maximum in the band: take the largest bin
     best = 0;
     for (int j = 1; j < n_band; ++j) {
       if (band[j] > band[best]) best = j;
     }
   }
-  int k = SG_K_HR_LO + best;
-
-  // Prefer the fundamental if the chosen peak looks like a 2nd harmonic.
-  if (k >= SG_K_HALF_MIN) {
-    int half = -1;  // largest band bin within 0.08 Hz of f0 / 2
-    for (int j = SG_K_HR_LO; j <= SG_K_HR_HI; ++j) {
-      const int d = 2 * j - k;
-      if (d >= -SG_K_HALF2 && d <= SG_K_HALF2 && (half < 0 || p[j] > p[half])) half = j;
-    }
-    if (half >= 0 && p[half] >= 0.5f * p[k]) k = half;
-  }
+  const int k = SG_K_HR_LO + best;
 
   // Share of the 0.5-8 Hz power within 0.1 Hz of the peak and of its 2nd harmonic. The
   // total is > 0 because it includes the cardiac band, which pulse_spectrum() checked.

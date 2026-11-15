@@ -137,18 +137,15 @@ def spectral_bins() -> dict:
     t_lo, t_hi = bounds((f >= 0.5) & (f <= 8.0))
     assert t_lo <= k_lo and k_hi <= t_hi          # in-band power > 0 implies total power > 0
     near = int(math.floor(0.1 / df))              # |f - f0| <= 0.1
-    half2 = int(math.floor(2 * 0.08 / df))        # |f - f0 / 2| <= 0.08  <=>  |2 j - k| <= half2
-    half_min = int(np.flatnonzero(f / 2 >= lo_hz)[0])
-    fb = f[band]
+    span = beats.HARMONIC_SPAN
     for k in range(k_lo, k_hi + 1):
         f0 = f[k]
         mask = (np.abs(f - f0) <= 0.1) | (np.abs(f - 2 * f0) <= 0.1)
         assert np.array_equal(mask, (np.abs(idx - k) <= near) | (np.abs(idx - 2 * k) <= near))
         assert k - near >= 0 and k + near < 2 * k - near and 2 * k + near <= NFFT // 2
-        assert np.array_equal(np.abs(fb - f0 / 2) <= 0.08, np.abs(2 * idx[band] - k) <= half2)
-        assert (f0 / 2 >= lo_hz) == (k >= half_min)
+        assert 3 * k + span <= NFFT // 2          # the 3rd harmonic's bins are never clipped
         assert float(f0 * 60.0) == k * df * 60.0
-    return dict(df=df, k_lo=k_lo, k_hi=k_hi, t_lo=t_lo, t_hi=t_hi, near=near, half2=half2, half_min=half_min)
+    return dict(df=df, k_lo=k_lo, k_hi=k_hi, t_lo=t_lo, t_hi=t_hi, near=near)
 
 
 # --------------------------------------------------------------------------
@@ -271,8 +268,8 @@ def render() -> str:
     const("int", "SG_K_TOTAL_LO", bins["t_lo"], "first bin with f >= 0.5 Hz")
     const("int", "SG_K_TOTAL_HI", bins["t_hi"], "last bin with f <= 8 Hz")
     const("int", "SG_K_NEAR", bins["near"], "|f[j] - f[k]| <= 0.1 Hz  <=>  |j - k| <= SG_K_NEAR")
-    const("int", "SG_K_HALF2", bins["half2"], "|f[j] - f[k] / 2| <= 0.08 Hz  <=>  |2 j - k| <= SG_K_HALF2")
-    const("int", "SG_K_HALF_MIN", bins["half_min"], "f[k] / 2 >= HR_BAND_HZ[0]  <=>  k >= SG_K_HALF_MIN")
+    const("double", "SG_HARMONIC_MIN_SHARE", beats.HARMONIC_MIN_SHARE, "beats.HARMONIC_MIN_SHARE")
+    const("int", "SG_K_HARMONIC_SPAN", beats.HARMONIC_SPAN, "beats.HARMONIC_SPAN: bins either side of a harmonic")
     add("")
     add("// sin(2 pi k / SG_FFT_N) for k = 0 .. SG_FFT_N / 4, rounded to float.")
     quarter = NFFT // 4

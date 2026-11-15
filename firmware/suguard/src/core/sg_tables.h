@@ -152,8 +152,8 @@ constexpr int SG_K_HR_HI = 286;  // last bin of the cardiac band, f <= HR_BAND_H
 constexpr int SG_K_TOTAL_LO = 41;  // first bin with f >= 0.5 Hz
 constexpr int SG_K_TOTAL_HI = 655;  // last bin with f <= 8 Hz
 constexpr int SG_K_NEAR = 8;  // |f[j] - f[k]| <= 0.1 Hz  <=>  |j - k| <= SG_K_NEAR
-constexpr int SG_K_HALF2 = 13;  // |f[j] - f[k] / 2| <= 0.08 Hz  <=>  |2 j - k| <= SG_K_HALF2
-constexpr int SG_K_HALF_MIN = 96;  // f[k] / 2 >= HR_BAND_HZ[0]  <=>  k >= SG_K_HALF_MIN
+constexpr double SG_HARMONIC_MIN_SHARE = 0x1.999999999999ap-4;  // 0.1 (beats.HARMONIC_MIN_SHARE)
+constexpr int SG_K_HARMONIC_SPAN = 2;  // beats.HARMONIC_SPAN: bins either side of a harmonic
 
 // sin(2 pi k / SG_FFT_N) for k = 0 .. SG_FFT_N / 4, rounded to float.
 static const float SG_FFT_SIN[1025] = {

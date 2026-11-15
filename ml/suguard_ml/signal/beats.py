@@ -156,9 +156,28 @@ def pulse_polarity(x: np.ndarray, fs: float = FS, ref_bpm: np.ndarray | None = N
     return 1 if float(np.median(np.mean(z ** 3, axis=1))) >= 0 else -1
 
 
+# Spectral heart rate by harmonic summation: a peak of the cardiac band is
+# scored by its own power plus the strongest power within HARMONIC_SPAN bins
+# of its 2nd and 3rd harmonic. A real pulse often has a 2nd harmonic stronger
+# than its fundamental (a pronounced dicrotic notch or reflected wave); the
+# strongest peak alone then reads double the rate. Only peaks with at least
+# HARMONIC_MIN_SHARE of the strongest peak's power compete, so that a noise
+# peak at half the rate cannot win with the pulse's own harmonics.
+HARMONIC_MIN_SHARE = 0.1
+HARMONIC_SPAN = 2
+
+
+def _harmonic_power(spec: np.ndarray, k: int, h: int) -> float:
+    lo, hi = h * k - HARMONIC_SPAN, h * k + HARMONIC_SPAN
+    if lo > spec.size - 1:
+        return 0.0
+    return float(spec[max(lo, 0):min(hi, spec.size - 1) + 1].max())
+
+
 def spectral_hr(bv: np.ndarray, fs: float = FS, prior_bpm: float | None = None,
                 nfft: int = 4096) -> tuple[float | None, float]:
-    """Heart rate from the dominant spectral peak in the cardiac band.
+    """Heart rate from the cardiac-band peak with the most power in it and
+    its 2nd and 3rd harmonic (see HARMONIC_MIN_SHARE).
 
     Returns ``(bpm, purity)`` where purity is the share of in-band power that
     lies within +-0.1 Hz of the chosen peak and its 2nd harmonic. With a prior
@@ -174,21 +193,19 @@ def spectral_hr(bv: np.ndarray, fs: float = FS, prior_bpm: float | None = None,
     band = (f >= HR_BAND_HZ[0]) & (f <= HR_BAND_HZ[1])
     if not band.any() or spec[band].sum() <= 0:
         return None, 0.0
+    k_lo = int(np.flatnonzero(band)[0])
     fb, pb = f[band], spec[band]
     cand, _ = signal.find_peaks(pb)
     if cand.size == 0:
         cand = np.array([int(np.argmax(pb))])
-    score = pb[cand].astype(np.float64)
+    cand = cand[pb[cand] >= HARMONIC_MIN_SHARE * pb[cand].max()]
+    score = np.array([pb[c] + _harmonic_power(spec, k_lo + c, 2) + _harmonic_power(spec, k_lo + c, 3)
+                      for c in cand], dtype=np.float64)
     if prior_bpm is not None:
         d = np.abs(fb[cand] * 60.0 - prior_bpm)
         score = score * np.exp(-0.5 * (d / 15.0) ** 2)
     k = cand[int(np.argmax(score))]
     f0 = fb[k]
-    # Prefer the fundamental if the chosen peak looks like a 2nd harmonic.
-    half = np.abs(fb - f0 / 2) <= 0.08
-    if f0 / 2 >= HR_BAND_HZ[0] and half.any() and pb[half].max() >= 0.5 * pb[k] and prior_bpm is None:
-        k = np.flatnonzero(half)[int(np.argmax(pb[half]))]
-        f0 = fb[k]
     near = (np.abs(f - f0) <= 0.1) | (np.abs(f - 2 * f0) <= 0.1)
     total = spec[(f >= 0.5) & (f <= 8.0)].sum()
     purity = float(spec[near].sum() / total) if total > 0 else 0.0
