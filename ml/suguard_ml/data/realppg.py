@@ -48,5 +48,9 @@ def load_recordings(cache: str | Path = "data/heartpy") -> dict[str, np.ndarray]
     d3 = pd.read_csv(root / FILES[2])
     t3 = pd.to_datetime(d3["datetime"], format="mixed")
     t3 = (t3 - t3.iloc[0]).dt.total_seconds().to_numpy()
-    out["heartpy_data3"] = resample_irregular(t3, d3["hr"].to_numpy(dtype=float), FS)[1]
+    # The timestamps of this recording are quantised (runs of samples share one), so
+    # interpolating at them drops samples and bends the waveform. Like heartpy itself
+    # (get_samplerate_datetime), take the samples as uniform at the mean rate (~100.4 Hz).
+    fs3 = (t3.size - 1) / (t3[-1] - t3[0])
+    out["heartpy_data3"] = resample(d3["hr"].to_numpy(dtype=float), fs3, FS)
     return out

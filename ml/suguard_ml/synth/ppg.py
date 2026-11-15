@@ -15,8 +15,10 @@ Model of one channel (counts):
   beat comes from a deliberately wide family (``sample_morphology``): a
   skewed systolic wave plus a reflected/diastolic wave and a windkessel decay
   (a fingertip-like pulse), the same pulse low-passed down to little more
-  than its fundamental (as the tissue does at the wrist), or a smooth
-  harmonic series with one dominant peak per beat.
+  than its fundamental (as the tissue does at the wrist), a smooth harmonic
+  series, or a harmonic series rich in overtones (a 2nd harmonic up to 1.6
+  times the fundamental: a deep notch and a large diastolic wave), each with
+  one dominant peak per beat.
   The red channel's pulsatile part is the IR one scaled by the ratio of
   ratios R that corresponds to the simulated SpO2.
 * ``m``: motion modulation of the detected light (periodic arm swing / gait,
@@ -110,21 +112,27 @@ def _loguniform(rng, lo, hi):
     return float(np.exp(rng.uniform(np.log(lo), np.log(hi))))
 
 
-# Shares of the three pulse-shape families: the wave model as it is, the wave
-# model behind a low-pass, a harmonic series.
-SHAPE_SHARES = (0.40, 0.45, 0.15)
+# Shares of the pulse-shape families: the wave model as it is, the wave model
+# behind a low-pass, a smooth harmonic series, a harmonic series rich in
+# overtones. Real recordings span both ends: wrist pulses can be nearly
+# sinusoidal, while three public recordings (heartpy) have a 2nd harmonic of
+# 0.9-1.6 times the fundamental, more than the wave model ever makes (< 0.6).
+SHAPE_SHARES = (0.30, 0.30, 0.15, 0.25)
+# Harmonics 2..5 of the two harmonic families: upper bounds of the uniform amplitude draws.
+SMOOTH_HARMONICS = (0.45, 0.2, 0.08, 0.0)
+RICH_HARMONICS = (1.6, 0.7, 0.35, 0.15)
 PULSE_PAD_S = 1.0          # margin simulated around the window for the low-pass (beat_train covers 2 s)
 
 
-def _sample_harmonics(rng: np.random.Generator) -> tuple:
-    """A smooth pulse as fundamental + harmonics 2..4 with random phases:
-    ``sign * (sin(th) + sum a_k sin(k th + p_k))``. Drawn until the shape has
-    one dominant peak per beat; oriented so that the steeper flank rises
-    (systole)."""
+def _sample_harmonics(rng: np.random.Generator, bounds=SMOOTH_HARMONICS) -> tuple:
+    """A pulse as fundamental + harmonics 2..5 with random amplitudes (up to
+    ``bounds``) and phases: ``sign * (sin(th) + sum a_k sin(k th + p_k))``.
+    Drawn until the shape has one dominant peak per beat (the second highest
+    below 0.6 of it); oriented so that the steeper flank rises (systole)."""
     th = np.linspace(0.0, 2 * np.pi, 240, endpoint=False)
     for _ in range(30):
-        amps = np.array([rng.uniform(0, 0.45), rng.uniform(0, 0.2), rng.uniform(0, 0.08)])
-        phases = rng.uniform(0, 2 * np.pi, 3)
+        amps = np.array([rng.uniform(0, b) for b in bounds])
+        phases = rng.uniform(0, 2 * np.pi, len(bounds))
         x = np.sin(th) + sum(a * np.sin((k + 2) * th + p) for k, (a, p) in enumerate(zip(amps, phases)))
         d = np.diff(np.concatenate([x, x[:1]]))
         sign = 1.0 if d.max() >= -d.min() else -1.0
@@ -134,7 +142,7 @@ def _sample_harmonics(rng: np.random.Generator) -> tuple:
         heights = np.sort(x[peaks] - x.min())[::-1]
         if heights.size == 1 or heights[1] < 0.6 * heights[0]:
             return sign, amps, phases
-    return 1.0, np.array([0.2, 0.0, 0.0]), np.array([np.pi, 0.0, 0.0])
+    return 1.0, np.array([0.2] + [0.0] * (len(bounds) - 1)), np.array([np.pi] + [0.0] * (len(bounds) - 1))
 
 
 def sample_morphology(rng: np.random.Generator, hr_bpm: float = 75.0) -> Morphology:
@@ -167,9 +175,12 @@ def sample_morphology(rng: np.random.Generator, hr_bpm: float = 75.0) -> Morphol
         tau=rng.uniform(0.2, 0.6),
     )
     u = rng.random()
-    if u >= SHAPE_SHARES[0] + SHAPE_SHARES[1]:
-        m.harmonics = _sample_harmonics(rng)
-    elif u >= SHAPE_SHARES[0]:
+    edges = np.cumsum(SHAPE_SHARES)
+    if u >= edges[2]:
+        m.harmonics = _sample_harmonics(rng, RICH_HARMONICS)
+    elif u >= edges[1]:
+        m.harmonics = _sample_harmonics(rng, SMOOTH_HARMONICS)
+    elif u >= edges[0]:
         # From "the second harmonic is still there" (1.25 x the pulse rate) to "nearly the wave model" (8 Hz).
         m.lp_hz = _loguniform(rng, max(1.25 * hr_bpm / 60.0, 1.2), 8.0)
     return m

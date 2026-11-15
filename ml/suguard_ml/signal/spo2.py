@@ -11,8 +11,11 @@ from ..config import FS, SPO2_COEFFS
 # Accept R only on the descending (physiological) branch of the calibration
 # curve and below the curve's validated range (Maxim curve: R 1.1 ~ 74 %).
 # Ratios a little under the vertex (-b/2a ~ 0.34) are well-perfused, ~100 %
-# readings; much lower or higher ratios are noise, not physiology.
-R_MIN_PLAUSIBLE = 0.25
+# readings; much lower or higher ratios are noise, not physiology. The floor
+# keeps 11 % of margin below the vertex for noise at full saturation (genuine
+# simulated windows up to 99.5 %, R 0.44, never estimate below 0.43). It was
+# 0.25, and a red pulse attenuated to a fifth (R 0.26-0.28) then read 100 %.
+R_MIN_PLAUSIBLE = 0.30
 R_MAX_CALIBRATED = 1.1
 # Below this red/IR agreement the two channels do not see the same arterial
 # pulse (noise, motion, ambient light) and the ratio is not trustworthy.

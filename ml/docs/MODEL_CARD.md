@@ -84,7 +84,7 @@ heart rate) only if all of this holds:
 | Quality components: each must reach 0.25 and their geometric mean 0.5 | perfusion (rising over 0.03–0.12 %, falling over 10–20 %); beat-template correlation; spectral purity; beat-amplitude spread; share of plausible beat intervals; agreement of the beat-based and the spectral heart rate; share of samples not flagged as motion. A component that cannot be computed fails | `weak_pulse`, `implausible_amplitude`, `motion`, `irregular_or_noisy` |
 | Motion share | ≤ 70 % of the samples flagged by the network | `motion` |
 | Input support | on the samples the network calls clean (≥ 10 of them), its IR output must correlate with the measured IR signal (≥ 0.7) and have a comparable size (0.7–1.4) | `denoiser_mismatch` |
-| Arterial ratio | the red/IR ratio R must be one that arterial blood can produce (0.25–1.1) | `red_ir_inconsistent` |
+| Arterial ratio | the red/IR ratio R must be one that arterial blood can produce (0.30–1.1) | `red_ir_inconsistent` |
 
 **SpO2** additionally needs two more quality components — the stability of the red/IR ratio over
 the window and the red/IR correlation (`red_ir_inconsistent`) — a red/IR correlation of at least

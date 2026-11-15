@@ -211,8 +211,16 @@ def _shape_generators() -> dict:
             return np.exp(-0.5 * (u / width) ** 2) + 0.35 * np.exp(-0.5 * ((u - 0.33) / (1.6 * width)) ** 2)
         return f
 
+    def deep_notch(th):
+        # The median beat of the longest public recording (heartpy data3): a sharp systolic peak,
+        # a notch below the diastolic foot and a diastolic wave of ~40 % (2nd harmonic > 1st).
+        u = (th / (2 * np.pi)) % 1.0
+        return (np.exp(-0.5 * ((u - 0.2) / 0.055) ** 2) + 0.42 * np.exp(-0.5 * ((u - 0.55) / 0.09) ** 2)
+                - 0.12 * np.exp(-0.5 * ((u - 0.37) / 0.035) ** 2) + 0.15 * (1.0 - u))
+
     return {
         "sharp_with_reflected_wave": gaussian_pulse(0.07),
+        "deep_notch_large_diastolic_wave": deep_notch,
         "rounded_with_reflected_wave": gaussian_pulse(0.13),
         "skewed_triangle_rise_20pct": skewed_triangle(0.2, 6.0),
         "skewed_triangle_rise_35pct_smooth": skewed_triangle(0.35, 3.0),
