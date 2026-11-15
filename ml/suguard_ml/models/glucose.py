@@ -142,22 +142,30 @@ class PersonalCalibration:
         return float(y), math.sqrt(max(var, 0.0))
 
     def update(self, f: float, y_ref: float, t: float | None = None) -> "PersonalCalibration":
+        """Assimilate one fingerstick. A reading older than the newest one
+        (entered late) is used with correspondingly less weight: the state
+        has drifted since it was taken."""
         P = self._predict_state(t)
         h = np.array([1.0, f - self.f0])
         y_hat = self.f0 + self.a + self.b * (f - self.f0)
         r = (GLUCOMETER_CV * y_ref) ** 2 + self.resid_var
-        s = float(h @ P @ h) + r
+        late = t is not None and self.last_t is not None and t < self.last_t
+        if late:
+            days_back = min((self.last_t - t) / 86400.0, MAX_DRIFT_DAYS)
+            r += float(h @ np.diag([self.drift_a_per_day * days_back, self.drift_b_per_day * days_back]) @ h)
+        predicted_var = float(h @ P @ h)
+        s = predicted_var + r
         k = P @ h / s
         innov = y_ref - y_hat
         theta = np.array([self.a, self.b]) + k * innov
         P = (np.eye(2) - np.outer(k, h)) @ P
         P = 0.5 * (P + P.T)                                  # rounding must not break the symmetry
         P *= min(1.0, P_LIMIT[0] / max(P[0, 0], 1e-300), P_LIMIT[1] / max(P[1, 1], 1e-300))
-        # Online estimate of the model's own error (bounded, slow).
-        if self.n_points >= 2:
-            excess = innov**2 - float(h @ P @ h) - (GLUCOMETER_CV * y_ref) ** 2
-            self.resid_var = float(np.clip(0.9 * self.resid_var + 0.1 * max(excess, RESID_VAR_RANGE[0]),
-                                           *RESID_VAR_RANGE))
+        # Online estimate of the model's own error: E[innovation^2] = predicted variance + meter
+        # variance + model error, so the excess estimates the last term (slow, bounded average).
+        if self.n_points >= 2 and not late:
+            excess = innov**2 - predicted_var - (GLUCOMETER_CV * y_ref) ** 2
+            self.resid_var = float(np.clip(0.9 * self.resid_var + 0.1 * excess, *RESID_VAR_RANGE))
         self.a = float(np.clip(theta[0], -A_LIMIT, A_LIMIT))
         self.b = float(np.clip(theta[1], *B_RANGE))
         self.P = P.tolist()

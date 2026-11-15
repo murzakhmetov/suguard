@@ -104,13 +104,18 @@ def test_risk_model_behaviour():
     assert asian["p_prediabetes_or_diabetes"] > euro["p_prediabetes_or_diabetes"]
     names = {f["factor"] for f in m.predict(RiskInput(age=45, bmi=26))["factors"]}
     assert "resting_hr" not in names and "smoking" not in names
+    # Unanswered questions are named: the estimate is then an average over US adults, not this user.
+    assert m.predict(RiskInput(age=45, bmi=26))["inputs_averaged_over_reference_population"] == [
+        "male", "physically_active", "ancestry"]
+    full = RiskInput(age=45, bmi=26, male=True, physically_active=False, ancestry="asian")
+    assert m.predict(full)["inputs_averaged_over_reference_population"] == []
     assert m.predict(RiskInput(age=95, bmi=26))["age_clipped"]
     assert m.predict(RiskInput(age=50, bmi=29, diagnosed_diabetes=True))["applicable"] is False
 
 
-def _run_train(table: Path, out: Path):
+def _run_train(table: Path, out: Path, *extra):
     cmd = [sys.executable, str(ML / "scripts" / "train_glucose.py"), "--table", str(table), "--out", str(out),
-           "--name", "ctrl", "--tz-offset-h", "0", "--min-subjects", "10"]
+           "--name", "ctrl", "--tz-offset-h", "0", "--min-subjects", "10", *extra]
     subprocess.run(cmd, check=True, capture_output=True, cwd=ML)
     return json.loads((out / "metrics" / "ctrl_eval.json").read_text())
 
@@ -130,7 +135,80 @@ def test_glucose_training_controls(tmp_path):
     # ... but only the positive control passes every evidence criterion.
     assert pos["not_validated_because"] == [r for r in pos["not_validated_because"] if "SuGuard bracelet" in r]
     assert len(neg["not_validated_because"]) > 1
+    assert pos["C_personalised"]["n_subjects"] == 12 and pos["C_personalised"]["subjects_not_scored"] == []
+    assert pos["holdout"]["personalised"]["n_subjects"] == 3 and pos["holdout"]["gain_vs_best_non_ppg_baseline"] > 0
     # Leaky random split must look better than the honest subject-wise one.
     assert pos["A_random_rows_LEAKY"]["mard_pct"] <= pos["B_subject_wise"]["model"]["mard_pct"]
     est = GlucoseEstimator.load(tmp_path / "pos")
     assert est.model is not None and not est.model.validated   # experimental on this device
+    assert est.model.version.startswith("1.0.0+") and len(est.model.version) == 18   # unique per trained model
+
+
+@pytest.mark.slow
+def test_glucose_gate_fails_closed(tmp_path):
+    """Regression (review findings): tables labelled as bracelet data that must
+    still not come out validated."""
+    sys.path.insert(0, str(ML / "tests"))
+    from synthetic_paired import make_table
+
+    dev = "suguard_max30102"
+    # The same strong signal, labelled as bracelet data: this one is validated ...
+    make_table(True, n_subjects=15, per_subject=120, source=dev).to_csv(tmp_path / "ok.csv", index=False)
+    ok = _run_train(tmp_path / "ok.csv", tmp_path / "ok")
+    assert ok["validated"] is True and ok["not_validated_because"] == []
+    assert GlucoseEstimator.load(tmp_path / "ok").model.validated
+    # ... but not if most people have no readings at the fingerstick times (the gain was then
+    # "shown" on a handful of people while --min-subjects counted everybody in the table),
+    thin = make_table(True, n_subjects=15, per_subject=60, scheduled=False, source=dev)
+    thin.to_csv(tmp_path / "thin.csv", index=False)
+    r = _run_train(tmp_path / "thin.csv", tmp_path / "thin")
+    assert r["validated"] is False and any("could score only" in x for x in r["not_validated_because"])
+    assert len(r["C_personalised"]["subjects_not_scored"]) >= 3
+    # ... and not if the table has no PPG features at all (the two controls used to be skipped).
+    make_table(True, n_subjects=15, per_subject=120, ppg=False, source=dev).to_csv(tmp_path / "ctx.csv", index=False)
+    r = _run_train(tmp_path / "ctx.csv", tmp_path / "ctx")
+    assert r["validated"] is False and "the table has no PPG features" in r["not_validated_because"]
+    assert not GlucoseEstimator.load(tmp_path / "ctx").model.validated
+
+
+def test_table_time_base(tmp_path):
+    """Regression (review findings): the local clock of a table comes from the
+    table, so hour features and the fingerstick schedule cannot run on UTC by
+    accident."""
+    import pandas as pd
+
+    from suguard_ml.data.paired import load_paired
+
+    sys.path.insert(0, str(ML / "scripts"))
+    from train_glucose import calibration_times
+
+    def hours(df):
+        return (np.degrees(np.arctan2(df.hour_sin, df.hour_cos)) % 360) / 15.0
+
+    base = {"subject_id": ["a"] * 3, "glucose_mgdl": [100.0, 110.0, 120.0], "f1": [0.1, 0.2, 0.3]}
+    # Offsets written in the timestamps (what the PC recorder writes): used as they are.
+    pd.DataFrame({**base, "timestamp": ["2026-11-14T08:05:00+05:00", "2026-11-14T09:05:00+0500",
+                                        "2026-11-14T05:05:00Z"]}).to_csv(tmp_path / "aware.csv", index=False)
+    df = load_paired(tmp_path / "aware.csv")
+    assert sorted(df.meta_tz_offset_h) == [0.0, 5.0, 5.0]
+    assert sorted(np.round(hours(df), 2)) == pytest.approx([5.08, 8.08, 9.08], abs=0.01)
+    assert df.t.min() == pytest.approx(1794625500.0)                    # 03:05 UTC
+    # Unix seconds: the offset must come from the table or from the caller.
+    t = [1794625500.0, 1794629100.0, 1794632700.0]
+    pd.DataFrame({**base, "timestamp": t}).to_csv(tmp_path / "unix.csv", index=False)
+    with pytest.raises(ValueError, match="tz_offset_h"):
+        load_paired(tmp_path / "unix.csv")
+    assert np.round(hours(load_paired(tmp_path / "unix.csv", tz_offset_h=5)), 2).tolist() == [8.08, 9.08, 10.08]
+    pd.DataFrame({**base, "t": t, "timestamp": t, "meta_tz_offset_h": 5.0}).to_csv(tmp_path / "own.csv", index=False)
+    assert np.round(hours(load_paired(tmp_path / "own.csv")), 2).tolist() == [8.08, 9.08, 10.08]
+    assert load_paired(tmp_path / "own.csv", tz_offset_h=0).meta_tz_offset_h.tolist() == [5.0] * 3   # the table wins
+    # Naive wall-clock strings without an offset are the wall clock itself (as in BIG IDEAs).
+    pd.DataFrame({**base, "timestamp": ["2026-11-14 08:05:00", "2026-11-14 09:05:00", "2026-11-14 10:05:00"]}).to_csv(
+        tmp_path / "naive.csv", index=False)
+    assert np.round(hours(load_paired(tmp_path / "naive.csv")), 2).tolist() == [8.08, 9.08, 10.08]
+    # The fingerstick schedule (07:30 and 19:30) follows the local clock of each row.
+    day0 = 1794614400.0                                                  # 2026-11-14 00:00 UTC
+    t = day0 + 900.0 * np.arange(4 * 96)                                 # a reading every 15 min for 4 days
+    picked = calibration_times(t, per_day=2, days=3.0, tz_offset_h=np.full(t.size, 5.0))
+    local_hour = ((t[picked] + 5 * 3600) % 86400) / 3600
+    assert set(np.round(local_hour, 2)) == {7.5, 19.5} and picked.size == 6

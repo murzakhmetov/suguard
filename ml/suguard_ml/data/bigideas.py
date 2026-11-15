@@ -203,7 +203,7 @@ def participant_table(folder: Path, every_n: int = 1, window_s: float = 300.0,
             tv = temp.iloc[k0:k1, 1].to_numpy(dtype=float)
             f["temperature_c"] = float(np.nanmedian(tv)) if tv.size else np.nan
         row = {"subject_id": sid, "t": float(T), "timestamp": float(T), "glucose_mgdl": float(g),
-               "n_windows": len(per_win), "meta_source": "bigideas_empatica_e4",
+               "n_windows": len(per_win), "meta_source": "bigideas_empatica_e4", "meta_tz_offset_h": 0.0,
                "meta_acc_std": move, "meta_clean_s": float(best * 10), **f}
         row.update(meal_features(food, T))
         rows.append(row)

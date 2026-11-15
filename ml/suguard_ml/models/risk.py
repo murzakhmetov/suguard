@@ -202,6 +202,11 @@ class RiskModel:
         cat = category(p_dys, p_dm)
         not_used = [k for k, col in INPUT_COLUMNS.items()
                     if getattr(inp, k) is not None and col not in self.used]
+        # Unanswered questions the model does use: the estimate is then the average over the
+        # reference population (US adults, NHANES), which is not the user's own group. For
+        # ancestry this matters: an Asian adult is underestimated by about a third.
+        averaged = [k for k, col in (("male", "male"), ("physically_active", "active"), ("ancestry", "asian"))
+                    if getattr(inp, k) is None and col in self.used]
         return {
             "applicable": True,
             "p_prediabetes_or_diabetes": p_dys,
@@ -216,6 +221,7 @@ class RiskModel:
             "glucose_evidence_ignored": ignored,
             "a1c_from_glucose_pct": None if a1c_hat is None else round(a1c_hat, 2),
             "inputs_not_used": not_used,
+            "inputs_averaged_over_reference_population": averaged,
             "age_clipped": bool(inp.age > self.age_max or inp.age < self.age_min),
             "factors": self.explain(inp, target="diabetes" if (p_dm >= 0.10 and p_dys < 0.60) else "dysglycemia"),
         }

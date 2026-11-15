@@ -52,25 +52,73 @@ def _to_unix(ts: pd.Series, tz_offset_h: float = 0.0) -> np.ndarray:
     return out
 
 
-def add_time_features(df: pd.DataFrame, tz_offset_h: float = 0.0) -> pd.DataFrame:
+def _local_offsets(ts: pd.Series, tz_offset_h: float | None) -> np.ndarray:
+    """UTC offset (hours) of the wall clock each timestamp was written in:
+    the offset inside the string where there is one, else ``tz_offset_h``
+    (NaN where neither is known)."""
+    default = np.nan if tz_offset_h is None else float(tz_offset_h)
+    out = np.full(len(ts), default)
+    if pd.api.types.is_numeric_dtype(ts):
+        return out
+    s = ts.astype(str).str.strip()
+    m = s.str.extract(r"(Z|[+-]\d{2}:?\d{2})$")[0]
+    for i, suffix in enumerate(m.to_numpy()):
+        if isinstance(suffix, str):
+            if suffix == "Z":
+                out[i] = 0.0
+            else:
+                sign = -1.0 if suffix[0] == "-" else 1.0
+                digits = suffix[1:].replace(":", "")
+                out[i] = sign * (int(digits[:2]) + int(digits[2:]) / 60.0)
+    return out
+
+
+def add_time_features(df: pd.DataFrame, tz_offset_h=0.0) -> pd.DataFrame:
     """Hour-of-day as sin/cos (circadian and meal timing), in local time:
-    ``t`` is UTC unix seconds and ``tz_offset_h`` the participant's offset."""
-    hours = ((df["t"] / 3600.0) + tz_offset_h) % 24.0
+    ``t`` is UTC unix seconds and ``tz_offset_h`` the participants' offset
+    (one number, or one per row)."""
+    hours = ((df["t"] / 3600.0) + np.asarray(tz_offset_h, dtype=float)) % 24.0
     df["hour_sin"] = np.sin(2 * np.pi * hours / 24.0)
     df["hour_cos"] = np.cos(2 * np.pi * hours / 24.0)
     return df
 
 
-def load_paired(path: str | Path, tz_offset_h: float = 0.0) -> pd.DataFrame:
+def load_paired(path: str | Path, tz_offset_h: float | None = None) -> pd.DataFrame:
+    """A paired table with ``t`` (unix seconds) and ``meta_tz_offset_h``: the
+    hours to add to ``t`` to get the participant's wall clock. Everything that
+    depends on the time of day (hour features, the fingerstick schedule of the
+    evaluation) uses that column, so it cannot disagree with the table.
+
+    The offset comes, in this order, from the table's own ``meta_tz_offset_h``
+    column, from the offset written in each timestamp ("...+05:00"), or from
+    ``tz_offset_h``. Timestamps without any of these raise ValueError, except
+    naive strings without ``tz_offset_h``: those are taken as the wall clock
+    itself (``t`` is then "local seconds" with offset 0, as in BIG IDEAs).
+    """
     p = Path(path)
     df = pd.read_parquet(p) if p.suffix == ".parquet" else pd.read_csv(p)
     if "glucose_mgdl" not in df and "glucose_mmol" in df:
         df["glucose_mgdl"] = df["glucose_mmol"] * 18.0
     df["subject_id"] = df["subject_id"].astype(str)
-    df["t"] = _to_unix(df["timestamp"], tz_offset_h) if "t" not in df else df["t"].astype(float)
+    naive_strings = "t" not in df and not pd.api.types.is_numeric_dtype(df["timestamp"])
+    if "t" in df:
+        df["t"] = df["t"].astype(float)
+        offsets = np.full(len(df), np.nan if tz_offset_h is None else float(tz_offset_h))
+    else:
+        offsets = _local_offsets(df["timestamp"], tz_offset_h)
+        if naive_strings and tz_offset_h is None:
+            offsets = np.where(np.isnan(offsets), 0.0, offsets)       # wall clock taken as it is
+        df["t"] = _to_unix(df["timestamp"], 0.0 if tz_offset_h is None else tz_offset_h)
+    if "meta_tz_offset_h" in df:
+        stored = pd.to_numeric(df["meta_tz_offset_h"], errors="coerce").to_numpy(dtype=float)
+        offsets = np.where(np.isfinite(stored), stored, offsets)
+    if np.isnan(offsets).any():
+        raise ValueError("the table has unix timestamps and no meta_tz_offset_h column: pass the participants' "
+                         "UTC offset (tz_offset_h), needed for the local hour of day")
+    df["meta_tz_offset_h"] = offsets
     df = df[np.isfinite(df["glucose_mgdl"]) & (df["glucose_mgdl"] > 20) & (df["glucose_mgdl"] < 600)]
     if "hour_sin" not in df:
-        df = add_time_features(df, tz_offset_h)
+        df = add_time_features(df, df["meta_tz_offset_h"].to_numpy())
     return df.sort_values(["subject_id", "t"]).reset_index(drop=True)
 
 
@@ -150,7 +198,7 @@ def build_from_device_logs(windows_jsonl: str | Path, fingersticks_csv: str | Pa
         f = aggregate_window_features(feats)
         row = {"subject_id": uid, "t": float(s.t), "timestamp": float(s.t),
                "glucose_mgdl": float(s.glucose_mgdl), "n_windows": len(feats),
-               "meta_source": "suguard_max30102", **f}
+               "meta_source": "suguard_max30102", "meta_tz_offset_h": float(tz_offset_h), **f}
         if meals is not None:
             row.update(meal_context(s.t, meals[meals["user_id"].astype(str) == uid]))
         if profiles is not None and uid in profiles.index:

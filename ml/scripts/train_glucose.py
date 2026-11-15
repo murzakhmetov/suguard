@@ -97,12 +97,13 @@ def protocol_subject(df, feats, seed=0):
     return pred, base
 
 
-def local_hours(t: np.ndarray, tz_offset_h: float) -> tuple[np.ndarray, np.ndarray]:
-    loc = t + tz_offset_h * 3600.0
+def local_hours(t: np.ndarray, tz_offset_h) -> tuple[np.ndarray, np.ndarray]:
+    """Local calendar day and hour of day; ``tz_offset_h`` is one number or one per row."""
+    loc = t + np.asarray(tz_offset_h, dtype=float) * 3600.0
     return np.floor(loc / 86400.0), (loc % 86400.0) / 3600.0
 
 
-def calibration_times(t: np.ndarray, per_day: int, days: float, tz_offset_h: float = 0.0) -> np.ndarray:
+def calibration_times(t: np.ndarray, per_day: int, days: float, tz_offset_h=0.0) -> np.ndarray:
     """At most ``per_day`` fingersticks per local calendar day: the first row
     within 30 min after each scheduled clock time, during the first ``days``."""
     hours = SCHEDULES.get(per_day) or list(np.linspace(7.5, 21.5, per_day))
@@ -117,17 +118,22 @@ def calibration_times(t: np.ndarray, per_day: int, days: float, tz_offset_h: flo
     return np.asarray(sorted(chosen), dtype=int)
 
 
-def protocol_personal(df, f_oof, per_day=2, days=3.0, tz_offset_h=0.0, seed=0):
+def protocol_personal(df, f_oof, per_day=2, days=3.0, seed=0):
     """Kalman calibration of the out-of-fold population prediction, scored on
-    later days, against calibration-only baselines (same noisy fingersticks)."""
+    later days, against calibration-only baselines (same noisy fingersticks).
+    The fingerstick schedule runs on each participant's wall clock
+    (``meta_tz_offset_h`` of the table). Returns (summary, rows); the summary
+    names the people who could not be scored."""
     rng = np.random.default_rng(seed)
-    rows = []
+    rows, skipped = [], []
     hours = np.array(SCHEDULES.get(per_day) or list(np.linspace(7.5, 21.5, per_day)))
     for sid, g in df.assign(f=f_oof).groupby("subject_id", sort=False):
         g = g.sort_values("t")
         t, y, f = g.t.to_numpy(), g.glucose_mgdl.to_numpy(), g.f.to_numpy()
+        tz_offset_h = g["meta_tz_offset_h"].to_numpy(dtype=float)
         cal_idx = calibration_times(t, per_day, days, tz_offset_h)
         if cal_idx.size < 2 or cal_idx[-1] >= len(g) - 5:
+            skipped.append(str(sid))                 # too few readings at the scheduled times, or nothing after them
             continue
         meas = y[cal_idx] * (1.0 + GLUCOMETER_CV * rng.standard_normal(cal_idx.size))
         cal_m = PersonalCalibration()          # PPG model + calibration
@@ -135,7 +141,7 @@ def protocol_personal(df, f_oof, per_day=2, days=3.0, tz_offset_h=0.0, seed=0):
         for i, m in zip(cal_idx, meas):
             cal_m.update(f[i], m, t[i])
             cal_0.update(cal_0.f0, m, t[i])
-        _, hod_cal = local_hours(t[cal_idx], tz_offset_h)
+        _, hod_cal = local_hours(t[cal_idx], tz_offset_h[cal_idx])
         slot_cal = np.argmin(np.abs(hod_cal[:, None] - hours[None, :]), axis=1)
         profile = {s: float(np.mean(meas[slot_cal == s])) for s in np.unique(slot_cal)}
         _, hod = local_hours(t, tz_offset_h)
@@ -149,7 +155,7 @@ def protocol_personal(df, f_oof, per_day=2, days=3.0, tz_offset_h=0.0, seed=0):
     r = pd.DataFrame(rows, columns=["sid", "y", "model_cal", "sd", "cal_only", "last_stick", "tod_profile"])
     z = 1.2816
     res = {
-        "n_subjects": int(r.sid.nunique()),
+        "n_subjects": int(r.sid.nunique()), "subjects_not_scored": skipped,
         "fingersticks_per_day": per_day, "calibration_days": days,
         "model_plus_calibration": glucose_metrics(r.y, r.model_cal),
         "interval_80_coverage": float(np.mean(np.abs(r.y - r.model_cal) <= z * r.sd)),
@@ -202,22 +208,24 @@ def main():
     ap.add_argument("--out", default="models")
     ap.add_argument("--name", default="glucose")
     ap.add_argument("--tz-offset-h", type=float, default=None,
-                    help="UTC offset of the participants; required for unix-second timestamps")
+                    help="UTC offset of the participants; only needed for tables with unix timestamps and no "
+                         "meta_tz_offset_h column (tables built by this package carry it)")
     ap.add_argument("--per-day", type=int, default=2, help="calibration fingersticks per day (protocol C)")
     ap.add_argument("--cal-days", type=float, default=3.0)
     ap.add_argument("--min-gain", type=float, default=0.10, help="required relative MARD gain over baselines")
     ap.add_argument("--max-mard", type=float, default=15.0, help="absolute MARD bar after calibration (%%)")
     ap.add_argument("--min-subjects", type=int, default=20)
+    ap.add_argument("--min-scored-frac", type=float, default=0.8,
+                    help="share of the development and of the hold-out people the personalised protocol must score")
     ap.add_argument("--holdout-frac", type=float, default=0.2, help="people locked away for the final check")
     ap.add_argument("--seed", type=int, default=0)
     a = ap.parse_args()
 
-    raw = pd.read_parquet(a.table) if a.table.endswith(".parquet") else pd.read_csv(a.table, nrows=5)
-    numeric_ts = "t" in raw or pd.api.types.is_numeric_dtype(raw.get("timestamp", pd.Series(dtype=float)))
-    if "hour_sin" not in raw and numeric_ts and a.tz_offset_h is None:
-        sys.exit("unix timestamps without hour_sin/hour_cos: pass --tz-offset-h (the API uses local time)")
-    tz = a.tz_offset_h or 0.0
-    df = load_paired(a.table, tz_offset_h=tz)
+    try:
+        df = load_paired(a.table, tz_offset_h=a.tz_offset_h)
+    except ValueError as e:
+        sys.exit(f"{a.table}: {e} (--tz-offset-h)")
+    tz = sorted(set(df["meta_tz_offset_h"].round(2).tolist()))      # the wall clock(s) the table was recorded in
     feats = model_columns(df)
     ppg = [f for f in feats if f not in CONTEXT]
     sources = sorted(df["meta_source"].astype(str).unique()) if "meta_source" in df else ["unknown"]
@@ -242,7 +250,7 @@ def main():
     report["B_subject_wise"] = {"model": glucose_metrics(y, pred_b[:, 1]),
                                 "baseline_train_mean": glucose_metrics(y, base_b),
                                 "interval_80_coverage": float(np.mean((y >= pred_b[:, 0]) & (y <= pred_b[:, 2])))}
-    c, c_rows = protocol_personal(dev, pred_b[:, 1], a.per_day, a.cal_days, tz, a.seed)
+    c, c_rows = protocol_personal(dev, pred_b[:, 1], a.per_day, a.cal_days, a.seed)
     report["C_personalised"] = c
 
     # Controls: context only, and PPG shuffled within each person.
@@ -251,12 +259,12 @@ def main():
     if ctx and ppg:
         p_ctx, _ = protocol_subject(dev, ctx, a.seed)
         controls["context_only"] = (glucose_metrics(y, p_ctx[:, 1]),
-                                    protocol_personal(dev, p_ctx[:, 1], a.per_day, a.cal_days, tz, a.seed)[0])
+                                    protocol_personal(dev, p_ctx[:, 1], a.per_day, a.cal_days, a.seed)[0])
     if ppg:
         shuf = shuffle_within_subject(dev, ppg, a.seed)
         p_sh, _ = protocol_subject(shuf, feats, a.seed)
         controls["ppg_shuffled"] = (glucose_metrics(y, p_sh[:, 1]),
-                                    protocol_personal(shuf, p_sh[:, 1], a.per_day, a.cal_days, tz, a.seed)[0])
+                                    protocol_personal(shuf, p_sh[:, 1], a.per_day, a.cal_days, a.seed)[0])
     report["controls"] = {k: {"B": v[0], "C": (v[1] or {}).get("model_plus_calibration")} for k, v in controls.items()}
 
     reasons = []
@@ -280,15 +288,25 @@ def main():
         reasons.append(f"only {subjects.size} subjects (< {a.min_subjects})")
     if b_gain < a.min_gain:
         reasons.append("population model does not beat the mean on new people")
+    n_dev = int(dev.subject_id.nunique())
     if c is None:
         reasons.append("no subject with enough data for the personalised protocol")
     else:
+        need = int(np.ceil(a.min_scored_frac * n_dev))
+        if c["n_subjects"] < need:
+            reasons.append(f"the personalised protocol could score only {c['n_subjects']} of {n_dev} development "
+                           f"people (< {need}): too few readings at the scheduled fingerstick times")
         if c_gain < a.min_gain or c_ci[0] <= 0:
             reasons.append("calibrated model does not beat fingerstick-only baselines")
         if not absolute_ok(c["model_plus_calibration"], a.max_mard):
             reasons.append(f"calibrated MARD/Clarke above the absolute bar ({a.max_mard} %, A+B 99 %)")
-    for k, g in ctrl_gain.items():
-        if g < a.min_gain / 2:
+    # The controls must exist and be beaten: without them nothing shows that the PPG contributes.
+    if not ppg:
+        reasons.append("the table has no PPG features")
+    for k in ("context_only", "ppg_shuffled"):
+        if k not in ctrl_gain:
+            reasons.append(f"the {k} control could not be run")
+        elif ctrl_gain[k] < a.min_gain / 2:
             reasons.append(f"PPG adds nothing over the {k} control")
 
     # Final model on the development people only (the evaluated one).
@@ -297,10 +315,19 @@ def main():
         tmp = GlucosePopulationModel(final_boosters, feats, {})
         f_test = np.array([tmp.predict(r)[0] for r in test[feats].to_dict("records")])
         report["holdout"] = {"population": glucose_metrics(test.glucose_mgdl, f_test)}
-        h_c, _ = protocol_personal(test, f_test, a.per_day, a.cal_days, tz, a.seed)
+        h_c, _ = protocol_personal(test, f_test, a.per_day, a.cal_days, a.seed)
         report["holdout"]["personalised"] = h_c
         if h_c is None or not absolute_ok(h_c["model_plus_calibration"], a.max_mard):
             reasons.append("fails the absolute bar on the locked hold-out")
+        else:
+            need = int(np.ceil(a.min_scored_frac * len(hold)))
+            if h_c["n_subjects"] < need:
+                reasons.append(f"only {h_c['n_subjects']} of {len(hold)} hold-out people could be scored (< {need})")
+            # Calibration alone often meets the absolute bar: the hold-out must show the PPG gain too.
+            h_gain = 1 - h_c["model_plus_calibration"]["mard_pct"] / h_c[best_baseline(h_c)]["mard_pct"]
+            report["holdout"]["gain_vs_best_non_ppg_baseline"] = h_gain
+            if h_gain <= 0:
+                reasons.append("calibrated model is not better than fingerstick-only baselines on the locked hold-out")
     else:
         reasons.append("no locked hold-out (too few subjects)")
 
