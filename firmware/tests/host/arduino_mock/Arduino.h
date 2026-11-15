@@ -52,7 +52,6 @@ class String {
 class HWCDC {
  public:
   size_t setTxBufferSize(size_t n);
-  void setTxTimeoutMs(uint32_t timeout);
   void begin(unsigned long baud);
   operator bool() const;                     // a PC is connected and reading
   int availableForWrite();

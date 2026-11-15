@@ -18,12 +18,13 @@ It does **not** output glucose. There is no validated glucose model for this sen
 [../ml/README.md](../ml/README.md)); the firmware is built so that collecting the data needed for
 one is easy (`tools/suguard_monitor.py --record`).
 
-> **Read this first.** This firmware has never run on the real board and has never been compiled
+> **Read this first.** This firmware has never run on the real board and has never been built
 > with the ESP32 toolchain: I had the KiCad files but no hardware, and the toolchain could not be
-> installed where the firmware was written. What was verified instead is listed under
-> [Verification](#verification). Expect a first-build and first-flash debugging session; the
-> [bring-up checklist](#bring-up-checklist) is ordered to make it short. If the compiler reports
-> an error, send me its output.
+> run where the firmware was written. Every source file was type-checked against the real
+> Arduino-ESP32 headers (cores 2.0.17 and 3.3.12), but that is not a build. What was verified is
+> listed under [Verification](#verification). Expect a first-build and first-flash debugging
+> session; the [bring-up checklist](#bring-up-checklist) is ordered to make it short. If the
+> compiler or the linker reports an error, send me its output.
 
 ## Build and flash
 
@@ -45,7 +46,8 @@ pio device monitor
 ```
 
 No external libraries are needed (the MAX30102 driver is part of the firmware). The sketch only
-uses functions that exist in both Arduino core 2.0.17 and 3.x (checked against the cores' source).
+uses functions that exist in both Arduino core 2.0.17 and 3.x. With core 2.0.x the Arduino IDE
+compiles as C++11, which is too old for this code: use core 3.x in the IDE, or PlatformIO.
 
 ## Bring-up checklist
 
@@ -174,11 +176,13 @@ Behaviour worth knowing:
 
 ## Verification
 
-Everything below runs with `python -m pytest firmware/tests` (45 tests; needs `g++`; the RV32 tests
-also need `gcc-riscv64-unknown-elf`, `picolibc-riscv64-unknown-elf` and `qemu-system-misc`).
+Everything below except the first row runs with `python -m pytest firmware/tests` (45 tests; needs
+`g++`; the RV32 tests also need `gcc-riscv64-unknown-elf`, `picolibc-riscv64-unknown-elf` and
+`qemu-system-misc`).
 
 | What | How | Result |
 |---|---|---|
+| Sources against the real Arduino API | `tools/typecheck_arduino.sh`: the sketch and every source file through a GCC front end with the headers, include paths and defines of Arduino core 2.0.17 (ESP-IDF 4.4, as C++17) and 3.3.12 (ESP-IDF 5.5, as C++20) | no error, no warning; **not a build** (generic 32-bit compiler, nothing generated or linked) |
 | Signal core = Python reference | C++ built for the host, compared on simulated windows: 300 classical, 200 denoised, 37 degenerate inputs | every decision identical; double-precision values within 5·10⁻¹⁵ (relative), FFT-dependent ones within 6·10⁻⁷ |
 | Integer network = Python reference | the C++ engine against the NumPy integer reference, random models and the shipped one | bit-exact |
 | Whole pipeline per window | `sg_process_window` against the Python pipeline, 316 windows × 2 modes, incl. inputs where the network must be overruled | same decisions and reasons; heart rate and SpO2 within 10⁻⁶ |
@@ -190,7 +194,7 @@ Two independent reviews of the firmware (one against the toolchain and the hardw
 behaviour over time) found the defects that the second half of this list now tests for; the
 reviewers reproduced each in the simulator before it was fixed.
 
-Not verified: compilation with the real ESP32 Arduino core, anything that depends on the actual
+Not verified: a real build and link with the ESP32 toolchain, anything that depends on the actual
 hardware (I²C timing, Wi-Fi/TLS, flash storage, ADC readings, memory head-room, power
 consumption), real pre-emption between the two tasks (the simulation runs them in turn), and
 signal quality on a real wrist.

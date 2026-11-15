@@ -259,14 +259,16 @@ void SgSampler::poll(uint32_t now) {
   if (pending_cfg_) {
     cfg_ = pending_cfg_value_;
     pending_cfg_ = false;
-    pending_off_ = pending_rest_ = false;
+    pending_off_ = false;
+    pending_rest_ = false;
     resting_ = false;
     led_red_ = led_ir_ = cfg_.led_init;
     enter_no_sensor(now, 0);
   }
   if (pending_off_) {                                   // before the board sleeps: LEDs off, sensor in shutdown
     pending_off_ = false;
-    pending_led_test_ = pending_rest_ = false;
+    pending_led_test_ = false;
+    pending_rest_ = false;
     write_leds(0, 0);
     dev_.set_shutdown(true);
     idx_ = 0;

@@ -92,8 +92,9 @@ static size_t g_line_len = 0;
 // ----------------------------------------------------------------------------
 
 // Never stall the firmware on the USB port. With a PC attached a line is
-// skipped when the buffer has no room for all of it; without one the write
-// time-out is zero, so the core drops what does not fit.
+// written only if the buffer has room for all of it (the core's write() would
+// otherwise wait for the PC); without one the core does not wait at all and
+// keeps the newest data, so that a PC plugged in later sees current lines.
 static bool serialWrite(const char* s, size_t n) {
   if (Serial && (size_t)Serial.availableForWrite() < n) return false;
   Serial.write((const uint8_t*)s, n);
@@ -203,11 +204,11 @@ static void onWindow(void*, const SgWindow* w) {
       memcpy(&g_window, w, sizeof(SgWindow));
       g_window_state = 1;
     } else {
-      g_windows_dropped++;                                       // loop() is still busy with the previous one
+      g_windows_dropped = g_windows_dropped + 1;                 // loop() is still busy with the previous one
     }
     xSemaphoreGive(g_window_lock);
   } else {
-    g_windows_dropped++;
+    g_windows_dropped = g_windows_dropped + 1;
   }
 }
 
@@ -649,7 +650,6 @@ void setup() {
   // A raw window (7 kB of text) fits the large buffer in one piece; otherwise it is sent in parts.
   Serial.setTxBufferSize(g_cfg.stream_raw ? 16384 : 4096);
   Serial.begin(115200);
-  Serial.setTxTimeoutMs(0);               // never wait for a PC that is not there
   pinMode(board::kPinButton, INPUT_PULLUP);
   Wire.begin(board::kPinI2cSda, board::kPinI2cScl, board::kI2cHz);
   Wire.setTimeOut(50);

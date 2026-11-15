@@ -190,7 +190,6 @@ size_t HWCDC::setTxBufferSize(size_t n) {
   g_tx_buffer = n;
   return n;
 }
-void HWCDC::setTxTimeoutMs(uint32_t) {}
 void HWCDC::begin(unsigned long) {}
 HWCDC::operator bool() const { return g_host; }
 int HWCDC::availableForWrite() { return g_serial_room >= 0 ? g_serial_room : (int)g_tx_buffer; }
