@@ -26,32 +26,57 @@ Three ways of processing a 10.24-s window are compared:
 * **bracelet** — the integer network that runs on the ESP32-C3 (94,667 weights, 45 kB of working memory);
 * **server** — the larger network (457,267 parameters, ONNX).
 
-**Whole pipeline with every reliability check**, 600 simulated MAX30102 windows (motion of every
-strength, perfusion 0.08–5 %; `models/metrics/denoiser_eval.json` and `denoiser_edge_eval.json`
-→ `pipeline_with_gates`):
+The simulated test data comes from a simulator of the MAX30102 whose pulse shapes span four
+families, from a sharp fingertip-like pulse to an almost sinusoidal wrist pulse and to pulses whose
+2nd harmonic is stronger than the fundamental (a deep notch and a large diastolic wave), because
+real recordings span that whole range ([model card](docs/MODEL_CARD.md#1-motion-artefact-denoiser)).
+
+**Whole pipeline with every reliability check**, 600 simulated windows (motion of every strength,
+perfusion 0.08–5 %; `models/metrics/denoiser_eval.json` and `denoiser_edge_eval.json` →
+`pipeline_with_gates`):
 
 | | Classical | Bracelet | Server |
 |---|---|---|---|
-| Windows that get a heart rate | 36 % | 55 % | 57 % |
-| … of the windows without motion | 92 % | 97 % | 96 % |
-| Heart rate: mean / 95th-percentile error | 1.76 / 2.3 bpm | **0.53 / 1.3 bpm** | **0.52 / 1.4 bpm** |
-| Heart-rate errors above 10 bpm | 6 | **0** | **0** |
-| Windows that get an SpO2 value | 32 % | 52 % | 56 % |
-| SpO2: mean / 95th-percentile error | 0.70 / 2.2 points | **0.20 / 0.6** | **0.16 / 0.5** |
-| SpO2 errors above 4 points | 7 | **0** | **0** |
+| Windows that get a heart rate | 37 % | 53 % | 54 % |
+| … of the windows without motion | 93 % | 93 % | 94 % |
+| Heart rate: mean / 95th-percentile error | 2.87 / 3.1 bpm | 0.35 / 1.3 bpm | 0.35 / 1.4 bpm |
+| Heart-rate errors above 10 bpm | 7 | 0 | 0 |
+| Windows that get an SpO2 value | 32 % | 51 % | 54 % |
+| SpO2: mean / 95th-percentile error | 0.88 / 3.8 points | 0.23 / 0.8 points | 0.17 / 0.7 points |
+| SpO2 errors above 4 points | 8 | 0 | 0 |
 
 Share of windows that get a heart rate, by how much of the window is really in motion:
 
-| Motion in the window | Classical | Bracelet | Server |
+| Motion in the window (windows) | Classical | Bracelet | Server |
 |---|---|---|---|
-| 0–5 % | 92 % | 97 % | 96 % |
-| 5–30 % | 46 % | 96 % | 98 % |
-| 30–70 % | 19 % | 80 % | 89 % |
-| more than 70 % | 10 % | 2 % | 1 % |
+| 0–5 % (138) | 93 % | 93 % | 94 % |
+| 5–30 % (89) | 43 % | 92 % | 97 % |
+| 30–70 % (138) | 23 % | 67 % | 75 % |
+| more than 70 % (235) | 9 % | 5 % | 3 % |
 
 The last row is intended: when most of a window is motion, the pulse cannot be recovered and no
-value is given. The classical path still answers there in 10 % of the windows, and that is where
+value is given. The classical path still answers there in 9 % of the windows, and that is where
 its large errors come from.
+
+**Pulse shapes the training simulator does not make** (`shape_robustness`), clean windows, share
+that gets a heart rate. "v2" are the networks shipped before this version, evaluated with the same
+code and data (`models/metrics/previous/`):
+
+| Pulse shape (150 clean windows each) | Classical | Bracelet v2 | Bracelet | Server v2 | Server |
+|---|---|---|---|---|---|
+| Sharp systolic peak and reflected wave | 99 % | 99 % | 99 % | 99 % | 99 % |
+| Deep notch, large diastolic wave (like the real recording data3) | 83 % | 91 % | 84 % | 83 % | 84 % |
+| Rounded peak and reflected wave | 100 % | 59 % | 100 % | 27 % | 100 % |
+| Steep rise, slow fall | 100 % | 73 % | 100 % | 57 % | 100 % |
+| Slower rise, smoothed | 100 % | 5 % | 100 % | 1 % | 100 % |
+| Three harmonics | 100 % | 30 % | 100 % | 14 % | 100 % |
+| Two harmonics | 99 % | 20 % | 99 % | 5 % | 99 % |
+| Sine | 99 % | 1 % | 99 % | 0 % | 99 % |
+
+The v2 networks had been trained on sharp pulses only and took smooth ones for motion. No cell
+has a heart-rate error above 10 bpm (mean errors 0.18–0.61 bpm). The deep-notch shape is hard
+for the beat detector itself: at slow rates the diastolic wave is sometimes counted as a beat, and
+the checks then reject the window (on all three paths).
 
 **Inputs that must not produce a value** (`must_not_report`) — number of windows in which a heart
 rate / an SpO2 value was reported anyway:
@@ -60,30 +85,37 @@ rate / an SpO2 value was reported anyway:
 |---|---|---|---|
 | Noise, no pulse (300) | 0 / 0 | 0 / 0 | 0 / 0 |
 | No pulse in the infrared channel (300) | 0 / 0 | 0 / 0 | 0 / 0 |
-| No pulse, motion only (1500) | 21 / 13 | 1 / 1 | 0 / 0 |
-| Pulse in infrared only, none in red (300) ¹ | 296 / 0 | 5 / 0 | 3 / 0 |
-| Red pulse at a fifth of its size, in noise (300) ¹ | 189 / 0 | 33 / 0 | 81 / 2 |
-| The two LED channels swapped (300) ² | 10 / 10 | 21 / 21 | 18 / 18 |
+| Pulse in infrared only, none in red ¹ (300) | 283 / 0 | 1 / 0 | 0 / 0 |
+| Red pulse at a fifth of its size, in noise ¹ (300) | 178 / 0 | 49 / 0 | 5 / 1 |
+| The two LED channels swapped ² (300) | 10 / 10 | 15 / 15 | 16 / 16 |
+| Pulse below the sensor noise (0.01 %), the usual motion mix ³ (1500) | 20 / 15 | 1 / 1 | 0 / 0 |
+| Pulse below the sensor noise, periodic motion as large as a pulse ⁴ (300) | 72 / 53 | 0 / 0 | 0 / 0 |
 
-¹ A heart rate is legitimate here (the infrared pulse is real); an SpO2 value is not.
+¹ A heart rate is legitimate here (the infrared pulse is real); an SpO2 value is not. The one
+server value is at the edge of the plausibility check (red/IR ratio 0.300).
 ² A wiring/configuration fault, caught at bring-up (`led red` on the console); the firmware also
 prints a hint when the red pulse is persistently larger than the infrared one.
+³ A fifth of these windows have no motion; most of the motion is small.
+⁴ Periodic motion of 0.1–6 % of the light level at 0.7–3.2 Hz and no pulse: the classical path
+takes a quarter of it for a pulse; the networks take none.
 
 **Real PPG recordings** (heartpy, 835 s: real pulse shapes and rhythm) with a simulated second
-wavelength and simulated motion (`real_ppg_simulated_motion`). Errors over *all* windows, no gates,
-to show what the network itself does; the last column is the share of windows the gates then let
-through:
+wavelength and simulated motion (`real_ppg_simulated_motion` → `pipeline`), through the complete
+pipeline — share of windows that get a heart rate, mean error, errors above 10 bpm:
 
-| Scenario (windows) | Heart-rate error without a network | Bracelet | Server | Pass the gates (bracelet / server) |
-|---|---|---|---|---|
-| At rest (57) | 1.28 bpm | 0.39 | 0.37 | 72 % / 82 % |
-| Walking, motion close to the pulse rate (342) | 21.9 bpm | 4.2 | 3.4 | 11 % / 11 % |
-| Gestures, pressure changes (342) | 5.7 bpm | 1.7 | 1.5 | 11 % / 19 % |
-| Mixed (342) | 13.7 bpm | 3.2 | 2.9 | 20 % / 26 % |
+| Scenario (windows) | Classical | Bracelet | Server |
+|---|---|---|---|
+| At rest (52) | 100 %, 0.1 bpm | 100 %, 0.1 bpm | 100 %, 0.0 bpm |
+| Walking: periodic motion, a quarter of it near the pulse rate (312) | 18 %, 21.8 bpm, 28 > 10 | 20 %, 1.1 bpm | 21 %, 0.4 bpm |
+| Gestures, pressure changes (312) | 5 %, 1.1 bpm | 40 %, 0.6 bpm | 48 %, 0.3 bpm |
+| Mixed (312) | 24 %, 3.6 bpm, 4 > 10 | 40 %, 0.4 bpm | 40 %, 0.3 bpm |
 
-In the windows that pass the gates the heart-rate error is 0.3–1.4 bpm. So during continuous
-motion the bracelet gives a value for one window in five to ten, and that value is good; it does
-not give one for the others.
+At rest all three report every window. During motion the networks report about as many windows
+as the classical path when walking and far more during gestures and mixed motion, and none of their
+values is off by more than 10 bpm; half of the classical path's walking values are off by more
+than that (it follows the arm swing). The v2 networks reported
+62–75 % of the resting windows: these recordings have a stronger 2nd harmonic than any shape the
+v2 training simulator made.
 
 **What these numbers do not show**
 
@@ -92,11 +124,11 @@ not give one for the others.
   channel, so it only tests part of the method).
 * The classical path cannot tell rhythmic motion from a pulse (the rows above); it is there for
   diagnostics.
-* SpO2 uses Maxim's generic curve and is **not calibrated** for this enclosure. In simulation it
-  reads 0.3–0.5 points high below 90 %.
+* SpO2 uses Maxim's generic curve and is **not calibrated** for this enclosure; the estimator's
+  own bias in simulation is in the [model card](docs/MODEL_CARD.md#3-heart-rate-hrv-spo2-pulse-shape-features).
 * With the two LED channels swapped, windows still pass when the true saturation is below about
-  88 % (3–7 % of that test set), and the SpO2 shown is then several points too low. Check the LED
-  order once at bring-up.
+  90 % (3–5 % of that test set), and the SpO2 shown is then mostly too low (by a median of 6
+  points). Check the LED order once at bring-up.
 
 ### Diabetes risk — `models/risk_model.json`
 
@@ -194,7 +226,7 @@ flowchart LR
 cd ml
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
-python -m pytest -q                      # 51 tests
+python -m pytest -q                      # 67 tests
 uvicorn api.app:app --port 8000
 ```
 

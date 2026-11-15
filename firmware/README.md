@@ -216,7 +216,7 @@ signal quality on a real wrist.
 | ... classical processing only | 77 million | same |
 | Time per 10.24-s window | about 1.2–2 s at 160 MHz (2.5–4 s at 80 MHz) | estimate: 1.5–2.5 cycles per instruction; **not measured on the chip** — read `proc_ms` |
 | Static RAM of the signal pipeline | 109 kB | size of the pipeline's memory block |
-| Code and constants of the signal core | 183 kB (94 kB of it network weights, in flash) | linker map of the RV32 build |
+| Code and constants of the signal core | 184 kB (94 kB of it network weights, in flash) | linker map of the RV32 build |
 
 ## Regenerating generated files
 

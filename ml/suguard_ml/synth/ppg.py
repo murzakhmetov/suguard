@@ -145,7 +145,10 @@ def _sample_harmonics(rng: np.random.Generator, bounds=SMOOTH_HARMONICS) -> tupl
     return 1.0, np.array([0.2] + [0.0] * (len(bounds) - 1)), np.array([np.pi] + [0.0] * (len(bounds) - 1))
 
 
-def sample_morphology(rng: np.random.Generator, hr_bpm: float = 75.0) -> Morphology:
+SHAPE_FAMILIES = ("wave", "low_pass", "smooth_harmonics", "rich_harmonics")
+
+
+def sample_morphology(rng: np.random.Generator, hr_bpm: float = 75.0, shape: str | None = None) -> Morphology:
     """Shape of the pulse in one window.
 
     The shape matters to a model that has to tell a pulse from motion. A
@@ -176,6 +179,10 @@ def sample_morphology(rng: np.random.Generator, hr_bpm: float = 75.0) -> Morphol
     )
     u = rng.random()
     edges = np.cumsum(SHAPE_SHARES)
+    if shape is not None:                    # a given family (tests, evaluations); same random stream
+        if shape not in SHAPE_FAMILIES:
+            raise ValueError(f"shape must be one of {SHAPE_FAMILIES}")
+        u = (0.0, edges[0], edges[1], edges[2])[SHAPE_FAMILIES.index(shape)]
     if u >= edges[2]:
         m.harmonics = _sample_harmonics(rng, RICH_HARMONICS)
     elif u >= edges[1]:
@@ -433,8 +440,10 @@ def corrupt_pulse(pulse: np.ndarray, rng: np.random.Generator | int | None = Non
 def simulate_window(rng: np.random.Generator | int | None = None, *, n: int = WINDOW, fs: float = FS,
                     clean_prob: float = 0.2, artifact_level: float | None = None,
                     hr_bpm: float | None = None, spo2: float | None = None,
-                    pi_ir: float | None = None, kinds: list[str] | None = None) -> SimWindow:
-    """Simulate one raw MAX30102 window (both channels, counts)."""
+                    pi_ir: float | None = None, kinds: list[str] | None = None,
+                    shape: str | None = None) -> SimWindow:
+    """Simulate one raw MAX30102 window (both channels, counts). ``shape``: one of
+    SHAPE_FAMILIES to fix the pulse-shape family (default: drawn with SHAPE_SHARES)."""
     rng = np.random.default_rng(rng)
     t = np.arange(n) / fs
 
@@ -442,7 +451,7 @@ def simulate_window(rng: np.random.Generator | int | None = None, *, n: int = WI
     if hr_bpm is None:
         hr_bpm = float(np.clip(rng.normal(75, 15) if rng.random() < 0.8 else rng.uniform(45, 170), 40, 185))
     resp_hz = rng.uniform(0.12, 0.45)
-    morph = sample_morphology(rng, hr_bpm)
+    morph = sample_morphology(rng, hr_bpm, shape)
     onsets, rrs = beat_train(
         t[0], t[-1], hr_bpm, rng, resp_hz=resp_hz,
         rsa=rng.uniform(0.0, 0.06) * (75.0 / hr_bpm), lf=rng.uniform(0.0, 0.04),

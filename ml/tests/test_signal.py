@@ -52,7 +52,10 @@ def test_spo2_curve_inverse():
 
 @pytest.mark.parametrize("seed", range(8))
 def test_clean_window_hr_and_spo2(seed):
-    w = simulate_window(seed, kinds=[])
+    # The wave model: the beat detector alone (no quality checks) on the pulse shape it is built for.
+    # Double-humped shapes at slow rates can get the diastolic wave counted as a beat; the pipeline's
+    # checks reject those windows (scripts/eval_denoiser.py, shape_robustness).
+    w = simulate_window(seed, kinds=[], shape="wave")
     ir, _ = preprocess(w.ir_raw, w.fs)
     red, _ = preprocess(w.red_raw, w.fs)
     beats = detect_beats(ir, w.fs)
@@ -72,7 +75,7 @@ def test_sensor_state_flags_no_contact_and_saturation():
 
 
 def test_features_on_clean_window():
-    w = simulate_window(3, kinds=[])
+    w = simulate_window(3, kinds=[], shape="wave")
     ir, dci = preprocess(w.ir_raw, w.fs)
     red, dcr = preprocess(w.red_raw, w.fs)
     f = extract_features(ir, red, w.fs, ir_dc=float(np.median(dci)), red_dc=float(np.median(dcr)))

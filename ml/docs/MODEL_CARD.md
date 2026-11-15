@@ -8,7 +8,9 @@ Contents: [1 denoiser](#1-motion-artefact-denoiser) · [2 reliability decision](
 
 ## 1. Motion-artefact denoiser
 
-Two networks with the same job, the same inputs and outputs and the same training data.
+Two networks with the same job, the same inputs and outputs and the same training data (version
+v4 of the training simulator; the networks shipped before, "v2", are evaluated with the same code
+and data in `models/metrics/previous/`).
 
 | | Server model | Bracelet model |
 |---|---|---|
@@ -18,45 +20,66 @@ Two networks with the same job, the same inputs and outputs and the same trainin
 | Arithmetic | float32 | integers only: int8 weights with one scale per output channel, int16 activations, int32 accumulators (overflow-free by construction, checked at export) |
 | Input | (2, 512): IR and red blood-volume signals, 10.24 s at 50 Hz, both divided by the IR standard deviation (one common scale, so the red/IR ratio is preserved) | same |
 | Output | clean IR, clean red, artefact logit per sample | same |
+| Training | 16,000 steps of 128 windows, best at the last step; validation mask AUC 0.9965 (`denoiser_train.json`) | 16,000 steps, best at step 15,000; validation mask AUC 0.9947 (`denoiser_edge_train.json`) |
 | Cost | — | 9.19 million multiply-accumulates per window, 45,056 bytes of working memory, 94,216 bytes of weights; whole pipeline 132 million RV32IMC instructions per window (QEMU), not yet timed on the chip |
-| Integer vs. float version of the same network | — | waveform SNR 41.4 dB, artefact decisions agree on 99.85 % of samples, no output saturation (`models/metrics/denoiser_edge_export.json`) |
+| Integer vs. float version of the same network | — | waveform SNR 38.9 dB, artefact decisions agree on 99.86 % of samples, no output saturation (`models/metrics/denoiser_edge_export.json`) |
 
-**Training data.** 150,000 windows from a simulator of the MAX30102 (`suguard_ml/synth/ppg.py`):
-a pulse model with heart-rate variability, respiratory modulation and ectopic beats; red/IR optics
+**Training data.** 200,000 windows from a simulator of the MAX30102 (`suguard_ml/synth/ppg.py`):
+a pulse train with heart-rate variability, respiratory modulation and ectopic beats; red/IR optics
 for SpO2 82–99.5 %; perfusion 0.08–5 %; motion as periodic swing (also at the pulse rate), bursts,
 pressure steps, spikes, drift and partial loss of contact; sensor noise, 18-bit quantisation, ADC
-saturation. No recorded data is used for training, and nothing glucose-related is simulated.
+saturation. The shape of the pulse is drawn from four families (`SHAPE_SHARES`): the wave model (a
+skewed systolic wave, a reflected wave and a windkessel decay; 30 %), the same behind a low-pass
+down to little more than the fundamental (30 %), a smooth harmonic series (15 %) and a harmonic
+series rich in overtones, with a 2nd harmonic of up to 1.6 times the fundamental (25 %). No recorded
+data is used for training, and nothing glucose-related is simulated.
+
+**Why four shape families.** The v2 networks were trained on the wave model alone (2nd harmonic
+below about 0.6 of the fundamental). They took smooth pulses for motion — a clean sine-shaped
+pulse got a heart rate in 0–1 % of windows, against 99 % on the classical path — and also real
+pulses with a strong 2nd harmonic: of the clean real recordings at rest they reported 62–75 %.
+Those recordings have a 2nd harmonic of 0.9–1.6 times the fundamental (a dicrotic notch below the
+diastolic foot, a diastolic wave of about 40 %). With the four families both networks report
+99–100 % of every smooth shape and every clean real window, and still none of the periodic motion
+without a pulse (README, "Results").
 
 **Loss.** L1 on the waveform + L1 on its derivative + cross-entropy on the artefact mask + error of
 the red/IR ratio. The mask marks a sample as artefact when either channel is disturbed.
 
 **Evaluation data.** 4,000 held-out simulated windows; 600 further windows through the complete
-gated pipeline; 3,000 windows that must not produce a value; real PPG recordings (heartpy, 835 s)
-with a simulated second wavelength and simulated motion. Files: `models/metrics/denoiser_eval.json`
-(server), `denoiser_edge_eval.json` (bracelet model, integer arithmetic exactly as on the device).
+gated pipeline; 3,300 windows that must not produce a value; 1,200 clean windows of eight pulse
+shapes built outside the training simulator; real PPG recordings (heartpy, 835 s) with a simulated
+second wavelength and simulated motion, scored without checks and through the complete pipeline.
+Files: `models/metrics/denoiser_eval.json` (server), `denoiser_edge_eval.json` (bracelet model,
+integer arithmetic exactly as on the device).
 
-**Results without gates** (every window scored; shows the network alone):
+**Results without gates** (every window scored; shows the network alone). Share of the test
+windows that are clean / lightly / moderately / heavily disturbed: 20 % / 19 % / 23 % / 39 %.
 
 | 4,000 simulated windows | No network | Bracelet | Server |
 |---|---|---|---|
-| Artefact mask, AUC | — | 0.996 | 0.998 |
-| Heart-rate error, mean (all windows) | 10.7 bpm | 2.25 | 1.66 |
-| … clean / light / moderate / heavy motion | 0.50 / 0.88 / 8.9 / 22.2 | 0.50 / 0.53 / 0.75 / 4.9 | 0.50 / 0.51 / 0.63 / 3.4 |
-| SpO2 error, mean (windows where both give a value) | 3.06 points | 0.33 | 0.26 |
-| … clean / light / moderate / heavy motion | 0.13 / 2.3 / 5.9 / 8.1 | 0.14 / 0.22 / 0.31 / 0.98 | 0.12 / 0.18 / 0.24 / 0.73 |
+| Artefact mask, AUC | – | 0.995 | 0.996 |
+| Heart-rate error, mean (all windows) | 11.2 bpm | 3.04 | 2.51 |
+| … clean / light / moderate / heavy motion | 1.00 / 1.59 / 10.99 / 21.45 | 0.99 / 1.00 / 1.65 / 5.89 | 1.00 / 1.07 / 1.20 / 4.76 |
+| SpO2 error, mean, on the 2,423 windows where the server network and no network both give a value | 3.49 points | 0.39 ¹ | 0.32 |
+| … clean / light / moderate / heavy motion, each path on the windows where it gives a value | 0.13 / 2.69 / 6.21 / 8.21 | 0.14 / 0.20 / 0.33 / 1.14 | 0.12 / 0.18 / 0.25 / 0.94 |
 
-| Real PPG + simulated motion: heart-rate error (SpO2 error) | No network | Bracelet | Server |
+¹ On the 2,438 windows where the bracelet network and no network both give a value.
+
+| Real PPG + simulated motion, no checks: heart-rate error (SpO2 error on the windows where all paths give one) | No network | Bracelet | Server |
 |---|---|---|---|
-| At rest, 57 windows | 1.28 bpm (0.2) | 0.39 (0.9) | 0.37 (0.7) |
-| Walking, 342 | 21.9 (5.5) | 4.2 (0.95) | 3.4 (0.8) |
-| Gestures, 342 | 5.7 (6.9) | 1.7 (0.9) | 1.5 (0.9) |
-| Mixed, 342 | 13.7 (4.2) | 3.2 (1.0) | 2.9 (0.8) |
+| At rest (52) | 0.04 bpm (0.25) | 0.04 (0.36) | 0.03 (0.25) |
+| Walking: periodic motion, a quarter of it near the pulse rate (312) | 21.67 bpm (6.48) | 5.17 (0.78) | 3.62 (0.66) |
+| Gestures, pressure changes (312) | 4.52 bpm (6.75) | 1.29 (0.77) | 0.98 (0.70) |
+| Mixed (312) | 11.42 bpm (4.57) | 3.03 (0.91) | 1.81 (0.69) |
 
-At rest the networks make SpO2 slightly worse (0.2 → 0.7–0.9 points) while the waveform is kept
-(correlation with the clean recording 0.96–0.97): a clean signal has nothing to gain.
+The heart-rate column is over all windows; the SpO2 values in brackets are over the windows where
+the network and no network both give a value (from each network's own file; the "no network"
+value from the server's file). At rest the bracelet network makes SpO2 slightly worse (0.25 →
+0.36 points): a clean signal has nothing to gain.
 
-**Results with gates** are in [README.md](../README.md#results): 55–57 % of mixed windows get a
-heart rate with 0.5 bpm mean error and no error above 10 bpm; windows that are mostly motion get
+**Results with gates** are in [README.md](../README.md#results): about 54 % of mixed windows get a
+heart rate with 0.35 bpm mean error and no error above 10 bpm; windows that are mostly motion get
 no value.
 
 **Limits.**
@@ -67,9 +90,12 @@ no value.
 * No accelerometer: motion is recognised only by the shape of the signal and the red/IR
   proportion. Motion that is periodic near the pulse rate and equal in both channels cannot be
   told from a pulse in principle.
-* During continuous motion most windows are rejected (11–26 % pass in the real-PPG scenarios).
-* `models/metrics/denoiser_v1_vs_v2.json` documents the change from the first to the current
-  server model and was computed with the gate rules of that time.
+* During continuous motion most windows are rejected (20–48 % pass in the real-PPG scenarios).
+* Shapes with two humps per beat are hard for the beat detector: at slow rates a large diastolic
+  wave is sometimes counted as a beat, and the onset of a beat is ambiguous when the notch dips
+  below the foot. The checks then reject the window (deep-notch test shape: 83–84 % reported on
+  all paths, mean error of the reported values 0.2 bpm, none above 10 bpm). Next step: peak-aligned beat templates and an
+  amplitude-aware peak selection that still keeps premature beats.
 
 ## 2. The decision to report a value
 
