@@ -9,14 +9,14 @@
 //
 // Windows
 //   in :  n_cases, then for each case
-//           n, mode, ir_dc_min, prior_hr (<= 0: none), red_raw[n], ir_raw[n]
+//           n, mode, ir_dc_min, red_raw[n], ir_raw[n]
 //           and for mode 1 also c_ir[n], c_red[n], p_art[n]
 //   out:  n_cases, n_fields, sg_work_size(), then for each case
 //           the scalar outputs in --fields order, ir_bv[n], red_bv[n]
-//   Every case computes the sensor state, both preprocessed signals and the
-//   input perfusion index from the raw counts. The vitals then come from
-//     mode 0 (classical): the preprocessed signals, without artefact probability
-//     mode 1 (denoised) : the given c_ir, c_red and p_art
+//   Every case computes the sensor state and both preprocessed signals from
+//   the raw counts. The vitals then come from
+//     mode 0 (classical): the preprocessed signals alone
+//     mode 1 (denoised) : the preprocessed signals and the given c_ir, c_red and p_art
 //
 // Building blocks (--dsp)
 //   in :  for each call  op (DspOp), n, m, param, a[n], b[m]
@@ -37,23 +37,22 @@
   X(ir_dc, sensor.ir_dc)                                      \
   X(red_dc, sensor.red_dc)                                    \
   X(sensor_reasons, sensor.reasons)                           \
-  X(pi_in, pi_in)                                             \
+  X(pi_in, v.pi_in)                                           \
   X(reliable, v.reliable)                                     \
   X(reasons, v.reasons)                                       \
   X(has_hr, v.has_hr)                                         \
   X(hr_bpm, v.hr_bpm)                                         \
-  X(hr_source, v.hr_source)                                   \
-  X(has_hr_spectral, v.has_hr_spectral)                       \
-  X(hr_spectral, v.hr_spectral)                               \
-  X(spectral_purity, v.spectral_purity)                       \
   X(n_beats, v.n_beats)                                       \
   X(n_valid_ibi, v.n_valid_ibi)                               \
-  X(spo2_ok, v.spo2_ok)                                       \
   X(has_spo2, v.has_spo2)                                     \
   X(spo2, v.spo2)                                             \
   X(has_r, v.has_r)                                           \
   X(r_ratio, v.r_ratio)                                       \
   X(spo2_reason, v.spo2_reason)                               \
+  X(support_ir_corr, v.support_ir_corr)                       \
+  X(support_ir_gain, v.support_ir_gain)                       \
+  X(support_red_corr, v.support_red_corr)                     \
+  X(support_red_gain, v.support_red_gain)                     \
   X(q_perfusion_index, v.quality.perfusion_index)             \
   X(q_template_corr, v.quality.template_corr)                 \
   X(q_spectral_purity, v.quality.spectral_purity)             \
@@ -100,11 +99,11 @@ static bool write_doubles(FILE* f, const double* src, int count) {
 
 // Reads one case, runs the core and writes its outputs.
 static bool run_case(FILE* in, FILE* out) {
-  double head[4];
-  if (!read_doubles(in, head, 4)) return false;
+  double head[3];
+  if (!read_doubles(in, head, 3)) return false;
   const int n = (int)head[0];
   const int mode = (int)head[1];
-  const double ir_dc_min = head[2], prior_hr = head[3];
+  const double ir_dc_min = head[2];
   if (n < 0 || n > MAX_N || (mode != 0 && mode != 1)) return false;
   if (!read_doubles(in, red_raw, n) || !read_doubles(in, ir_raw, n)) return false;
   if (mode == 1 && !(read_doubles(in, c_ir, n) && read_doubles(in, c_red, n) && read_doubles(in, p_art, n))) {
@@ -116,11 +115,10 @@ static bool run_case(FILE* in, FILE* out) {
   sg_sensor_state(red_raw, ir_raw, n, ir_dc_min, &sensor, &work);
   sg_preprocess(ir_raw, n, ir_bv, &work);
   sg_preprocess(red_raw, n, red_bv, &work);
-  const double pi_in = sg_perfusion_index(ir_bv, n, &work);
   if (mode == 0) {
-    sg_vitals_from_signals(ir_bv, red_bv, NULL, n, &sensor, pi_in, prior_hr, &v, &work);
+    sg_vitals_from_signals(ir_bv, red_bv, NULL, NULL, NULL, n, &sensor, &v, &work);
   } else {
-    sg_vitals_from_signals(c_ir, c_red, p_art, n, &sensor, pi_in, prior_hr, &v, &work);
+    sg_vitals_from_signals(ir_bv, red_bv, c_ir, c_red, p_art, n, &sensor, &v, &work);
   }
 
 #define VALUE(name, value) (double)(value),

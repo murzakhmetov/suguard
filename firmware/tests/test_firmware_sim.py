@@ -70,16 +70,7 @@ def run_sim(exe, samples, seconds, *args):
 def reference(windows, denoiser, hr_scale=1.0):
     """What the Python pipeline says for the raw windows the firmware streamed."""
     pipe = SuGuardPipeline(denoiser=denoiser)
-    prior, prior_seq, ref = None, 0, {}
-    for seq in sorted(windows):
-        w = windows[seq]
-        if prior is not None and prior_seq + 3 < seq:
-            prior = None
-        r = pipe.analyze(w["red"], w["ir"], fs=50.0, prior_hr=prior)
-        if r["reliable"]:
-            prior, prior_seq = r["heart_rate"]["bpm"], seq
-        ref[seq] = r
-    return ref
+    return {seq: pipe.analyze(w["red"], w["ir"], fs=50.0) for seq, w in windows.items()}
 
 
 def assert_matches(fw, ref, hr_scale=1.0):

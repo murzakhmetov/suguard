@@ -76,7 +76,7 @@ void sg_sensor_state(const double* red_raw, const double* ir_raw, int n, double 
   out->saturated_fraction = (double)saturated / n;
   out->finger_detected = out->ir_dc >= ir_dc_min && out->red_dc >= 0.2 * ir_dc_min;
   if (!out->finger_detected) out->reasons |= SG_R_NO_CONTACT;
-  if (out->saturated_fraction > 0.05) out->reasons |= SG_R_ADC_SATURATED;
+  if (out->saturated_fraction > SG_MAX_SATURATED_FRACTION) out->reasons |= SG_R_ADC_SATURATED;
   if (out->ir_dc > 0.9 * SG_ADC_MAX) out->reasons |= SG_R_LED_CURRENT_TOO_HIGH;
 }
 
@@ -240,23 +240,18 @@ static bool pulse_spectrum(const double* x, int n, SgWork* w) {
   return band_power(w->fft, SG_K_HR_LO, SG_K_HR_HI) > 0;
 }
 
-// Second half of spectral_hr on the spectrum p: the strongest peak of the
-// cardiac band (weighted towards prior_bpm if it is > 0) and its purity.
-static SpectralHr spectral_peak(const float* p, double prior_bpm) {
+// Second half of spectral_hr (without a prior) on the spectrum p: the strongest
+// peak of the cardiac band and its purity.
+static SpectralHr spectral_peak(const float* p) {
   const float* band = p + SG_K_HR_LO;
   const int n_band = SG_K_HR_HI - SG_K_HR_LO + 1;
   int best = -1;
   double best_score = 0.0;
   int scan = 1;
   for (int c = sg_next_peak(band, n_band, &scan); c >= 0; c = sg_next_peak(band, n_band, &scan)) {
-    double score = band[c];
-    if (prior_bpm > 0) {
-      const double d = fabs((SG_K_HR_LO + c) * SG_FFT_DF * 60.0 - prior_bpm);
-      score *= exp(-0.5 * ((d / 15.0) * (d / 15.0)));
-    }
-    if (best < 0 || score > best_score) {
+    if (best < 0 || band[c] > best_score) {
       best = c;
-      best_score = score;
+      best_score = band[c];
     }
   }
   if (best < 0) {  // no local maximum in the band: take the largest bin
@@ -267,8 +262,8 @@ static SpectralHr spectral_peak(const float* p, double prior_bpm) {
   }
   int k = SG_K_HR_LO + best;
 
-  // Prefer the fundamental if the chosen peak looks like a 2nd harmonic (only without a prior).
-  if (prior_bpm <= 0 && k >= SG_K_HALF_MIN) {
+  // Prefer the fundamental if the chosen peak looks like a 2nd harmonic.
+  if (k >= SG_K_HALF_MIN) {
     int half = -1;  // largest band bin within 0.08 Hz of f0 / 2
     for (int j = SG_K_HR_LO; j <= SG_K_HR_HI; ++j) {
       const int d = 2 * j - k;
@@ -487,12 +482,15 @@ static double motion_fraction(const double* p_art, int n) {
   return (double)flagged / n;
 }
 
-// quality._ramp
+// quality._ramp: rises from 0 at lo to 1 at hi; an undefined metric scores 0.
 static double ramp(double x, double lo, double hi) {
   if (!isfinite(x)) return 0.0;
   const double t = (x - lo) / (hi - lo);
   return t < 0.0 ? 0.0 : (t > 1.0 ? 1.0 : t);
 }
+
+// quality._ramp_down: falls from 1 at lo to 0 at hi; an undefined metric scores 0 as well.
+static double ramp_down(double x, double lo, double hi) { return isfinite(x) ? 1.0 - ramp(x, lo, hi) : 0.0; }
 
 // Bit of quality component k in a component mask.
 static unsigned bit(int k) { return 1u << k; }
@@ -509,7 +507,7 @@ static double geometric_mean(const double* comp, unsigned mask) {
   return exp(sg_mean(logs, count));
 }
 
-// quality.assess_quality. `spec` is spectral_hr(ir) without a prior; the beats are in w->beats.
+// quality.assess_quality. `spec` is spectral_hr(ir); the beats are in w->beats.
 static void assess_quality(const double* ir, const double* red, const double* p_art, int n,
                            const SgSensorState* sensor, double red_ir_corr, const SpectralHr* spec,
                            SgQuality* q, SgWork* w) {
@@ -528,10 +526,10 @@ static void assess_quality(const double* ir, const double* red, const double* p_
   q->comp[SG_Q_PERFUSION] = ramp(pi, 0.03, 0.12) * (1.0 - ramp(pi, 10.0, 20.0));
   q->comp[SG_Q_TEMPLATE] = ramp(q->template_corr, 0.5, 0.9);
   q->comp[SG_Q_PURITY] = ramp(q->spectral_purity, 0.15, 0.5);
-  q->comp[SG_Q_AMPLITUDE] = 1.0 - ramp(q->beat_amp_cv, 0.2, 0.4);
+  q->comp[SG_Q_AMPLITUDE] = ramp_down(q->beat_amp_cv, 0.2, 0.4);
   q->comp[SG_Q_RHYTHM] = ramp(q->valid_ibi_fraction, 0.85, 0.95);
-  q->comp[SG_Q_HR_AGREEMENT] = 1.0 - ramp(q->hr_agreement_bpm, 5.0, 15.0);
-  q->comp[SG_Q_R_STABILITY] = 1.0 - ramp(q->r_spread, 0.08, 0.25);
+  q->comp[SG_Q_HR_AGREEMENT] = ramp_down(q->hr_agreement_bpm, 5.0, 15.0);
+  q->comp[SG_Q_R_STABILITY] = ramp_down(q->r_spread, 0.08, 0.25);
   q->comp[SG_Q_RED_IR] = ramp(q->red_ir_corr, 0.5, 0.8);
   q->comp[SG_Q_MOTION] = 1.0 - q->motion_fraction;
 
@@ -545,72 +543,117 @@ static void assess_quality(const double* ir, const double* red, const double* p_
   q->sqi = geometric_mean(q->comp, all);
   const double sqi_hr = geometric_mean(q->comp, hr_parts);
 
+  const bool sensor_ok = sensor->finger_detected && sensor->saturated_fraction <= SG_MAX_SATURATED_FRACTION;
   q->reasons = sensor->reasons;
-  if (!sensor->finger_detected || sensor->saturated_fraction > 0.05) q->sqi = 0.0;
+  if (!sensor_ok) q->sqi = 0.0;
   if (failing & bit(SG_Q_PERFUSION)) q->reasons |= pi < 1.0 ? SG_R_WEAK_PULSE : SG_R_IMPLAUSIBLE_AMPLITUDE;
-  if (q->motion_fraction > 0.5 || (failing & (bit(SG_Q_HR_AGREEMENT) | bit(SG_Q_AMPLITUDE)))) {
-    q->reasons |= SG_R_MOTION;
+  // Too few beats to measure (undefined amplitude spread / heart-rate agreement) is "noisy", not "motion".
+  unsigned undefined = 0;
+  if (!isfinite(q->beat_amp_cv)) undefined |= bit(SG_Q_AMPLITUDE);
+  if (!isfinite(q->hr_agreement_bpm)) undefined |= bit(SG_Q_HR_AGREEMENT);
+  const unsigned motion_parts = bit(SG_Q_HR_AGREEMENT) | bit(SG_Q_AMPLITUDE);
+  if (q->motion_fraction > 0.5 || (failing & motion_parts & ~undefined)) q->reasons |= SG_R_MOTION;
+  if (failing & (bit(SG_Q_TEMPLATE) | bit(SG_Q_PURITY) | bit(SG_Q_RHYTHM) | undefined)) {
+    q->reasons |= SG_R_IRREGULAR_OR_NOISY;
   }
-  if (failing & (bit(SG_Q_TEMPLATE) | bit(SG_Q_PURITY) | bit(SG_Q_RHYTHM))) q->reasons |= SG_R_IRREGULAR_OR_NOISY;
   if (failing & (bit(SG_Q_R_STABILITY) | bit(SG_Q_RED_IR))) q->reasons |= SG_R_RED_IR_INCONSISTENT;
-  q->usable = sqi_hr >= SG_USABLE_SQI && !(failing & hr_parts);
+  q->usable = sensor_ok && sqi_hr >= SG_USABLE_SQI && !(failing & hr_parts);
   q->usable_spo2 = q->usable && q->sqi >= SG_USABLE_SQI && !failing;
 }
 
 // ---------------------------------------------------------------------------
-// pipeline.vitals_from_signals
+// pipeline.input_support and pipeline.vitals_from_signals
 // ---------------------------------------------------------------------------
 
-void sg_vitals_from_signals(const double* c_ir, const double* c_red, const double* p_art, int n,
-                            const SgSensorState* sensor, double pi_in, double prior_hr,
-                            SgVitals* out, SgWork* w) {
+// pipeline.InputSupport
+struct Support {
+  double corr;
+  double gain;
+};
+
+// InputSupport.ok
+static bool supported(Support s) {
+  return s.corr >= SG_MIN_SUPPORT_CORR && s.gain >= SG_SUPPORT_GAIN_MIN && s.gain <= SG_SUPPORT_GAIN_MAX;
+}
+
+// pipeline.input_support: correlation and gain of the measured signal against the denoised
+// one over the samples with artefact probability <= 0.5 (0, 0 if that cannot be computed).
+static Support input_support(const double* measured, const double* denoised, const double* p_art, int n, SgWork* w) {
+  Support out = {0.0, 0.0};
+  double* x = w->a;
+  double* y = w->b;
+  int kept = 0;
+  for (int i = 0; i < n; ++i) {
+    if (!(p_art[i] <= 0.5)) continue;
+    x[kept] = measured[i];
+    y[kept] = denoised[i];
+    ++kept;
+  }
+  if (kept < SG_MIN_SUPPORT_SAMPLES || !all_finite(x, kept) || !all_finite(y, kept)) return out;
+  const double mean_x = sg_mean(x, kept), mean_y = sg_mean(y, kept);
+  for (int i = 0; i < kept; ++i) {
+    x[i] -= mean_x;
+    y[i] -= mean_y;
+  }
+  const double sxx = weighted_sum(NULL, x, x, kept, w->c);
+  const double syy = weighted_sum(NULL, y, y, kept, w->c);
+  const double sxy = weighted_sum(NULL, x, y, kept, w->c);
+  if (sxx <= 0 || syy <= 0) return out;
+  out.corr = sxy / sqrt(sxx * syy);
+  out.gain = sxy / syy;
+  return out;
+}
+
+void sg_vitals_from_signals(const double* ir_bv, const double* red_bv, const double* c_ir, const double* c_red,
+                            const double* p_art, int n, const SgSensorState* sensor, SgVitals* out, SgWork* w) {
   memset(out, 0, sizeof(*out));
   out->spo2_reason = SG_SPO2_NO_COMMON_PULSE;
   if (!valid_length(n)) return;
+  const bool denoised = p_art != NULL;
+  if (!denoised) {
+    c_ir = ir_bv;
+    c_red = red_bv;
+  }
+  out->pi_in = sg_perfusion_index(ir_bv, n, w);
 
   // detect_beats and spectral_hr band-pass the IR signal identically (0.5-8 Hz): filter once.
   sg_filtfilt(&SG_FILTER_PULSE, c_ir, n, w->pulse, w->ext);
   detect_beats(w->pulse, n, w);
   const SgBeats* beats = &w->beats;
-
-  // One spectrum serves spectral_hr without a prior (quality) and with it (heart-rate fallback).
-  SpectralHr unprimed = {false, 0.0, 0.0};
-  SpectralHr primed = unprimed;
-  if (pulse_spectrum(w->pulse, n, w)) {
-    unprimed = spectral_peak(w->fft, 0.0);
-    primed = prior_hr > 0 ? spectral_peak(w->fft, prior_hr) : unprimed;
-  }
+  SpectralHr spec = {false, 0.0, 0.0};
+  if (pulse_spectrum(w->pulse, n, w)) spec = spectral_peak(w->fft);
 
   const Spo2 sp = estimate_spo2(c_red, c_ir, p_art, n, w);
   SgQuality* q = &out->quality;
-  assess_quality(c_ir, c_red, p_art, n, sensor, sp.ratio.corr, &unprimed, q, w);
+  assess_quality(c_ir, c_red, p_art, n, sensor, sp.ratio.corr, &spec, q, w);
+
+  bool mismatch = false, red_supported = true;
+  if (denoised) {
+    const Support ir = input_support(ir_bv, c_ir, p_art, n, w);
+    const Support red = input_support(red_bv, c_red, p_art, n, w);
+    out->support_ir_corr = ir.corr;
+    out->support_ir_gain = ir.gain;
+    out->support_red_corr = red.corr;
+    out->support_red_gain = red.gain;
+    mismatch = !supported(ir);
+    red_supported = supported(red);
+  }
+  const bool weak = out->pi_in < SG_MIN_INPUT_PI;
+  // Both wavelengths carry the same waveform, but in a ratio no arterial blood produces.
+  const bool non_arterial = sp.reason == SG_SPO2_R_OUT_OF_RANGE;
 
   out->reasons = q->reasons;
-  if (pi_in < SG_MIN_INPUT_PI) out->reasons |= SG_R_WEAK_PULSE;
-  out->reliable = sensor->finger_detected && sensor->saturated_fraction <= 0.05 &&
-                  q->motion_fraction <= SG_MAX_ARTIFACT_FRACTION && pi_in >= SG_MIN_INPUT_PI && q->usable;
+  if (weak) out->reasons |= SG_R_WEAK_PULSE;
+  if (mismatch) out->reasons |= SG_R_DENOISER_MISMATCH;
+  if (non_arterial) out->reasons |= SG_R_RED_IR_INCONSISTENT;
+  out->reliable = q->usable && q->motion_fraction <= SG_MAX_ARTIFACT_FRACTION && !(weak || mismatch || non_arterial);
 
-  if (beats->has_hr) {
-    out->has_hr = true;
-    out->hr_bpm = beats->hr_bpm;
-    out->hr_source = SG_HR_BEATS;
-  } else if (primed.purity >= SG_MIN_SPECTRAL_PURITY) {  // implies primed.valid
-    out->has_hr = true;
-    out->hr_bpm = primed.bpm;
-    out->hr_source = SG_HR_SPECTRUM;
-  }
-  if (out->reliable && !out->has_hr) {
-    out->reliable = false;
-    out->reasons |= SG_R_NO_HEART_RATE;
-  }
-  out->has_hr_spectral = primed.valid;
-  out->hr_spectral = primed.bpm;
-  out->spectral_purity = primed.purity;
+  out->has_hr = beats->has_hr;   // a usable window always has it: without it the HR agreement is undefined
+  out->hr_bpm = beats->has_hr ? beats->hr_bpm : 0.0;
   out->n_beats = beats->n;
   out->n_valid_ibi = beats->n_valid;
 
-  out->spo2_ok = out->reliable && q->usable_spo2;
-  out->has_spo2 = out->spo2_ok && sp.has_spo2;
+  out->has_spo2 = out->reliable && q->usable_spo2 && red_supported && sp.has_spo2;
   out->spo2 = out->has_spo2 ? sp.spo2 : 0.0;
   out->has_r = sp.ratio.valid;
   out->r_ratio = sp.ratio.r;

@@ -79,19 +79,13 @@ class Checker:
         from suguard_ml.pipeline import SuGuardPipeline
 
         self.pipe = SuGuardPipeline(denoiser=EdgeDenoiserInt.load())
-        self.prior = None
-        self.prior_seq = 0
         self.n = self.n_bad = 0
 
     def analyze(self, raw: dict) -> dict:
         w = raw["w"]
-        if self.prior is not None and self.prior_seq + 3 < w.get("seq", 0):
-            self.prior = None                              # same staleness rule as the firmware
-        res = self.pipe.analyze(w["red"], w["ir"], fs=50.0, prior_hr=self.prior)
+        res = self.pipe.analyze(w["red"], w["ir"], fs=50.0)
         scale = w["fs"] / 50.0 if w.get("fs") else 1.0     # the firmware reports HR on the measured clock
         hr = res["heart_rate"]["bpm"]
-        if res["reliable"] and hr is not None:
-            self.prior, self.prior_seq = hr, w.get("seq", 0)   # in 50 Hz units, like the firmware's prior
         return {"reliable": res["reliable"], "hr": None if hr is None else hr * scale,
                 "spo2": res["spo2"]["percent"], "sqi": res["quality"]["sqi"]}
 

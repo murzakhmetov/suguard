@@ -11,11 +11,12 @@ from ..signal.spo2 import estimate_spo2
 
 def vitals_from_bv(ir_bv: np.ndarray, red_bv: np.ndarray, fs: float = FS,
                    artifact_prob: np.ndarray | None = None) -> dict:
-    """HR (peaks, falling back to spectrum) and SpO2 from blood-volume signals."""
+    """HR (peaks, falling back to a clean spectral peak) and SpO2 from
+    blood-volume signals, without the reliability gates of the pipeline."""
     beats = detect_beats(ir_bv, fs)
     hr = beats.hr_bpm
     hr_spec, purity = spectral_hr(ir_bv, fs)
-    if hr is None and purity >= 0.3:   # same fallback rule as the pipeline
+    if hr is None and purity >= 0.3:   # ungated evaluation only; the pipeline reports beat-based HR alone
         hr = hr_spec
     w = None if artifact_prob is None else 1.0 - artifact_prob
     sp = estimate_spo2(red_bv, ir_bv, weights=w)

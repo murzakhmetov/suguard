@@ -85,7 +85,7 @@ def reference_filters() -> dict:
             sensor = quality.sensor_state(win.red_raw, win.ir_raw)
             ir_bv, _ = filters.preprocess(win.ir_raw)
             red_bv, _ = filters.preprocess(win.red_raw)
-            pipeline.vitals_from_signals(ir_bv, red_bv, None, sensor, 1.0)
+            pipeline.vitals_from_signals(ir_bv, red_bv, sensor)
     finally:
         filters._sos, signal.sosfiltfilt = real_sos, real_filtfilt
 
@@ -208,11 +208,15 @@ def render() -> str:
     check("SG_FFT_N", NFFT, "the default nfft of beats.spectral_hr")
     check("SG_MAX_ARTIFACT_FRACTION", pipeline.MAX_ARTIFACT_FRACTION, "pipeline.MAX_ARTIFACT_FRACTION")
     check("SG_MIN_INPUT_PI", pipeline.MIN_INPUT_PI, "pipeline.MIN_INPUT_PI")
-    check("SG_MIN_SPECTRAL_PURITY", pipeline.MIN_SPECTRAL_PURITY, "pipeline.MIN_SPECTRAL_PURITY")
+    check("SG_MIN_SUPPORT_CORR", pipeline.MIN_SUPPORT_CORR, "pipeline.MIN_SUPPORT_CORR")
+    check("SG_SUPPORT_GAIN_MIN", pipeline.SUPPORT_GAIN_RANGE[0], "pipeline.SUPPORT_GAIN_RANGE[0]")
+    check("SG_SUPPORT_GAIN_MAX", pipeline.SUPPORT_GAIN_RANGE[1], "pipeline.SUPPORT_GAIN_RANGE[1]")
+    check("SG_MIN_SUPPORT_SAMPLES", pipeline.MIN_SUPPORT_SAMPLES, "pipeline.MIN_SUPPORT_SAMPLES")
     add("")
     add("// ---- scalar constants ------------------------------------------------------------------")
     const("double", "SG_PI", math.pi, "math.pi")
     const("double", "SG_SATURATION_LEVEL", config.SATURATION_LEVEL, "config.SATURATION_LEVEL")
+    const("double", "SG_MAX_SATURATED_FRACTION", quality.MAX_SATURATED_FRACTION, "quality.MAX_SATURATED_FRACTION")
     const("double", "SG_HR_MIN_BPM", config.HR_MIN_BPM, "config.HR_MIN_BPM")
     const("double", "SG_HR_MAX_BPM", config.HR_MAX_BPM, "config.HR_MAX_BPM")
     for name, value in zip("ABC", config.SPO2_COEFFS):   # SpO2 = A R^2 + B R + C

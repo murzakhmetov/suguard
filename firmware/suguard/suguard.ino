@@ -54,8 +54,6 @@ static volatile uint8_t g_window_state = 0;
 static volatile uint32_t g_windows_dropped = 0;
 static SemaphoreHandle_t g_window_lock;
 
-static double g_prior_hr = 0;             // last reliable heart rate (50 Hz units), for spectral tracking
-static uint32_t g_prior_seq = 0;
 static uint32_t g_last_report_ms = 0;
 static uint32_t g_last_battery_ms = 0;
 static uint32_t g_low_battery_since_ms = 0;
@@ -300,7 +298,7 @@ static void printWindowLine(const SgWindow& w, const SgPipelineOutput& o, double
       "{\"t\":\"vitals\",\"seq\":%lu,\"reliable\":%s,\"hr\":%s,\"spo2\":%s,\"sqi\":%.2f,\"pi\":%.3f,"
       "\"motion\":%.2f,\"reasons\":\"%s\",\"nn\":%s,\"dc\":[%.0f,%.0f],\"led\":[%u,%u],\"temp\":%s,"
       "\"fs\":%.3f,\"proc_ms\":%lu,\"bat\":%d,\"usb\":%s}\n",
-      (unsigned long)w.seq, o.vitals.reliable ? "true" : "false", hr, spo2, o.vitals.quality.sqi, o.pi_in,
+      (unsigned long)w.seq, o.vitals.reliable ? "true" : "false", hr, spo2, o.vitals.quality.sqi, o.vitals.pi_in,
       o.vitals.quality.motion_fraction, reasons, o.used_nn ? "true" : "false", o.sensor.red_dc, o.sensor.ir_dc,
       (unsigned)w.led_red, (unsigned)w.led_ir, temp, (double)w.fs_hz, (unsigned long)proc_ms,
       g_battery.state().percent, g_battery.state().usb_present ? "true" : "false");
@@ -353,18 +351,14 @@ static void processPendingWindow() {
   xSemaphoreGive(g_window_lock);
 
   const SgWindow& w = g_window;
-  if (g_prior_seq + 3 < w.seq) g_prior_hr = 0;                   // stale: do not steer the spectrum with it
   static SgPipelineOutput out;
   const uint32_t t0 = millis();
-  sg_process_window(w.red, w.ir, g_prior_hr, g_cfg.use_nn != 0, &out);
+  sg_process_window(w.red, w.ir, g_cfg.use_nn != 0, &out);
   const uint32_t proc_ms = millis() - t0;
   if (w.flags & SG_WF_AMBIENT_OVERFLOW) {                        // sunlight overwhelmed the sensor
     out.vitals.reliable = false;
     out.vitals.has_spo2 = false;
-  }
-  if (out.vitals.reliable && out.vitals.has_hr) {
-    g_prior_hr = out.vitals.hr_bpm;
-    g_prior_seq = w.seq;
+    out.vitals.reasons |= SG_R_ADC_SATURATED;
   }
   const double hr_scale = w.fs_hz > 0 ? (double)w.fs_hz / SG_FS : 1.0;   // sensor clock tolerance
   g_agg.add(out.vitals, hr_scale, (double)w.temperature_c);

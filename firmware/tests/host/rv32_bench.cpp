@@ -31,13 +31,13 @@ int main() {
   for (int nn = 0; nn < 2; nn++) {
     for (int i = 0; i < BENCH_N; i++) {
       const uint64_t t0 = instructions();
-      sg_process_window(bench_red[i], bench_ir[i], 0.0, nn != 0, &out);
+      sg_process_window(bench_red[i], bench_ir[i], nn != 0, &out);
       const uint64_t t1 = instructions();
       const SgVitals& v = out.vitals;
       printf("{\"i\":%d,\"nn\":%d,\"instr\":%lu,\"reliable\":%d,\"has_hr\":%d,\"hr\":%.9f,\"has_spo2\":%d,"
              "\"spo2\":%.9f,\"sqi\":%.9f,\"pi_in\":%.9f,\"motion\":%.6f,\"reasons\":%u,\"n_beats\":%d}\n",
              i, nn, (unsigned long)(t1 - t0), (int)v.reliable, (int)v.has_hr, v.has_hr ? v.hr_bpm : 0.0,
-             (int)v.has_spo2, v.has_spo2 ? v.spo2 : 0.0, v.quality.sqi, out.pi_in, v.quality.motion_fraction,
+             (int)v.has_spo2, v.has_spo2 ? v.spo2 : 0.0, v.quality.sqi, v.pi_in, v.quality.motion_fraction,
              (unsigned)v.reasons, v.n_beats);
     }
   }

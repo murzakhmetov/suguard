@@ -23,12 +23,19 @@ static_assert(SG_MAX_ARTIFACT_FRACTION == 0x1.6666666666666p-1,
               "SG_MAX_ARTIFACT_FRACTION in sg_core.h differs from pipeline.MAX_ARTIFACT_FRACTION = 0.7");
 static_assert(SG_MIN_INPUT_PI == 0x1.eb851eb851eb8p-6,
               "SG_MIN_INPUT_PI in sg_core.h differs from pipeline.MIN_INPUT_PI = 0.03");
-static_assert(SG_MIN_SPECTRAL_PURITY == 0x1.3333333333333p-2,
-              "SG_MIN_SPECTRAL_PURITY in sg_core.h differs from pipeline.MIN_SPECTRAL_PURITY = 0.3");
+static_assert(SG_MIN_SUPPORT_CORR == 0x1.6666666666666p-1,
+              "SG_MIN_SUPPORT_CORR in sg_core.h differs from pipeline.MIN_SUPPORT_CORR = 0.7");
+static_assert(SG_SUPPORT_GAIN_MIN == 0x1.6666666666666p-1,
+              "SG_SUPPORT_GAIN_MIN in sg_core.h differs from pipeline.SUPPORT_GAIN_RANGE[0] = 0.7");
+static_assert(SG_SUPPORT_GAIN_MAX == 0x1.6666666666666p+0,
+              "SG_SUPPORT_GAIN_MAX in sg_core.h differs from pipeline.SUPPORT_GAIN_RANGE[1] = 1.4");
+static_assert(SG_MIN_SUPPORT_SAMPLES == 10,
+              "SG_MIN_SUPPORT_SAMPLES in sg_core.h differs from pipeline.MIN_SUPPORT_SAMPLES = 10");
 
 // ---- scalar constants ------------------------------------------------------------------
 constexpr double SG_PI = 0x1.921fb54442d18p+1;  // 3.141592653589793 (math.pi)
 constexpr double SG_SATURATION_LEVEL = 0x1.f5c211eb851ebp+17;  // 256900.13999999998 (config.SATURATION_LEVEL)
+constexpr double SG_MAX_SATURATED_FRACTION = 0x1.999999999999ap-5;  // 0.05 (quality.MAX_SATURATED_FRACTION)
 constexpr double SG_HR_MIN_BPM = 0x1.18p+5;  // 35.0 (config.HR_MIN_BPM)
 constexpr double SG_HR_MAX_BPM = 0x1.a4p+7;  // 210.0 (config.HR_MAX_BPM)
 constexpr double SG_SPO2_A = -0x1.687ae147ae148p+5;  // -45.06 (config.SPO2_COEFFS, A of A R^2 + B R + C)

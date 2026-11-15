@@ -28,8 +28,9 @@ struct Mem {
   int32_t acc[SG_NN_MAX_LEN];
   double ir[SG_WINDOW];        // raw IR counts, later the denoised IR signal
   double red[SG_WINDOW];       // raw red counts, later the denoised red signal
-  double bv_ir[SG_WINDOW];     // band-passed blood-volume signals (network input)
-  double bv_red[SG_WINDOW];    // ... later the artefact probability
+  double bv_ir[SG_WINDOW];     // measured (band-passed) blood-volume signals: the network input,
+  double bv_red[SG_WINDOW];    // kept to check that the network's output is supported by them
+  double p_art[SG_WINDOW];     // artefact probability from the network
 };
 
 Mem g_mem;
@@ -54,7 +55,7 @@ void denoise(Mem* m) {
   for (int i = 0; i < SG_WINDOW; i++) {
     m->ir[i] = (double)out[i] / lsb * scale;
     m->red[i] = (double)out[SG_WINDOW + i] / lsb * scale;
-    m->bv_red[i] = 1.0 / (1.0 + exp(-((double)out[2 * SG_WINDOW + i] / lsb)));
+    m->p_art[i] = 1.0 / (1.0 + exp(-((double)out[2 * SG_WINDOW + i] / lsb)));
   }
 }
 
@@ -64,8 +65,7 @@ void sg_pipeline_init(void) { sg_work_init(&g_mem.work, g_mem.scratch.fft); }
 
 size_t sg_pipeline_static_bytes(void) { return sizeof(Mem); }
 
-void sg_process_window(const uint32_t* red, const uint32_t* ir, double prior_hr, bool use_nn,
-                       SgPipelineOutput* out) {
+void sg_process_window(const uint32_t* red, const uint32_t* ir, bool use_nn, SgPipelineOutput* out) {
   Mem* m = &g_mem;
   for (int i = 0; i < SG_WINDOW; i++) {
     m->ir[i] = (double)ir[i];
@@ -74,22 +74,21 @@ void sg_process_window(const uint32_t* red, const uint32_t* ir, double prior_hr,
   sg_sensor_state(m->red, m->ir, SG_WINDOW, SG_FINGER_IR_DC_MIN, &out->sensor, &m->work);
   sg_preprocess(m->ir, SG_WINDOW, m->bv_ir, &m->work);
   sg_preprocess(m->red, SG_WINDOW, m->bv_red, &m->work);
-  out->pi_in = sg_perfusion_index(m->bv_ir, SG_WINDOW, &m->work);
   out->used_nn = use_nn;
   if (use_nn) {
     denoise(m);
-    sg_vitals_from_signals(m->ir, m->red, m->bv_red, SG_WINDOW, &out->sensor, out->pi_in, prior_hr,
-                           &out->vitals, &m->work);
+    sg_vitals_from_signals(m->bv_ir, m->bv_red, m->ir, m->red, m->p_art, SG_WINDOW, &out->sensor, &out->vitals,
+                           &m->work);
   } else {
-    sg_vitals_from_signals(m->bv_ir, m->bv_red, nullptr, SG_WINDOW, &out->sensor, out->pi_in, prior_hr,
-                           &out->vitals, &m->work);
+    sg_vitals_from_signals(m->bv_ir, m->bv_red, nullptr, nullptr, nullptr, SG_WINDOW, &out->sensor, &out->vitals,
+                           &m->work);
   }
 }
 
 void sg_reason_names(uint16_t reasons, char* out, size_t out_len) {
   static const char* const kNames[] = {"no_contact", "adc_saturated", "led_current_too_high",
                                        "weak_pulse", "implausible_amplitude", "motion",
-                                       "irregular_or_noisy", "red_ir_inconsistent", "no_heart_rate"};
+                                       "irregular_or_noisy", "red_ir_inconsistent", "denoiser_mismatch"};
   size_t len = 0;
   if (out_len == 0) return;
   out[0] = '\0';

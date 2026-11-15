@@ -122,7 +122,6 @@ class AnalyzeRequest(BaseModel):
     timestamp: Optional[float] = Field(None, ge=UNIX_MIN, le=UNIX_MAX, allow_inf_nan=False,
                                        description="unix seconds of the first sample")
     temperature_c: Optional[float] = Field(None, ge=-20, le=80, allow_inf_nan=False)
-    prior_hr: Optional[float] = Field(None, ge=30, le=220, allow_inf_nan=False)
     include_signals: bool = False
 
     @model_validator(mode="after")
@@ -222,7 +221,7 @@ def analyze(req: AnalyzeRequest):
     t0 = time.perf_counter()
     try:
         res = PIPE.analyze(req.red, req.ir, fs=req.fs, temperature_c=req.temperature_c,
-                           prior_hr=req.prior_hr, include_signals=req.include_signals)
+                           include_signals=req.include_signals)
     except ValueError as e:
         raise HTTPException(422, str(e)) from e
     res["timestamp"] = req.timestamp if req.timestamp is not None else time.time()

@@ -29,7 +29,10 @@
 // Thresholds of the reliability decision (suguard_ml.pipeline).
 #define SG_MAX_ARTIFACT_FRACTION 0.7
 #define SG_MIN_INPUT_PI 0.03
-#define SG_MIN_SPECTRAL_PURITY 0.3
+#define SG_MIN_SUPPORT_CORR 0.7         // denoised signal vs measurement over the clean samples ...
+#define SG_SUPPORT_GAIN_MIN 0.7         // ... and the size at which the measurement contains it
+#define SG_SUPPORT_GAIN_MAX 1.4
+#define SG_MIN_SUPPORT_SAMPLES 10
 
 // Why a window is not reliable (bit mask; names follow the Python reason strings).
 enum SgReason : uint16_t {
@@ -41,10 +44,8 @@ enum SgReason : uint16_t {
   SG_R_MOTION = 1u << 5,                 // "motion"
   SG_R_IRREGULAR_OR_NOISY = 1u << 6,     // "irregular_or_noisy"
   SG_R_RED_IR_INCONSISTENT = 1u << 7,    // "red_ir_inconsistent"
-  SG_R_NO_HEART_RATE = 1u << 8,          // "no_heart_rate"
+  SG_R_DENOISER_MISMATCH = 1u << 8,      // "denoiser_mismatch": the denoised pulse is not in the measurement
 };
-
-enum SgHrSource : uint8_t { SG_HR_NONE = 0, SG_HR_BEATS = 1, SG_HR_SPECTRUM = 2 };
 
 // Outcome of the SpO2 estimate itself (SpO2Estimate.reason in Python).
 enum SgSpo2Reason : uint8_t {
@@ -89,8 +90,8 @@ struct SgQuality {
   double r_spread;
   double motion_fraction;      // share of samples with artefact probability > 0.5 (0 if p_art == NULL)
   double sqi;                  // geometric mean of comp[] (0 if the sensor checks fail)
-  double comp[SG_Q_COUNT];
-  bool usable;                 // pulse timing trustworthy (heart rate)
+  double comp[SG_Q_COUNT];     // a metric that cannot be computed scores 0
+  bool usable;                 // sensor checks pass and the pulse timing is trustworthy (heart rate)
   bool usable_spo2;            // additionally both wavelengths trustworthy
   uint16_t reasons;            // quality + sensor reasons, as in Quality.reasons
 };
@@ -100,21 +101,21 @@ struct SgVitals {
   bool reliable;
   uint16_t reasons;            // union of all reasons, as in SignalVitals.reasons
 
-  bool has_hr;                 // hr_bpm is not None in Python
-  double hr_bpm;               // beats-based or spectral fallback (valid if has_hr)
-  uint8_t hr_source;           // SgHrSource
-  bool has_hr_spectral;
-  double hr_spectral;          // spectral HR computed with the prior (valid if has_hr_spectral)
-  double spectral_purity;      // purity of the primed spectral HR
+  bool has_hr;                 // hr_bpm is not None in Python; always true when reliable
+  double hr_bpm;               // from the detected beats (valid if has_hr)
   int n_beats;                 // number of detected systolic peaks
   int n_valid_ibi;             // number of inter-beat intervals accepted as valid
 
-  bool spo2_ok;                // reliable && quality.usable_spo2
-  bool has_spo2;               // spo2 is not None in Python (spo2_ok && estimate valid)
+  bool has_spo2;               // SignalVitals.spo2_ok: SpO2-grade window with a value
   double spo2;                 // % (valid if has_spo2)
   bool has_r;                  // SpO2Estimate.r_ratio is not None
   double r_ratio;              // ratio of ratios (valid if has_r), reported regardless of gating
   uint8_t spo2_reason;         // SgSpo2Reason of the raw estimate
+
+  double pi_in;                // peak-to-peak IR perfusion (%) of the measured signal
+  // InputSupport of the IR and red signals; all zero on the classical path.
+  double support_ir_corr, support_ir_gain;
+  double support_red_corr, support_red_gain;
 
   SgQuality quality;
 };
@@ -139,14 +140,14 @@ void sg_preprocess(const double* raw, int n, double* bv_out, SgWork* w);
 // Peak-to-peak perfusion (%) of a blood-volume signal: (p97 - p3) * 100.
 double sg_perfusion_index(const double* bv, int n, SgWork* w);
 
-// Heart rate, SpO2 and the reliability decision from blood-volume signals.
-//   c_ir, c_red : denoised (or just band-passed) signals, n <= SG_WINDOW samples
-//   p_art       : per-sample artefact probability in [0, 1], or NULL (classical path)
-//   pi_in       : perfusion index of the IR signal *before* denoising
-//   prior_hr    : previous heart rate in bpm for spectral tracking, <= 0 for none
-void sg_vitals_from_signals(const double* c_ir, const double* c_red, const double* p_art, int n,
-                            const SgSensorState* sensor, double pi_in, double prior_hr,
-                            SgVitals* out, SgWork* w);
+// Heart rate, SpO2 and the reliability decision for one window of n <= SG_WINDOW samples.
+//   ir_bv, red_bv : the measured (band-passed) blood-volume signals
+//   c_ir, c_red   : the denoiser's output                      } all three NULL on the classical path,
+//   p_art         : its per-sample artefact probability [0, 1] } where the measured signals are analysed
+// A denoiser can draw a pulse that is not in the measurement, so with a denoiser the result is
+// reliable only if the measured signals support the denoised ones (SG_R_DENOISER_MISMATCH).
+void sg_vitals_from_signals(const double* ir_bv, const double* red_bv, const double* c_ir, const double* c_red,
+                            const double* p_art, int n, const SgSensorState* sensor, SgVitals* out, SgWork* w);
 
 // sizeof(SgWork), for tests and static allocation checks.
 size_t sg_work_size(void);

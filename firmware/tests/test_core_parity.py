@@ -30,7 +30,7 @@ from suguard_ml.config import ADC_MAX, FINGER_IR_DC_MIN, FS, WINDOW  # noqa: E40
 from suguard_ml.pipeline import vitals_from_signals  # noqa: E402
 from suguard_ml.signal import filters  # noqa: E402
 from suguard_ml.signal.filters import preprocess  # noqa: E402
-from suguard_ml.signal.quality import _ramp, sensor_state  # noqa: E402
+from suguard_ml.signal.quality import _ramp, _ramp_down, sensor_state  # noqa: E402
 from suguard_ml.synth.ppg import simulate_window  # noqa: E402
 
 sys.path.insert(0, str(FW / "tools"))
@@ -45,28 +45,25 @@ with warnings.catch_warnings():  # the marker is not registered in conftest.py
     warnings.simplefilter("ignore", pytest.PytestUnknownMarkWarning)
     rv32 = pytest.mark.rv32
 
-# sg_core.h: SgReason bits, SgHrSource, SgSpo2Reason.
+# sg_core.h: SgReason bits, SgSpo2Reason.
 REASON_BITS = {"no_contact": 0, "adc_saturated": 1, "led_current_too_high": 2, "weak_pulse": 3,
                "implausible_amplitude": 4, "motion": 5, "irregular_or_noisy": 6, "red_ir_inconsistent": 7,
-               "no_heart_rate": 8}
-HR_SOURCES = {None: 0, "beats": 1, "spectrum": 2}
+               "denoiser_mismatch": 8}
 SPO2_REASONS = {None: 0, "no_common_pulse": 1, "spo2_low_red_ir_agreement": 2, "r_out_of_calibration_range": 3}
 
 # Outputs of core_cli by the precision they must reach.
-EXACT = ["n", "finger_detected", "sensor_reasons", "reliable", "reasons", "has_hr", "hr_source", "has_hr_spectral",
-         "n_beats", "n_valid_ibi", "spo2_ok", "has_spo2", "has_r", "spo2_reason", "q_usable", "q_usable_spo2",
-         "q_reasons"]
+EXACT = ["n", "finger_detected", "sensor_reasons", "reliable", "reasons", "has_hr", "n_beats", "n_valid_ibi",
+         "has_spo2", "has_r", "spo2_reason", "q_usable", "q_usable_spo2", "q_reasons"]
 # Double-precision arithmetic in the same order as numpy/scipy: 1e-9 relative.
 TIGHT = ["saturated_fraction", "ir_dc", "red_dc", "pi_in", "hr_bpm", "spo2", "r_ratio", "q_perfusion_index",
          "q_template_corr", "q_red_ir_corr", "q_beat_amp_cv", "q_valid_ibi_fraction", "q_r_spread",
          "q_motion_fraction", "q_comp_perfusion", "q_comp_template", "q_comp_amplitude", "q_comp_rhythm",
-         "q_comp_r_stability", "q_comp_red_ir", "q_comp_motion"]
+         "q_comp_r_stability", "q_comp_red_ir", "q_comp_motion", "support_ir_corr", "support_ir_gain",
+         "support_red_corr", "support_red_gain"]
 # Downstream of the single-precision FFT: 1e-4 absolute.
-SPECTRAL = ["hr_spectral", "spectral_purity", "q_spectral_purity", "q_hr_agreement_bpm", "q_comp_purity",
-            "q_comp_hr_agreement", "q_sqi"]
+SPECTRAL = ["q_spectral_purity", "q_hr_agreement_bpm", "q_comp_purity", "q_comp_hr_agreement", "q_sqi"]
 TIGHT_REL, SPECTRAL_ABS, BV_ABS = 1e-9, 1e-4, 1e-12
 NFFT = gen_tables.NFFT
-BIN_BPM = FS / NFFT * 60.0   # one FFT bin of the spectral heart rate
 
 # core_cli.cpp: DspOp, and its filter numbers (the order of the tables).
 DSP_OPS = {name: i for i, name in enumerate(["sum", "std", "median", "percentile", "arg", "interp", "uniform",
@@ -79,8 +76,7 @@ class Case:
     name: str
     red: np.ndarray                 # raw counts
     ir: np.ndarray
-    prior_hr: float | None = None
-    denoised: tuple | None = None   # (c_ir, c_red, p_art): vitals from these instead of the band-passed signals
+    denoised: tuple | None = None   # (c_ir, c_red, p_art) as a denoiser would return them for this window
 
 
 # --------------------------------------------------------------------------
@@ -99,10 +95,10 @@ def unrounded_components(q) -> dict:
         "perfusion": _ramp(pi, 0.03, 0.12) * (1.0 - _ramp(pi, 10.0, 20.0)),
         "template": _ramp(q.template_corr, 0.5, 0.9),
         "purity": _ramp(q.spectral_purity, 0.15, 0.5),
-        "amplitude": 1.0 - _ramp(q.beat_amp_cv, 0.2, 0.4),
+        "amplitude": _ramp_down(q.beat_amp_cv, 0.2, 0.4),
         "rhythm": _ramp(q.valid_ibi_fraction, 0.85, 0.95),
-        "hr_agreement": 1.0 - _ramp(q.hr_agreement_bpm, 5.0, 15.0),
-        "r_stability": 1.0 - _ramp(q.r_spread, 0.08, 0.25),
+        "hr_agreement": _ramp_down(q.hr_agreement_bpm, 5.0, 15.0),
+        "r_stability": _ramp_down(q.r_spread, 0.08, 0.25),
         "red_ir": _ramp(q.red_ir_corr, 0.5, 0.8),
         "motion": 1.0 - q.motion_fraction,
     }
@@ -121,18 +117,20 @@ def reference(case: Case) -> dict:
         sensor = sensor_state(case.red, case.ir)
         ir_bv, _ = preprocess(case.ir, FS)
         red_bv, _ = preprocess(case.red, FS)
-        pi_in = float(np.percentile(ir_bv, 97) - np.percentile(ir_bv, 3)) * 100.0
-        c_ir, c_red, p_art = case.denoised or (ir_bv, red_bv, None)
-        v = vitals_from_signals(c_ir, c_red, p_art, sensor, pi_in, prior_hr=case.prior_hr)
+        v = vitals_from_signals(ir_bv, red_bv, sensor, *(case.denoised or ()))
     q = v.quality
+    assert v.spo2_ok == (v.spo2 is not None) and (v.hr_bpm is not None or not v.reliable)
+    assert (v.support_ir is None) == (v.support_red is None) == (case.denoised is None)
+    support = [x for s in (v.support_ir, v.support_red) for x in ((s.corr, s.gain) if s else (math.nan, math.nan))]
     out = dict(
         n=case.ir.size, finger_detected=sensor.finger_detected, saturated_fraction=sensor.saturated_fraction,
-        ir_dc=sensor.ir_dc, red_dc=sensor.red_dc, sensor_reasons=reason_mask(sensor.reasons), pi_in=pi_in,
+        ir_dc=sensor.ir_dc, red_dc=sensor.red_dc, sensor_reasons=reason_mask(sensor.reasons), pi_in=v.pi_in,
         reliable=v.reliable, reasons=reason_mask(v.reasons), has_hr=v.hr_bpm is not None, hr_bpm=num(v.hr_bpm),
-        hr_source=HR_SOURCES[v.hr_source], has_hr_spectral=v.hr_spectral is not None, hr_spectral=num(v.hr_spectral),
-        spectral_purity=v.spectral_purity, n_beats=v.beats.peaks.size, n_valid_ibi=int(v.beats.valid_ibi.sum()),
-        spo2_ok=v.spo2_ok, has_spo2=v.spo2 is not None, spo2=num(v.spo2), has_r=v.sp.r_ratio is not None,
+        n_beats=v.beats.peaks.size, n_valid_ibi=int(v.beats.valid_ibi.sum()),
+        has_spo2=v.spo2_ok, spo2=num(v.spo2), has_r=v.sp.r_ratio is not None,
         r_ratio=num(v.sp.r_ratio), spo2_reason=SPO2_REASONS[v.sp.reason],
+        support_ir_corr=support[0], support_ir_gain=support[1], support_red_corr=support[2],
+        support_red_gain=support[3], denoised=case.denoised is not None,
         q_perfusion_index=q.perfusion_index, q_template_corr=q.template_corr, q_spectral_purity=q.spectral_purity,
         q_red_ir_corr=q.red_ir_corr, q_beat_amp_cv=q.beat_amp_cv, q_valid_ibi_fraction=q.valid_ibi_fraction,
         q_hr_agreement_bpm=q.hr_agreement_bpm, q_r_spread=q.r_spread, q_motion_fraction=q.motion_fraction,
@@ -151,8 +149,7 @@ def classical_cases(count=300, seed0=7_000_000) -> list[Case]:
     cases = []
     for i in range(count):
         win = simulate_window(seed0 + i)
-        cases.append(Case(f"classical[{seed0 + i}]", win.red_raw, win.ir_raw,
-                          prior_hr=None if i % 2 == 0 else win.hr_bpm + 4))
+        cases.append(Case(f"classical[{seed0 + i}]", win.red_raw, win.ir_raw))
     return cases
 
 
@@ -165,8 +162,7 @@ def denoised_cases(count=200, seed0=7_100_000) -> list[Case]:
         win = simulate_window(seed0 + i)
         dn = denoiser.denoise_bv(preprocess(win.ir_raw, FS)[0], preprocess(win.red_raw, FS)[0], FS)
         signals = tuple(np.asarray(a, dtype=np.float64) for a in (dn.ir_bv, dn.red_bv, dn.artifact_prob))
-        cases.append(Case(f"denoised[{seed0 + i}]", win.red_raw, win.ir_raw,
-                          prior_hr=None if i % 2 == 0 else win.hr_bpm + 4, denoised=signals))
+        cases.append(Case(f"denoised[{seed0 + i}]", win.red_raw, win.ir_raw, denoised=signals))
     return cases
 
 
@@ -226,7 +222,6 @@ def edge_cases() -> list[Case]:
              denoised=as_denoised(clean, rng.uniform(-0.5, 1.5, n))),
         Case("artifact_prob_few_clean_samples", clean.red_raw, clean.ir_raw,
              denoised=as_denoised(clean, np.where(np.arange(n) < 9, 0.0, 1.0))),
-        Case("with_prior", clean.red_raw, clean.ir_raw, prior_hr=150.0),
         with_signals("constant_signals", np.full(n, 0.5), np.full(n, 0.25)),
         with_signals("tone_above_cardiac_band", 0.01 * tone(5.0), 0.006 * tone(5.0)),
         with_signals("tone_at_cardiac_band_edge", 0.01 * tone(4.0), 0.006 * tone(4.0)),
@@ -240,8 +235,7 @@ def edge_cases() -> list[Case]:
     for length in (100, 256, 400):
         for seed, kinds in ((7_300_000, []), (7_300_001, None)):
             win = simulate_window(seed + length, n=length, kinds=kinds)
-            cases.append(Case(f"n={length}[{'clean' if kinds == [] else 'mixed'}]", win.red_raw, win.ir_raw,
-                              prior_hr=win.hr_bpm - 6 if kinds is None else None))
+            cases.append(Case(f"n={length}[{'clean' if kinds == [] else 'mixed'}]", win.red_raw, win.ir_raw))
         win = simulate_window(7_300_002 + length, n=length)
         cases.append(Case(f"n={length}[weights]", win.red_raw, win.ir_raw,
                           denoised=as_denoised(win, rng.uniform(0, 1, length))))
@@ -255,7 +249,7 @@ def edge_cases() -> list[Case]:
 def write_vectors(path, cases):
     parts = [[len(cases)]]
     for case in cases:
-        parts.append([case.ir.size, 0 if case.denoised is None else 1, FINGER_IR_DC_MIN, case.prior_hr or 0.0])
+        parts.append([case.ir.size, 0 if case.denoised is None else 1, FINGER_IR_DC_MIN])
         parts += [case.red, case.ir, *(case.denoised or ())]
     np.concatenate([np.asarray(p, dtype="<f8").ravel() for p in parts]).tofile(path)
 
@@ -346,8 +340,8 @@ def compare(cases, results, label):
             if not err <= BV_ABS:
                 problems.append(f"{case.name}: {key} differs by {err:.3g}")
         # Values that are None in Python are compared through their has_* flag only.
-        skip = {"hr_bpm": not ref["has_hr"], "hr_spectral": not ref["has_hr_spectral"],
-                "spo2": not ref["has_spo2"], "r_ratio": not ref["has_r"]}
+        skip = {"hr_bpm": not ref["has_hr"], "spo2": not ref["has_spo2"], "r_ratio": not ref["has_r"]}
+        skip.update({f"support_{ch}_{what}": not ref["denoised"] for ch in ("ir", "red") for what in ("corr", "gain")})
         for key in TIGHT:
             if skip.get(key):
                 continue
@@ -362,8 +356,8 @@ def compare(cases, results, label):
             track("spectral", err, f"{case.name} {key}")
             if not err <= SPECTRAL_ABS:
                 problems.append(f"{case.name}: {key} = {got[key]!r}, reference {ref[key]!r}")
-        if ref["has_hr_spectral"] and round(got["hr_spectral"] / BIN_BPM) != round(ref["hr_spectral"] / BIN_BPM):
-            problems.append(f"{case.name}: spectral heart rate on another FFT bin")
+        if not ref["denoised"] and any(got[f"support_{ch}_{what}"] for ch in ("ir", "red") for what in ("corr", "gain")):
+            problems.append(f"{case.name}: input support reported on the classical path")
     print(f"\n{label}: {len(cases)} windows; max |preprocess diff| {worst['bv'][0]:.3g} ({worst['bv'][1]}); "
           f"max rel. error of double-precision outputs {worst['tight'][0]:.3g} ({worst['tight'][1]}); "
           f"max abs. error of FFT-dependent outputs {worst['spectral'][0]:.3g} ({worst['spectral'][1]})")
@@ -389,7 +383,7 @@ def test_classical_path(cli, build_dir):
     results, work_size = run_host(cli, build_dir, "classical", cases)
     assert work_size <= 65536
     compare(cases, results, "classical path")
-    assert {r["hr_source"] for r in results} == {0, 1, 2}        # no heart rate, beats, spectral fallback
+    assert {r["has_hr"] for r in results} == {0, 1}
     assert any(r["reliable"] for r in results) and any(r["has_spo2"] for r in results)
 
 
@@ -408,12 +402,11 @@ def test_edge_cases(cli, build_dir):
     cases = edge_cases()
     results, _ = run_host(cli, build_dir, "edge", cases)
     compare(cases, results, "edge cases")
-    # The cases reach every outcome ("no_heart_rate" cannot occur: a usable window always has beats).
+    # The cases reach every outcome.
     seen = 0
     for r in results:
         seen |= int(r["reasons"])
-    assert seen == (1 << len(REASON_BITS)) - 1 - (1 << REASON_BITS["no_heart_rate"])
-    assert {r["hr_source"] for r in results} == {0, 1, 2}
+    assert seen == (1 << len(REASON_BITS)) - 1
     assert {r["spo2_reason"] for r in results} == {0, 1, 2, 3}
 
 
@@ -425,7 +418,7 @@ def test_window_length_out_of_range(cli, build_dir):
     for case, r in zip(cases, results):
         assert r["n"] == case.ir.size
         assert not r["finger_detected"] and r["sensor_reasons"] == 1 << REASON_BITS["no_contact"], case.name
-        assert not (r["reliable"] or r["has_hr"] or r["has_hr_spectral"] or r["has_spo2"] or r["has_r"]), case.name
+        assert not (r["reliable"] or r["has_hr"] or r["has_spo2"] or r["has_r"]), case.name
         assert r["pi_in"] == 0 and not np.any(r["ir_bv"]) and not np.any(r["red_bv"]), case.name
 
 

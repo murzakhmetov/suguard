@@ -10,6 +10,9 @@ from scipy import stats
 from ..config import ADC_MAX, FINGER_IR_DC_MIN, FS, SATURATION_LEVEL
 from .beats import Beats, beat_template, spectral_hr
 
+# Share of samples at the ADC rails above which a window is unusable.
+MAX_SATURATED_FRACTION = 0.05
+
 
 @dataclass
 class SensorState:
@@ -30,7 +33,7 @@ def sensor_state(red_raw: np.ndarray, ir_raw: np.ndarray, ir_dc_min: float = FIN
     finger = ir_dc >= ir_dc_min and red_dc >= 0.2 * ir_dc_min
     if not finger:
         reasons.append("no_contact")
-    if sat > 0.05:
+    if sat > MAX_SATURATED_FRACTION:
         reasons.append("adc_saturated")
     if ir_dc > 0.9 * ADC_MAX:
         reasons.append("led_current_too_high")
@@ -50,7 +53,7 @@ class Quality:
     r_spread: float                 # spread of the ratio of ratios across sub-windows
     motion_fraction: float          # share of samples flagged as artefact by the denoiser
     sqi: float                      # 0..1
-    usable: bool                    # pulse timing trustworthy (heart rate)
+    usable: bool                    # sensor checks pass and the pulse timing is trustworthy (heart rate)
     usable_spo2: bool = False       # additionally both wavelengths trustworthy (SpO2, features)
     components: dict = field(default_factory=dict)
     reasons: list[str] = field(default_factory=list)
@@ -60,9 +63,18 @@ class Quality:
 
 
 def _ramp(x: float, lo: float, hi: float) -> float:
+    """Score rising from 0 at ``lo`` to 1 at ``hi``; an undefined metric scores 0."""
     if not np.isfinite(x):
         return 0.0
     return float(np.clip((x - lo) / (hi - lo), 0.0, 1.0))
+
+
+def _ramp_down(x: float, lo: float, hi: float) -> float:
+    """Score falling from 1 at ``lo`` to 0 at ``hi``; an undefined metric scores
+    0 as well: a check that could not be computed has not been passed."""
+    if not np.isfinite(x):
+        return 0.0
+    return 1.0 - _ramp(x, lo, hi)
 
 
 def _r_spread(ir: np.ndarray, red: np.ndarray, fs: float = FS, parts: int = 3) -> float:
@@ -111,7 +123,10 @@ def assess_quality(ir_bv: np.ndarray, red_bv: np.ndarray, beats: Beats, fs: floa
     * red/IR correlation as a lower bound only: motion common to both LEDs
       *raises* it, so it cannot certify a motion-free window
     * artefact fraction from the denoiser's mask head, when available
-    Skewness (Elgendi 2016) is reported, not scored.
+    Skewness (Elgendi 2016) is reported, not scored. A metric that cannot be
+    computed (too few beats, no spectral peak, window shorter than 3 s for
+    the ratio stability) fails its component. With ``sensor`` given, a window
+    that fails the sensor checks is never usable.
     """
     ir = np.asarray(ir_bv, dtype=np.float64)
     red = np.asarray(red_bv, dtype=np.float64)
@@ -140,10 +155,10 @@ def assess_quality(ir_bv: np.ndarray, red_bv: np.ndarray, beats: Beats, fs: floa
         "perfusion": _ramp(pi, 0.03, 0.12) * (1.0 - _ramp(pi, 10.0, 20.0)),
         "template": _ramp(tcorr, 0.5, 0.9),
         "purity": _ramp(purity, 0.15, 0.5),
-        "amplitude": 1.0 - _ramp(amp_cv, 0.2, 0.4),
+        "amplitude": _ramp_down(amp_cv, 0.2, 0.4),
         "rhythm": _ramp(valid_frac, 0.85, 0.95),
-        "hr_agreement": 1.0 - _ramp(hr_diff, 5.0, 15.0),
-        "r_stability": 1.0 - _ramp(r_spread, 0.08, 0.25),
+        "hr_agreement": _ramp_down(hr_diff, 5.0, 15.0),
+        "r_stability": _ramp_down(r_spread, 0.08, 0.25),
         "red_ir": _ramp(red_ir_corr, 0.5, 0.8),
         "motion": 1.0 - motion,
     }
@@ -158,19 +173,23 @@ def assess_quality(ir_bv: np.ndarray, red_bv: np.ndarray, beats: Beats, fs: floa
     fail_hr = [k for k in failing if k in hr_parts]
 
     reasons = []
+    sensor_ok = True
     if sensor is not None:
         reasons += sensor.reasons
-        if not sensor.finger_detected or sensor.saturated_fraction > 0.05:
+        sensor_ok = bool(sensor.finger_detected and sensor.saturated_fraction <= MAX_SATURATED_FRACTION)
+        if not sensor_ok:
             sqi = 0.0
     if comp["perfusion"] < COMPONENT_MIN:
         reasons.append("weak_pulse" if pi < 1.0 else "implausible_amplitude")
-    if motion > 0.5 or {"hr_agreement", "amplitude"} & set(failing):
+    # Too few beats to measure (undefined amplitude spread / heart-rate agreement) is "noisy", not "motion".
+    undefined = {k for k, x in (("amplitude", amp_cv), ("hr_agreement", hr_diff)) if not np.isfinite(x)}
+    if motion > 0.5 or ({"hr_agreement", "amplitude"} & set(failing)) - undefined:
         reasons.append("motion")
-    if {"template", "purity", "rhythm"} & set(failing):
+    if ({"template", "purity", "rhythm"} | undefined) & set(failing):
         reasons.append("irregular_or_noisy")
     if {"r_stability", "red_ir"} & set(failing):
         reasons.append("red_ir_inconsistent")
-    usable = sqi_hr >= usable_threshold and not fail_hr
+    usable = sensor_ok and sqi_hr >= usable_threshold and not fail_hr
     usable_spo2 = usable and sqi >= usable_threshold and not failing
     return Quality(perfusion_index=pi, skewness=skew, template_corr=tcorr, spectral_purity=purity,
                    red_ir_corr=float(red_ir_corr), beat_amp_cv=amp_cv, valid_ibi_fraction=valid_frac,

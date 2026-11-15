@@ -113,6 +113,102 @@ def test_noise_only_is_never_reliable():
         assert res["spo2"]["r_ratio"] is None and res["features"] is None and res["reason"]
 
 
+class _PulseDrawingDenoiser:
+    """Stand-in for a network that answers any input with a textbook pulse."""
+
+    def __init__(self):
+        from suguard_ml.signal.filters import preprocess
+
+        w = simulate_window(123, kinds=[], hr_bpm=72.0, spo2=97.0, pi_ir=0.01)
+        self.window = w
+        self.ir, self.red = preprocess(w.ir_raw, FS)[0], preprocess(w.red_raw, FS)[0]
+
+    def denoise_bv(self, ir_bv, red_bv, fs):
+        from suguard_ml.models.denoiser import Denoised
+        return Denoised(ir_bv=self.ir, red_bv=self.red, artifact_prob=np.zeros_like(self.ir), fs=fs)
+
+
+def test_denoiser_output_must_be_supported_by_the_input():
+    """Regression (review finding): a denoiser that draws a pulse into noise.
+    Its output passes every quality check, so only the comparison with the
+    measured signal can reject it."""
+    from suguard_ml.pipeline import SuGuardPipeline
+
+    drawer = _PulseDrawingDenoiser()
+    pipe = SuGuardPipeline(denoiser=drawer)
+    res = pipe.analyze(drawer.window.red_raw, drawer.window.ir_raw, fs=FS)      # the pulse really is in the input
+    assert res["reliable"] and res["spo2"]["percent"] is not None
+    rng = np.random.default_rng(3)
+    for _ in range(40):
+        sigma = float(np.exp(rng.uniform(np.log(5), np.log(400))))
+        red, ir = rng.normal(70_000, sigma, 512).round(), rng.normal(100_000, sigma, 512).round()
+        res = pipe.analyze(red, ir, fs=FS)
+        assert not res["reliable"] and "denoiser_mismatch" in res["reason"]
+        assert res["heart_rate"]["bpm"] is None and res["spo2"]["percent"] is None and res["features"] is None
+    # IR pulse measured, red pulse drawn: heart rate yes, SpO2 no.
+    red = np.median(drawer.window.red_raw) + rng.normal(0, 20, 512).round()
+    res = pipe.analyze(red, drawer.window.ir_raw, fs=FS)
+    assert res["reliable"] and res["heart_rate"]["bpm"] is not None
+    assert res["spo2"]["percent"] is None and res["spo2"]["reason"] == "red_denoiser_mismatch" and res["features"] is None
+
+
+@pytest.mark.parametrize("model", ["server", "edge"])
+def test_red_channel_without_pulse_gives_no_spo2(model):
+    """The real networks tend to repair a pulse-free red channel from the IR
+    one, which used to yield SpO2 ~100 % from nothing."""
+    from suguard_ml.pipeline import SuGuardPipeline
+
+    if model == "server":
+        if not HAS_DENOISER:
+            pytest.skip("denoiser not trained")
+        pipe = SuGuardPipeline.load()
+    else:
+        from suguard_ml.models.edge_int import EdgeDenoiserInt
+        if not (ML / "models" / "denoiser_edge_int.npz").exists():
+            pytest.skip("edge model not exported")
+        pipe = SuGuardPipeline(denoiser=EdgeDenoiserInt.load())
+    rng = np.random.default_rng(1)
+    for i in range(60):
+        w = simulate_window(8_000_000 + i, kinds=[], pi_ir=float(np.exp(rng.uniform(np.log(0.002), np.log(0.03)))))
+        dc = float(np.median(w.red_raw))
+        weak = 0.0 if i % 2 == 0 else 0.2                       # no red pulse at all / a fifth of it in more noise
+        red = np.round(dc + weak * (w.red_raw - dc) + rng.normal(0, (3e-4 + 2e-4 * (weak > 0)) * dc, 512))
+        res = pipe.analyze(red, w.ir_raw, fs=FS)
+        assert res["spo2"]["percent"] is None and res["features"] is None, (i, res["spo2"])
+
+
+def test_non_arterial_ratio_makes_the_window_unreliable():
+    """A clean waveform whose red/IR ratio no arterial blood produces (here: the
+    two LED channels swapped) is not a pulse measurement."""
+    from suguard_ml.pipeline import SuGuardPipeline
+
+    pipe = SuGuardPipeline(denoiser=None)
+    w = simulate_window(21, kinds=[], spo2=97.0, pi_ir=0.01)
+    assert pipe.analyze(w.red_raw, w.ir_raw, fs=FS)["reliable"]
+    res = pipe.analyze(w.ir_raw, w.red_raw, fs=FS)
+    assert not res["reliable"] and res["reason"] == ["red_ir_inconsistent"]
+    assert res["heart_rate"]["bpm"] is None and res["spo2"]["percent"] is None
+
+
+def test_undefined_quality_metrics_fail():
+    """Regression (review finding): a check that cannot be computed is not passed."""
+    from suguard_ml.pipeline import SuGuardPipeline
+    from suguard_ml.signal.quality import _ramp_down
+
+    assert _ramp_down(np.inf, 0.2, 0.4) == 0.0 and _ramp_down(np.nan, 0.2, 0.4) == 0.0 and _ramp_down(0.1, 0.2, 0.4) == 1.0
+    pipe = SuGuardPipeline(denoiser=None)
+    for seed in range(12):                                   # 2.5 s: too short for the red/IR ratio stability
+        w = simulate_window(30_000 + seed, n=125, kinds=[], pi_ir=0.01)
+        res = pipe.analyze(w.red_raw, w.ir_raw, fs=FS)
+        assert res["quality"]["components"]["r_stability"] == 0.0
+        assert res["spo2"]["percent"] is None and res["features"] is None
+    # ... and a window that fails the sensor checks is not "usable", whatever its waveform.
+    w = simulate_window(4, kinds=[], pi_ir=0.01)
+    res = pipe.analyze(w.red_raw * 0.1, w.ir_raw * 0.1, fs=FS)
+    assert "no_contact" in res["reason"]
+    assert res["quality"]["usable"] is False and res["quality"]["usable_spo2"] is False and res["quality"]["sqi"] == 0.0
+
+
 def test_pipeline_handles_sparse_nan_and_rejects_many():
     from suguard_ml.pipeline import SuGuardPipeline
 
