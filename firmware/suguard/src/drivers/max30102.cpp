@@ -33,7 +33,9 @@ bool Device::configure(const Config& c) {
   mode_ = kModeSpo2;
   const uint8_t fifo = (uint8_t)((c.avg_code & 7) << 5);            // roll-over off, A_FULL unused
   const uint8_t spo2 = (uint8_t)(((c.range_code & 3) << 5) | ((c.rate_code & 7) << 2) | (c.pw_code & 3));
-  return wr(kIntEnable1, 0x00) && wr(kIntEnable2, 0x00) && wr(kFifoConfig, fifo) && wr(kSpo2Config, spo2) &&
+  // The INT pin is not used (the FIFO is polled), but the ambient-light overflow flag is read from
+  // the status register, and status flags of this chip family are only latched while enabled.
+  return wr(kIntEnable1, kStatusAlcOvf) && wr(kIntEnable2, 0x00) && wr(kFifoConfig, fifo) && wr(kSpo2Config, spo2) &&
          set_led(c.led1, c.led2) && wr(kModeConfig, mode_) && clear_fifo();
 }
 

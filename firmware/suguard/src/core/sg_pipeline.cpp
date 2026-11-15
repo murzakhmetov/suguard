@@ -65,15 +65,22 @@ void sg_pipeline_init(void) { sg_work_init(&g_mem.work, g_mem.scratch.fft); }
 
 size_t sg_pipeline_static_bytes(void) { return sizeof(Mem); }
 
-void sg_process_window(const uint32_t* red, const uint32_t* ir, bool use_nn, SgPipelineOutput* out) {
+char* sg_pipeline_scratch(size_t* bytes) {
+  *bytes = sizeof(g_mem.scratch);
+  return (char*)&g_mem.scratch;
+}
+
+void sg_process_window(const uint32_t* red, const uint32_t* ir, bool use_nn, double ir_dc_min,
+                       SgPipelineOutput* out) {
   Mem* m = &g_mem;
   for (int i = 0; i < SG_WINDOW; i++) {
     m->ir[i] = (double)ir[i];
     m->red[i] = (double)red[i];
   }
-  sg_sensor_state(m->red, m->ir, SG_WINDOW, SG_FINGER_IR_DC_MIN, &out->sensor, &m->work);
+  sg_sensor_state(m->red, m->ir, SG_WINDOW, ir_dc_min, &out->sensor, &m->work);
   sg_preprocess(m->ir, SG_WINDOW, m->bv_ir, &m->work);
   sg_preprocess(m->red, SG_WINDOW, m->bv_red, &m->work);
+  out->pi_red = sg_perfusion_index(m->bv_red, SG_WINDOW, &m->work);
   out->used_nn = use_nn;
   if (use_nn) {
     denoise(m);

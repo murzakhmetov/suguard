@@ -20,7 +20,7 @@
 #include "sampler.h"
 
 struct SgVitalsRecord {
-  int64_t unix_s;           // end of the interval (UTC)
+  int64_t unix_s;           // end of the interval (UTC); <= 0 if the clock is not set (time fields are then null)
   int tz_offset_min;
   double pulse_bpm;
   bool has_spo2;
@@ -50,8 +50,15 @@ void sg_record_key(int64_t unix_ms, char* out, size_t out_len);
 
 // JSON bodies. Return the length, or -1 if the buffer is too small.
 int sg_vitals_json(char* out, size_t out_len, const SgVitalsRecord* r, const char* key);
-int sg_raw_window_json(char* out, size_t out_len, const SgWindow* w, int64_t end_unix_s, const char* device_id);
+// `end_unix_ms`: unix time of the window's last sample, < 0 if the clock is not set ("ts" is then
+// null); `age_ms`: how long ago the window ended. A PC that receives the line can always compute the
+// time of the first sample as  now - age_ms / 1000 - 512 / fs.
+int sg_raw_window_json(char* out, size_t out_len, const SgWindow* w, int64_t end_unix_ms, uint32_t age_ms,
+                       const char* device_id);
 int sg_event_json(char* out, size_t out_len, int64_t unix_s, int tz_offset_min, const char* type, const char* note);
+
+// One line for the USB console: {"t":"<type>","<field>":<json>}\n . Returns the length, or -1.
+int sg_console_line(char* out, size_t out_len, const char* type, const char* field, const char* json);
 
 // "<db_url>/<node>/<uid>/<leaf>/<key>.json[?auth=...]"; pass leaf = NULL for "<node>/<uid>/<key>".
 int sg_db_url(char* out, size_t out_len, const char* db_url, const char* node, const char* uid, const char* leaf,

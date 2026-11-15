@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define SG_CONFIG_VERSION 1
+#define SG_CONFIG_VERSION 2
 
 struct SgConfig {
   uint16_t version;
@@ -16,6 +16,9 @@ struct SgConfig {
   char db_auth[160];          // optional database secret / ID token (sent as ?auth=)
   int16_t tz_offset_min;      // local time = UTC + this (Kazakhstan: 300)
   uint16_t report_interval_s; // one averaged record per interval
+  uint16_t upload_interval_s; // the radio is switched on at most this often (0 = stay connected)
+  uint16_t sensor_sps;        // MAX30102 conversions per second before averaging to 50 Hz: 400, 200, 100 or 50
+  uint8_t cpu_mhz;            // 160 or 80
   uint8_t cloud;              // upload vitals records
   uint8_t upload_raw;         // also upload every raw window (data collection; ~8 kB per 10 s)
   uint8_t stream_raw;         // print raw windows on USB serial

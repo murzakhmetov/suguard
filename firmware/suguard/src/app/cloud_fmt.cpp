@@ -121,10 +121,14 @@ int sg_vitals_json(char* out, size_t out_len, const SgVitalsRecord* r, const cha
   sg_local_iso8601(r->unix_s, r->tz_offset_min, iso, sizeof iso);
   put(&o, "{\"id\":");
   put_string(&o, key);
-  put(&o, ",\"timestamp\":");
-  put_string(&o, iso);
-  put(&o, ",\"ts\":");
-  put_fixed(&o, (double)r->unix_s, 0);
+  if (r->unix_s > 0) {
+    put(&o, ",\"timestamp\":");
+    put_string(&o, iso);
+    put(&o, ",\"ts\":");
+    put_fixed(&o, (double)r->unix_s, 0);
+  } else {
+    put(&o, ",\"timestamp\":null,\"ts\":null");
+  }
   put(&o, ",\"pulse\":");
   put_fixed(&o, r->pulse_bpm, 1);
   put(&o, ",\"spo2\":");
@@ -155,11 +159,15 @@ int sg_vitals_json(char* out, size_t out_len, const SgVitalsRecord* r, const cha
   return finish(o);
 }
 
-int sg_raw_window_json(char* out, size_t out_len, const SgWindow* w, int64_t end_unix_s, const char* device_id) {
+int sg_raw_window_json(char* out, size_t out_len, const SgWindow* w, int64_t end_unix_ms, uint32_t age_ms,
+                       const char* device_id) {
   Out o = {out, out_len, 0, false};
   const double fs = w->fs_hz > 0 ? (double)w->fs_hz : SG_FS;
   put(&o, "{\"ts\":");                                   // unix time of the FIRST sample
-  put_fixed(&o, (double)end_unix_s - SG_WINDOW / fs, 2);
+  if (end_unix_ms >= 0) put_fixed(&o, (double)end_unix_ms / 1000.0 - SG_WINDOW / fs, 3);
+  else put(&o, "null");
+  put(&o, ",\"age_ms\":");
+  put_u32(&o, age_ms);
   put(&o, ",\"fs\":");
   put_fixed(&o, fs, 3);
   put(&o, ",\"seq\":");
@@ -202,6 +210,18 @@ int sg_event_json(char* out, size_t out_len, int64_t unix_s, int tz_offset_min, 
   put(&o, ",\"note\":");
   put_string(&o, note ? note : "");
   put(&o, "}");
+  return finish(o);
+}
+
+int sg_console_line(char* out, size_t out_len, const char* type, const char* field, const char* json) {
+  Out o = {out, out_len, 0, false};
+  put(&o, "{\"t\":\"");
+  put(&o, type);
+  put(&o, "\",\"");
+  put(&o, field);
+  put(&o, "\":");
+  put(&o, json);
+  put(&o, "}\n");
   return finish(o);
 }
 

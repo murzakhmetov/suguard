@@ -30,6 +30,7 @@ void delay(uint32_t ms);
 void pinMode(int pin, int mode);
 int digitalRead(int pin);
 uint32_t analogReadMilliVolts(int pin);
+bool setCpuFrequencyMhz(uint32_t mhz);
 void configTime(long gmt_offset_s, int daylight_offset_s, const char* server1, const char* server2 = nullptr);
 
 SemaphoreHandle_t xSemaphoreCreateMutex();
@@ -51,7 +52,9 @@ class String {
 class HWCDC {
  public:
   size_t setTxBufferSize(size_t n);
+  void setTxTimeoutMs(uint32_t timeout);
   void begin(unsigned long baud);
+  operator bool() const;                     // a PC is connected and reading
   int availableForWrite();
   size_t write(const uint8_t* data, size_t n);
   size_t print(const char* s);
@@ -63,6 +66,8 @@ extern HWCDC Serial;
 class EspClass {
  public:
   uint32_t getFreeHeap();
+  uint32_t getMinFreeHeap();
+  uint32_t getMaxAllocHeap();
   void restart();
 };
 extern EspClass ESP;

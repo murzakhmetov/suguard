@@ -27,6 +27,7 @@ void SgAggregator::add(const SgVitals& v, double hr_scale, double temperature_c)
     n_temp_++;
   }
   if (!v.reliable || !v.has_hr) return;
+  n_reliable_++;
   if (n_hr_ < SG_AGG_MAX) {
     hr_[n_hr_++] = v.hr_bpm * hr_scale;
     sqi_sum_ += v.quality.sqi;
@@ -48,6 +49,6 @@ bool SgAggregator::summary(double* pulse, bool* has_spo2, double* spo2, double* 
 }
 
 void SgAggregator::reset() {
-  n_hr_ = n_spo2_ = windows_ = n_temp_ = 0;
+  n_hr_ = n_reliable_ = n_spo2_ = windows_ = n_temp_ = 0;
   sqi_sum_ = temp_sum_ = 0;
 }

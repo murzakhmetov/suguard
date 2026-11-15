@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
   static SgPipelineOutput out;
   sg_pipeline_init();
   while (fread(red, sizeof red, 1, in) == 1 && fread(ir, sizeof ir, 1, in) == 1) {
-    sg_process_window(red, ir, use_nn, &out);
+    sg_process_window(red, ir, use_nn, SG_FINGER_IR_DC_MIN, &out);
     const SgVitals& v = out.vitals;
     char reasons[160];
     sg_reason_names(v.reasons, reasons, sizeof reasons);

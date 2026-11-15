@@ -124,10 +124,11 @@ void sg_cli_handle(char* line, SgConfig* cfg, const SgCliHooks* h) {
       out(h, "usage: led red|ir|both|off\n");
       return;
     }
-    out(h, h->led_test && h->led_test(h->ctx, mode) ? "ok (5 s)\n" : "error: sensor busy or missing\n");
+    out(h, h->led_test && h->led_test(h->ctx, mode) ? "ok (5 s)\n" : "error: sensor not running\n");
   } else if (strcmp(cmd, "mark") == 0) {
-    if (h->mark) h->mark(h->ctx, rest(p));
-    out(h, "ok\n");
+    const int stored = h->mark ? h->mark(h->ctx, rest(p)) : 0;
+    out(h, stored == 2 ? "ok (queued for upload)\n"
+                       : stored == 1 ? "ok (USB only: no cloud account configured)\n" : "error: note too long\n");
   } else if (strcmp(cmd, "save") == 0) {
     if (h->save) h->save(h->ctx);
   } else if (strcmp(cmd, "defaults") == 0) {

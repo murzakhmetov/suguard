@@ -1,7 +1,11 @@
 // Battery state from the two ADC inputs of the SuGuard board:
 //   GPIO2 <- VBAT through R8 100k / R9 47k   (VBAT * 47/147)
 //   GPIO4 <- VBUS through R11 100k / R13 100k (VBUS / 2)
-// The charger (TP4056) status pins only drive LEDs, so "charging" is inferred.
+// The charger (TP4056) status pins only drive LEDs, so the firmware cannot see
+// whether the cell is still charging; it knows only that USB power is there.
+// The board has no power path: the running system loads the cell while it
+// charges, so the charger never sees its end-of-charge current and keeps the
+// cell at 4.2 V for as long as USB is connected.
 #pragma once
 
 #include <stdint.h>
@@ -16,7 +20,7 @@ struct SgBattery {
   float volts = 0;                // filtered battery voltage
   int percent = -1;               // -1 until the first reading
   bool usb_present = false;
-  bool charging = false;          // USB present and battery below the full level
+  bool charging = false;          // USB power present (the charger is then active)
 };
 
 // Resting-voltage to state-of-charge curve of a 1S LiPo. The 3.3 V regulator
@@ -34,4 +38,5 @@ class SgBatteryMonitor {
  private:
   SgBatteryConfig cfg_;
   SgBattery state_;
+  int resting_percent_ = -1;      // last reading taken without USB power
 };

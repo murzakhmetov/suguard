@@ -5,7 +5,10 @@
 1. Held-out simulated test set (seeds never used in training): HR/SpO2
    errors by artefact severity, artefact-mask AUC, and the coverage/accuracy
    trade-off of the reliability gate (share of window flagged as motion).
-2. Real PPG (heartpy recordings: real morphology and heart-rate variability)
+2. The full pipeline with every reliability gate on fresh simulated windows,
+   and on inputs that must never give a value (no pulse, a red channel
+   without a pulse, noise only, swapped LED channels).
+3. Real PPG (heartpy recordings: real morphology and heart-rate variability)
    passed through the simulated MAX30102 optics and motion. Ground-truth HR
    comes from the clean real signal. This checks that a model trained on
    synthetic beats generalises to real pulses.
@@ -106,6 +109,40 @@ def eval_pipeline(den: Denoiser, n: int = 600, seed0: int = 4_000_000) -> dict:
     return out
 
 
+def eval_must_not_report(den: Denoiser, n: int = 300, n_motion: int = 1500, seed0: int = 4_500_000) -> dict:
+    """Inputs for which any reported value is wrong: how often does the gated
+    pipeline report one? (Heart rate from the IR channel is legitimate when
+    only the red channel is broken; SpO2 never is.)"""
+    rng = np.random.default_rng(seed0)
+    sets: dict[str, list] = {k: [] for k in ("noise_only", "ir_without_pulse", "red_without_pulse",
+                                             "red_pulse_a_fifth_in_noise", "led_channels_swapped")}
+    for i in range(n):
+        w = simulate_window(seed0 + i, kinds=[], pi_ir=float(np.exp(rng.uniform(np.log(0.002), np.log(0.03)))))
+        red, ir = w.red_raw.astype(float), w.ir_raw.astype(float)
+        dr, di = float(np.median(red)), float(np.median(ir))
+        sigma = float(np.exp(rng.uniform(np.log(5), np.log(400))))
+        sets["noise_only"].append((np.round(dr + rng.normal(0, sigma, red.size)),
+                                   np.round(di + rng.normal(0, sigma, ir.size))))
+        sets["ir_without_pulse"].append((red, np.round(di + rng.normal(0, 3e-4 * di, ir.size))))
+        sets["red_without_pulse"].append((np.round(dr + rng.normal(0, 3e-4 * dr, red.size)), ir))
+        sets["red_pulse_a_fifth_in_noise"].append(
+            (np.round(dr + 0.2 * (red - dr) + rng.normal(0, 5e-4 * dr, red.size)), ir))
+        sets["led_channels_swapped"].append((ir, red))
+    # A pulse of 0.01 % (below the sensor noise) under the usual mix of motion: rhythmic motion is
+    # the one thing that looks like a pulse to a sensor without an accelerometer.
+    sets["no_pulse_with_motion"] = [(w.red_raw, w.ir_raw) for w in
+                                    (simulate_window(seed0 + 10_000 + i, pi_ir=1e-4) for i in range(n_motion))]
+    out = {}
+    for name, pipe in (("classical", SuGuardPipeline(denoiser=None)), ("denoiser", SuGuardPipeline(denoiser=den))):
+        out[name] = {}
+        for key, wins in sets.items():
+            res = [pipe.analyze(red, ir, fs=FS) for red, ir in wins]
+            out[name][key] = {"windows": len(wins), "heart_rate_reported": int(sum(r["reliable"] for r in res)),
+                              "spo2_reported": int(sum(r["spo2"]["percent"] is not None for r in res))}
+        print(name, json.dumps(out[name]), flush=True)
+    return out
+
+
 def eval_real(den: Denoiser, n_corrupt: int = 6, seed: int = 0) -> dict:
     """Real recordings x simulated optics/motion."""
     rng = np.random.default_rng(seed)
@@ -178,6 +215,7 @@ def main():
     s = report["synthetic_test"]
     print("synthetic all:", json.dumps(s["all"], indent=1)[:900])
     report["pipeline_with_gates"] = eval_pipeline(den)
+    report["must_not_report"] = eval_must_not_report(den)
     report["real_ppg_simulated_motion"] = eval_real(den)
     Path(a.out).mkdir(parents=True, exist_ok=True)
     (Path(a.out) / f"{a.name}.json").write_text(json.dumps(report, indent=2))

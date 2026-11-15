@@ -28,7 +28,12 @@ const Field kFields[] = {
     {"db_url", kStr, F(db_url), 0, 0, false, "Firebase Realtime Database URL"},
     {"db_auth", kStr, F(db_auth), 0, 0, true, "optional Firebase auth token"},
     {"tz_offset_min", kI16, F(tz_offset_min), -720, 840, false, "local time zone, minutes east of UTC"},
-    {"report_interval_s", kU16, F(report_interval_s), 20, 3600, false, "seconds between uploaded records"},
+    {"report_interval_s", kU16, F(report_interval_s), 20, 600, false, "seconds per averaged record"},
+    {"upload_interval_s", kU16, F(upload_interval_s), 0, 3600, false,
+     "radio on at most this often to upload (0 = stay connected)"},
+    {"sensor_sps", kU16, F(sensor_sps), 50, 400, false,
+     "sensor conversions per second: 400, 200, 100 or 50 (lower = less LED power, more noise)"},
+    {"cpu_mhz", kU8, F(cpu_mhz), 80, 160, false, "CPU clock: 160 or 80 MHz (after 'save' and 'reboot')"},
     {"cloud", kBool, F(cloud), 0, 1, false, "upload vitals to Firebase"},
     {"upload_raw", kBool, F(upload_raw), 0, 1, false, "upload raw windows too (data collection)"},
     {"stream_raw", kBool, F(stream_raw), 0, 1, false, "print raw windows on USB serial"},
@@ -63,6 +68,9 @@ void sg_config_defaults(SgConfig* c) {
   snprintf(c->db_url, sizeof(c->db_url), "https://suguard-7f535-default-rtdb.asia-southeast1.firebasedatabase.app");
   c->tz_offset_min = 300;
   c->report_interval_s = 60;
+  c->upload_interval_s = 300;
+  c->sensor_sps = 400;
+  c->cpu_mhz = 160;
   c->cloud = 1;
   c->use_nn = 1;
   c->led_init = 0x3F;
@@ -110,6 +118,14 @@ bool sg_config_set(SgConfig* c, const char* key, const char* value, char* err, s
   }
   if (v < f->lo || v > f->hi) {
     if (err && err_len) snprintf(err, err_len, "out of range (%g..%g)", (double)f->lo, (double)f->hi);
+    return false;
+  }
+  if (strcmp(key, "sensor_sps") == 0 && v != 400 && v != 200 && v != 100 && v != 50) {
+    fail(err, err_len, "must be 400, 200, 100 or 50");
+    return false;
+  }
+  if (strcmp(key, "cpu_mhz") == 0 && v != 160 && v != 80) {
+    fail(err, err_len, "must be 160 or 80");
     return false;
   }
   switch (f->type) {

@@ -15,7 +15,8 @@ struct SgCliHooks {
   void (*apply)(void* ctx);                                  // configuration changed in RAM
   void (*reboot)(void* ctx);
   bool (*led_test)(void* ctx, uint8_t mode);                 // bit0 red, bit1 IR
-  void (*mark)(void* ctx, const char* note);                 // event marker
+  // Event marker. Returns 0 = not stored, 1 = printed on USB only, 2 = also queued for upload.
+  int (*mark)(void* ctx, const char* note);
 };
 
 // Handles one command line (modified in place: it is tokenised).

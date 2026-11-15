@@ -96,7 +96,9 @@ struct SimMax30102 {
       case max30102::kOvfCounter: return (uint8_t)ovf;
       case max30102::kFifoRdPtr: return (uint8_t)rd;
       case max30102::kIntStatus1: {
-        const uint8_t v = reg[r];
+        // Stricter than the datasheet wording: a flag is visible only while its enable bit is set
+        // (PWR_RDY has none), which is how this chip family is reported to behave.
+        const uint8_t v = reg[r] & (uint8_t)(reg[max30102::kIntEnable1] | max30102::kStatusPwrRdy);
         reg[r] = 0;
         return v;
       }

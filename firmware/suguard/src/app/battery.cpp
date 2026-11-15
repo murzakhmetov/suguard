@@ -28,7 +28,15 @@ void SgBatteryMonitor::update(float bat_pin_mv, float vbus_pin_mv) {
   const float v = bat_pin_mv * 0.001f * cfg_.bat_divider * cfg_.cal;
   // The 32 kOhm divider gives noisy readings: smooth them (time constant ~10 updates).
   state_.volts = state_.percent < 0 ? v : state_.volts + 0.1f * (v - state_.volts);
-  state_.percent = sg_battery_percent(state_.volts);
   state_.usb_present = vbus_pin_mv * 0.001f * cfg_.vbus_divider > 3.0f;
-  state_.charging = state_.usb_present && state_.volts < 4.15f;
+  state_.charging = state_.usb_present;
+  if (!state_.usb_present) {
+    resting_percent_ = state_.percent = sg_battery_percent(state_.volts);
+  } else {
+    // While charging the terminal voltage sits above the resting voltage (about 0.1 V), so the
+    // curve would read too high: never show less than before USB was plugged in, nor more than
+    // the charging voltage supports.
+    const int charging_percent = sg_battery_percent(state_.volts - 0.10f);
+    state_.percent = charging_percent > resting_percent_ ? charging_percent : resting_percent_;
+  }
 }
