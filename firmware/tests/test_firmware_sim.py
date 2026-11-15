@@ -25,6 +25,7 @@ import pytest
 from conftest import FW, ML
 
 from suguard_ml.pipeline import SuGuardPipeline  # noqa: E402
+from suguard_ml.config import ADC_MAX  # noqa: E402
 from suguard_ml.synth.ppg import simulate_window  # noqa: E402
 
 SRC = FW / "suguard" / "src"
@@ -48,10 +49,16 @@ def fw_sim(build_dir):
     return exe
 
 
-def recording(path, seed, n, **kw):
-    """Simulated raw recording (red, IR counts at 50 Hz) written as uint32 pairs."""
+def recording(path, seed, n, dc_fraction=None, **kw):
+    """Simulated raw recording (red, IR counts at 50 Hz) written as uint32 pairs. With ``dc_fraction``
+    both channels are scaled so that the IR level is that share of full scale (the light level the
+    simulator draws at random can otherwise make the LED control step in at start-up)."""
     w = simulate_window(seed, n=n, **kw)
-    np.stack([w.red_raw, w.ir_raw], axis=1).astype("<u4").tofile(path)
+    red, ir = w.red_raw.astype(float), w.ir_raw.astype(float)
+    if dc_fraction is not None:
+        k = dc_fraction * ADC_MAX / float(np.median(ir))
+        red, ir = np.clip(np.round(red * k), 0, ADC_MAX), np.clip(np.round(ir * k), 0, ADC_MAX)
+    np.stack([red, ir], axis=1).astype("<u4").tofile(path)
     return w
 
 
@@ -59,7 +66,7 @@ def recording(path, seed, n, **kw):
 def clean(build_dir):
     """A resting signal: 72 bpm, SpO2 97 %, strong pulse, no motion."""
     path = build_dir / "rec_clean.bin"
-    return path, recording(path, 42, 6000, kinds=[], hr_bpm=72.0, spo2=97.0, pi_ir=0.01)
+    return path, recording(path, 42, 6000, dc_fraction=0.45, kinds=[], hr_bpm=72.0, spo2=97.0, pi_ir=0.01)
 
 
 def run_sim(exe, samples, seconds, *args):
