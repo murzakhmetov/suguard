@@ -1,9 +1,11 @@
 """The shipped networks against what they must and must not do.
 
 The first networks took smooth, wrist-like pulses for motion and gave a
-heart rate for almost none of them (a sine: 0 %; the classical path: 99 %).
-These tests keep a retrained model from losing that again, and from paying
-for it by reporting rhythmic motion as a pulse.
+heart rate for almost none of them (a sine: 0 %; the classical path: 99 %);
+the next ones still took real pulses with a deep notch and a large
+diastolic wave for motion (11 of 52 clean real windows rejected). These
+tests keep a retrained model from losing either again, and from paying for
+it by reporting rhythmic motion as a pulse.
 """
 import sys
 from pathlib import Path
@@ -71,3 +73,39 @@ def test_rhythmic_motion_without_a_pulse_is_not_reported(make):
                             artifact_level=float(np.exp(rng.uniform(np.log(30), np.log(300))))) for i in range(60)]
     reported = sum(pipe.analyze(w.red_raw, w.ir_raw, fs=FS)["reliable"] for w in wins)
     assert reported <= 1, reported
+
+
+REAL = ML / "data" / "heartpy"
+
+
+@pytest.mark.skipif(not MODELS, reason="no trained model in models/")
+@pytest.mark.skipif(not all((REAL / f).exists() for f in ("heartpy/data/data2.csv", "heartpy/data/data3.csv")),
+                    reason="real recordings not cached (scripts/eval_denoiser.py downloads them)")
+@pytest.mark.parametrize("make", MODELS)
+def test_clean_real_pulses_are_reported(make):
+    """Real pulse shapes (heartpy recordings) through the simulated optics, at rest: the network path
+    must report about as many windows as the classical path does, and correctly."""
+    from suguard_ml.data.realppg import load_recordings
+    from suguard_ml.signal.beats import beat_template, detect_beats, pulse_polarity
+    from suguard_ml.signal.filters import bandpass
+
+    pipe, classical = SuGuardPipeline(denoiser=make()), SuGuardPipeline(denoiser=None)
+    rng = np.random.default_rng(0)
+    n = ok = ok_classical = 0
+    for x in load_recordings(REAL).values():
+        x = pulse_polarity(x, FS) * bandpass(x, FS, 0.4, 12.0)
+        for s in range(0, len(x) - WINDOW + 1, WINDOW):
+            seg = x[s:s + WINDOW]
+            b = detect_beats(seg, FS)
+            if b.hr_bpm is None or b.valid_ibi.sum() < 5 or beat_template(seg, b)[1] < 0.9:
+                continue
+            w = corrupt_pulse(seg, rng, spo2=float(rng.uniform(90, 99.5)), pi_ir=float(rng.uniform(0.004, 0.02)),
+                              hr_bpm=b.hr_bpm, kinds=[])
+            r, rc = pipe.analyze(w.red_raw, w.ir_raw, fs=FS), classical.analyze(w.red_raw, w.ir_raw, fs=FS)
+            n += 1
+            ok_classical += rc["reliable"]
+            if r["reliable"]:
+                assert abs(r["heart_rate"]["bpm"] - b.hr_bpm) < 3.0
+                ok += 1
+    assert n >= 20
+    assert ok >= 0.9 * ok_classical, (ok, ok_classical, n)
