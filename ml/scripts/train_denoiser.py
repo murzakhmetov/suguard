@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from suguard_ml.config import FS, WINDOW  # noqa: E402
 from suguard_ml.eval.vitals_eval import both_finite, summarize_errors, vitals_from_bv  # noqa: E402
-from suguard_ml.models.denoiser_net import DenoiseUNet, denoiser_loss  # noqa: E402
+from suguard_ml.models.denoiser_net import build_model, denoiser_loss  # noqa: E402
 
 
 def load_split(path: Path):
@@ -106,7 +106,13 @@ def main():
     ap.add_argument("--eval-every", type=int, default=1000)
     ap.add_argument("--threads", type=int, default=4)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--arch", default="unet", choices=["unet", "edge"],
+                    help="unet: server model; edge: small model for the ESP32-C3 firmware")
+    ap.add_argument("--chans", default=None, help="comma-separated channel widths, e.g. 8,16,24,32")
+    ap.add_argument("--name", default=None, help="output file stem (default: denoiser / denoiser_edge)")
     a = ap.parse_args()
+    chans = [int(c) for c in a.chans.split(",")] if a.chans else None
+    name = a.name or ("denoiser" if a.arch == "unet" else "denoiser_edge")
 
     torch.manual_seed(a.seed)
     torch.set_num_threads(a.threads)
@@ -119,7 +125,7 @@ def main():
     Xva, Yva, Mva, meta_va = load_split(data / "val.npz")
     print(f"train {Xtr.shape}, val {Xva.shape}, device {device}")
 
-    model = DenoiseUNet().to(device)
+    model = build_model(a.arch, chans).to(device)
     n_params = sum(p.numel() for p in model.parameters())
     print(f"params: {n_params:,}")
     opt = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=1e-4)
@@ -155,15 +161,17 @@ def main():
                   res["vitals_denoised_confident"]["hr"], res["vitals_denoised_confident"]["spo2"], flush=True)
             if score < best:
                 best = score
-                torch.save({"state_dict": model.state_dict(), "step": step, "val": res}, out / "denoiser.pt")
+                torch.save({"state_dict": model.state_dict(), "step": step, "val": res,
+                            "arch": a.arch, "chans": chans}, out / f"{name}.pt")
 
-    ckpt = torch.load(out / "denoiser.pt", map_location="cpu")
+    ckpt = torch.load(out / f"{name}.pt", map_location="cpu")
     model.load_state_dict(ckpt["state_dict"])
-    err = export_onnx(model, out / "denoiser.onnx")
-    summary = {"params": n_params, "steps": a.steps, "best_step": ckpt["step"], "best_val": ckpt["val"],
+    err = export_onnx(model, out / f"{name}.onnx")
+    summary = {"arch": a.arch, "chans": chans, "params": n_params, "steps": a.steps, "best_step": ckpt["step"],
+               "best_val": ckpt["val"],
                "history": history, "onnx_max_abs_err": err, "train_windows": int(Xtr.shape[0]),
                "minutes": (time.time() - t0) / 60}
-    (out / "metrics" / "denoiser_train.json").write_text(json.dumps(summary, indent=2))
+    (out / "metrics" / f"{name}_train.json").write_text(json.dumps(summary, indent=2))
     print("done", json.dumps(ckpt["val"]["vitals_denoised"], indent=1))
 
 

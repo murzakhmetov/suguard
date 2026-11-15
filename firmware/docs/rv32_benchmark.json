@@ -1,0 +1,15 @@
+{
+  "instructions_per_window": {
+    "with_nn": {
+      "median": 129895380,
+      "max": 131961130
+    },
+    "classical": {
+      "median": 76483923,
+      "max": 78506857
+    }
+  },
+  "static_ram_bytes": 104968,
+  "code_and_constants_bytes": 182456,
+  "note": "QEMU instruction counts for -march=rv32imc -O2 with picolibc soft-float; not a measurement on the ESP32-C3"
+}

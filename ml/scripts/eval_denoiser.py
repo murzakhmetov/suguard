@@ -166,9 +166,14 @@ def main():
     ap.add_argument("--out", default="models/metrics")
     ap.add_argument("--models", default="models")
     ap.add_argument("--onnx", default=None, help="evaluate this model file instead of models/denoiser.onnx")
+    ap.add_argument("--edge-int", default=None, help="evaluate the integer edge model (.npz) instead")
     ap.add_argument("--name", default="denoiser_eval")
     a = ap.parse_args()
-    den = Denoiser(Path(a.onnx) if a.onnx else Path(a.models) / "denoiser.onnx")
+    if a.edge_int:
+        from suguard_ml.models.edge_int import EdgeDenoiserInt
+        den = EdgeDenoiserInt(a.edge_int)          # the integer model, exactly as the firmware runs it
+    else:
+        den = Denoiser(Path(a.onnx) if a.onnx else Path(a.models) / "denoiser.onnx")
     report = {"synthetic_test": eval_synthetic(den, Path(a.data) / "test.npz")}
     s = report["synthetic_test"]
     print("synthetic all:", json.dumps(s["all"], indent=1)[:900])

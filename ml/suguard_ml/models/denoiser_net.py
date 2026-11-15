@@ -69,6 +69,75 @@ class DenoiseUNet(nn.Module):
         return self.head(x)
 
 
+class EdgeBlock(nn.Module):
+    """conv -> BN -> ReLU, repeated; no residual branch.
+
+    The edge model is built from one operation only (convolution + bias +
+    optional ReLU) plus average pooling and sample repetition, so that the
+    integer inference engine in the firmware stays small and exact.
+    """
+
+    def __init__(self, c_in: int, c_out: int, k: int = 7, dilations=(1, 1)):
+        super().__init__()
+        layers = []
+        c = c_in
+        for d in dilations:
+            layers += [nn.Conv1d(c, c_out, k, padding=d * (k - 1) // 2, dilation=d),
+                       nn.BatchNorm1d(c_out), nn.ReLU()]
+            c = c_out
+        self.body = nn.Sequential(*layers)
+
+    def forward(self, x):
+        return self.body(x)
+
+
+class EdgeUNet(nn.Module):
+    """Small U-Net for on-device inference (ESP32-C3, no FPU).
+
+    Same input/output contract as DenoiseUNet. Differences, all chosen for a
+    simple fixed-point implementation: ReLU instead of GELU, average pooling
+    instead of strided convolutions, sample repetition instead of transposed
+    convolutions, no residual branches. With chans=(8, 16, 24, 32): ~97 k
+    parameters and ~10 M multiply-accumulates per 10.24-s window.
+    Decoder input order is [upsampled, skip] (the integer engine relies on it).
+    """
+
+    def __init__(self, in_ch: int = 2, out_ch: int = 3, chans=(8, 16, 24, 32), k: int = 7):
+        super().__init__()
+        self.chans = tuple(chans)
+        self.enc = nn.ModuleList()
+        c = in_ch
+        for ch in chans:
+            self.enc.append(EdgeBlock(c, ch, k))
+            c = ch
+        self.mid = EdgeBlock(c, c, k, dilations=(1, 2, 4, 8))
+        self.dec = nn.ModuleList()
+        for ch in reversed(chans):
+            self.dec.append(EdgeBlock(c + ch, ch, k))
+            c = ch
+        self.head = nn.Conv1d(c, out_ch, 1)
+
+    def forward(self, x):
+        skips = []
+        for enc in self.enc:
+            x = enc(x)
+            skips.append(x)
+            x = F.avg_pool1d(x, 2)
+        x = self.mid(x)
+        for dec, s in zip(self.dec, reversed(skips)):
+            x = torch.repeat_interleave(x, 2, dim=-1)
+            x = dec(torch.cat([x, s], dim=1))
+        return self.head(x)
+
+
+def build_model(arch: str = "unet", chans=None) -> nn.Module:
+    if arch == "unet":
+        return DenoiseUNet() if chans is None else DenoiseUNet(chans=tuple(chans), bottleneck=chans[-1])
+    if arch == "edge":
+        return EdgeUNet() if chans is None else EdgeUNet(chans=tuple(chans))
+    raise ValueError(f"unknown arch {arch!r}")
+
+
 def ratio_loss(pred: torch.Tensor, target: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
     """|R_pred - R_true| with R = sum(red*ir)/sum(ir^2) over artefact-free samples.
 
