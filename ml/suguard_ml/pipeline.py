@@ -20,17 +20,18 @@ component passes. Otherwise they are None with reasons, never a guess.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 
 from .config import FS
 from .models.denoiser import Denoiser
-from .signal.beats import detect_beats, hrv_metrics, spectral_hr
+from .signal.beats import Beats, detect_beats, hrv_metrics, spectral_hr
 from .signal.features import extract_features
 from .signal.filters import preprocess, resample
-from .signal.quality import assess_quality, sensor_state
-from .signal.spo2 import estimate_spo2
+from .signal.quality import Quality, SensorState, assess_quality, sensor_state
+from .signal.spo2 import SpO2Estimate, estimate_spo2
 
 MODELS_DIR = Path(__file__).resolve().parents[1] / "models"
 
@@ -47,6 +48,57 @@ MIN_SPECTRAL_PURITY = 0.3
 # Shorter windows go through the classical path (the denoiser saw 10.24 s).
 MIN_DENOISER_S = 6.0
 MAX_NONFINITE_FRACTION = 0.02
+
+
+@dataclass
+class SignalVitals:
+    """Result of :func:`vitals_from_signals` (also the contract of the C++ port
+    in firmware/suguard/src/core, function ``sg_vitals_from_signals``)."""
+    reliable: bool
+    reasons: list
+    hr_bpm: float | None          # beats-based, or spectral fallback; None if neither is trustworthy
+    hr_source: str | None         # "beats" | "spectrum" | None
+    hr_spectral: float | None
+    spectral_purity: float
+    spo2_ok: bool                 # window reliable AND both wavelengths agree
+    spo2: float | None
+    beats: Beats
+    sp: SpO2Estimate
+    quality: Quality
+
+
+def vitals_from_signals(c_ir: np.ndarray, c_red: np.ndarray, p_art: np.ndarray | None, sensor: SensorState,
+                        pi_in: float, prior_hr: float | None = None, spo2_coeffs=None) -> SignalVitals:
+    """Heart rate, SpO2 and the reliability decision from (denoised or
+    band-passed) blood-volume signals at FS.
+
+    ``p_art``: per-sample artefact probability from the denoiser, or None on
+    the classical path. ``pi_in``: peak-to-peak IR perfusion (%) of the signal
+    *before* denoising. Everything downstream of the denoiser lives here so
+    that the firmware port and the Python pipeline share one definition.
+    """
+    beats = detect_beats(c_ir, FS)
+    coeffs = {"coeffs": spo2_coeffs} if spo2_coeffs else {}
+    sp = estimate_spo2(c_red, c_ir, weights=None if p_art is None else 1 - p_art, **coeffs)
+    q = assess_quality(c_ir, c_red, beats, FS, artifact_prob=p_art, sensor=sensor, red_ir_corr=sp.red_ir_corr)
+    reasons = list(q.reasons)
+    if pi_in < MIN_INPUT_PI and "weak_pulse" not in reasons:
+        reasons.append("weak_pulse")
+    reliable = bool(sensor.finger_detected and sensor.saturated_fraction <= 0.05
+                    and q.motion_fraction <= MAX_ARTIFACT_FRACTION and pi_in >= MIN_INPUT_PI and q.usable)
+
+    hr, hr_source = beats.hr_bpm, "beats"
+    hr_spec, purity = spectral_hr(c_ir, FS, prior_bpm=prior_hr)
+    if hr is None:
+        hr, hr_source = (hr_spec, "spectrum") if purity >= MIN_SPECTRAL_PURITY else (None, None)
+    if reliable and hr is None:
+        reliable = False
+        reasons.append("no_heart_rate")
+
+    spo2_ok = bool(reliable and q.usable_spo2)
+    return SignalVitals(reliable=reliable, reasons=reasons, hr_bpm=hr, hr_source=hr_source, hr_spectral=hr_spec,
+                        spectral_purity=purity, spo2_ok=spo2_ok, spo2=sp.spo2 if spo2_ok else None,
+                        beats=beats, sp=sp, quality=q)
 
 
 def _clean_input(red_raw, ir_raw) -> tuple[np.ndarray, np.ndarray, int]:
@@ -96,27 +148,11 @@ class SuGuardPipeline:
             c_ir, c_red, p_art = ir_bv, red_bv, None
             method = "classical"
 
-        beats = detect_beats(c_ir, FS)
-        coeffs = {"coeffs": self.spo2_coeffs} if self.spo2_coeffs else {}
-        sp = estimate_spo2(c_red, c_ir, weights=None if p_art is None else 1 - p_art, **coeffs)
-        q = assess_quality(c_ir, c_red, beats, FS, artifact_prob=p_art, sensor=sensor,
-                           red_ir_corr=sp.red_ir_corr)
-        reasons = list(q.reasons)
-        if pi_in < MIN_INPUT_PI and "weak_pulse" not in reasons:
-            reasons.append("weak_pulse")
-        reliable = bool(sensor.finger_detected and sensor.saturated_fraction <= 0.05
-                        and q.motion_fraction <= MAX_ARTIFACT_FRACTION and pi_in >= MIN_INPUT_PI and q.usable)
-
-        hr, hr_source = beats.hr_bpm, "beats"
-        hr_spec, purity = spectral_hr(c_ir, FS, prior_bpm=prior_hr)
-        if hr is None:
-            hr, hr_source = (hr_spec, "spectrum") if purity >= MIN_SPECTRAL_PURITY else (None, None)
-        if reliable and hr is None:
-            reliable = False
-            reasons.append("no_heart_rate")
-
-        spo2_ok = reliable and q.usable_spo2
-        spo2_val = sp.spo2 if spo2_ok else None
+        v = vitals_from_signals(c_ir, c_red, p_art, sensor, pi_in, prior_hr=prior_hr,
+                                spo2_coeffs=self.spo2_coeffs)
+        beats, sp, q = v.beats, v.sp, v.quality
+        reliable, reasons, hr, hr_source = v.reliable, v.reasons, v.hr_bpm, v.hr_source
+        spo2_ok, spo2_val = v.spo2_ok, v.spo2
         out = {
             "method": method,
             "duration_s": round(duration, 2),
