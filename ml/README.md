@@ -336,7 +336,7 @@ flowchart LR
 cd ml
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
-python -m pytest -q                      # 74 tests
+python -m pytest -q                      # 75 tests
 uvicorn api.app:app --port 8000
 ```
 
