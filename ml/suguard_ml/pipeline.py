@@ -17,9 +17,12 @@ the measured pulse is strong enough, the denoiser flags at most
 by the measurement (a denoiser can draw a pulse that is not there, so its
 output cannot vouch for itself), the red/IR ratio is physiological, and
 every quality component passes. Where the denoiser flags (almost) nothing
-(``CLEAN_MAX_MOTION``), SpO2 and the spectral cross-check of the heart rate
-use the measured signals. Otherwise the values are None with reasons, never
-a guess. That a shown value is right is still not guaranteed: steady
+(``CLEAN_MAX_MOTION``), the measured signals are the reference: SpO2 and the
+red/IR checks (the arterial-ratio rule, which withholds the heart rate too,
+the red/IR correlation and the ratio stability) use them, and so does the
+spectral cross-check of the heart rate, with the few flagged samples taken
+from the denoiser's output for the checks. Otherwise the values are None
+with reasons, never a guess. That a shown value is right is still not guaranteed: steady
 rhythmic motion can pass for a pulse (scripts/eval_denoiser.py, hard_cases).
 """
 
@@ -139,9 +142,11 @@ def vitals_from_signals(ir_bv: np.ndarray, red_bv: np.ndarray, sensor: SensorSta
     pulse is supported by the measurement, and the red/IR ratio is one that
     arterial blood can produce. SpO2 additionally needs both wavelengths to
     agree and the denoised red pulse to be supported by the measurement. In
-    a window with at most ``CLEAN_MAX_MOTION`` flagged, SpO2 is computed from
-    the measured red/IR and the beat rate must agree with the measured IR's
-    spectrum.
+    a window with at most ``CLEAN_MAX_MOTION`` flagged, SpO2 and with it the
+    arterial-ratio rule and the red/IR correlation come from the measured
+    red/IR, and the beat rate must agree with the spectrum, and the red/IR
+    ratio be stable in, the measured signals with the flagged samples taken
+    from the denoiser's output.
     """
     denoised = p_art is not None
     if not denoised:
@@ -151,10 +156,16 @@ def vitals_from_signals(ir_bv: np.ndarray, red_bv: np.ndarray, sensor: SensorSta
     coeffs = {"coeffs": spo2_coeffs} if spo2_coeffs else {}
     # The network sees (almost) no motion: the measured signals are the reference (CLEAN_MAX_MOTION).
     clean = denoised and float(np.mean(p_art > 0.5)) <= CLEAN_MAX_MOTION
+    reference = None
+    if clean:
+        # The measured signals, with the samples the network flags taken from its output (the same
+        # clipped weight as in the SpO2 fit): a short burst it removed cannot dominate the checks.
+        w = np.clip(1.0 - p_art, 0.0, 1.0)
+        reference = (w * ir_bv + (1.0 - w) * c_ir, w * red_bv + (1.0 - w) * c_red)
     sp_red, sp_ir = (red_bv, ir_bv) if clean else (c_red, c_ir)
     sp = estimate_spo2(sp_red, sp_ir, weights=1 - p_art if denoised else None, **coeffs)
     q = assess_quality(c_ir, c_red, beats, FS, artifact_prob=p_art, sensor=sensor, red_ir_corr=sp.red_ir_corr,
-                       spectral_reference=ir_bv if clean else None)
+                       reference=reference)
     support_ir = input_support(ir_bv, c_ir, p_art) if denoised else None
     support_red = input_support(red_bv, c_red, p_art) if denoised else None
 

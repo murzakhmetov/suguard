@@ -449,6 +449,10 @@ def test_glucose_endpoints_with_a_model(monkeypatch):
         assert client.post("/v1/glucose/calibrate", json={**body, "recent_features": [{}] * 3}).status_code == 422
         r = client.post("/v1/glucose/calibrate", json={**body, "recent_features": feats})
         assert r.status_code == 200, r.text
+        # The estimate before each reading is what /estimate showed: the population value for the
+        # first three, the calibrated one after.
+        before = r.json()["estimate_before_mgdl"]
+        assert before == 150.0 if i < 3 else 115.0 < before < 130.0, (i, before)
         cal = r.json()["calibration"]
     assert cal["model_version"] == "stub-1" and cal["n_points"] == 4 and -31 < cal["a"] < -20
     g = client.post("/v1/glucose/estimate", json={"recent_features": feats, "timestamp": 1.7e9 + 5 * 3600,

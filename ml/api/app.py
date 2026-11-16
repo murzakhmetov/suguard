@@ -318,11 +318,14 @@ def calibrate(req: CalibrateRequest):
                                                         req.tz_offset_h))
     else:
         f = cal.f0
-    # The estimate before this reading is shown only where /v1/glucose/estimate
-    # would show one: a model that passed validation, or experimental output
-    # switched on. Without a model it would be the prior or the fingerstick average.
-    shown = GLUCOSE.model is not None and (GLUCOSE.model.validated or EXPERIMENTAL_GLUCOSE)
-    before = round(cal.predict(f, req.timestamp)[0], 1) if shown else None
+    # The estimate before this reading is what /v1/glucose/estimate shows at this
+    # moment: nothing without a model (the prior or the fingerstick average is no
+    # estimate) or with one that has not passed validation (unless experimental
+    # output is switched on); the population value until the calibration has
+    # MIN_CALIBRATIONS readings; the calibrated value after that.
+    before = None
+    if GLUCOSE.model is not None and (GLUCOSE.model.validated or EXPERIMENTAL_GLUCOSE):
+        before = round(f if cal.n_points < GLUCOSE.MIN_CALIBRATIONS else cal.predict(f, req.timestamp)[0], 1)
     cal.update(f, req.reference_mgdl, req.timestamp)
     return _finite({"calibration": _issue(cal), "n_points": cal.n_points,
                     "estimate_before_mgdl": before, "reference_mgdl": req.reference_mgdl})

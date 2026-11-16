@@ -112,7 +112,7 @@ USABLE_SQI = 0.5
 def assess_quality(ir_bv: np.ndarray, red_bv: np.ndarray, beats: Beats, fs: float = FS,
                    artifact_prob: np.ndarray | None = None, sensor: SensorState | None = None,
                    red_ir_corr: float | None = None, usable_threshold: float = USABLE_SQI,
-                   spectral_reference: np.ndarray | None = None) -> Quality:
+                   reference: tuple[np.ndarray, np.ndarray] | None = None) -> Quality:
     """Quality of a (raw or denoised) window from complementary indices.
 
     * perfusion index, two-sided: < ~0.03 % no measurable pulse; > ~10 %
@@ -127,10 +127,12 @@ def assess_quality(ir_bv: np.ndarray, red_bv: np.ndarray, beats: Beats, fs: floa
     Skewness (Elgendi 2016) is reported, not scored. A metric that cannot be
     computed (too few beats, no spectral peak, window shorter than 3 s for
     the ratio stability) fails its component. With ``sensor`` given, a window
-    that fails the sensor checks is never usable. With ``spectral_reference``
-    (the measured signal of a window the denoiser calls clean), the heart
-    rate from the beats has to agree with that signal's spectral rate instead
-    of the denoised one's.
+    that fails the sensor checks is never usable. With ``reference`` = (IR,
+    red) -- in a window the denoiser calls clean, the measured signals with
+    the few flagged samples taken from its output -- the heart rate from the
+    beats has to agree with the reference IR's spectral rate, and the red/IR
+    ratio has to be stable in the reference signals (SpO2 then comes from the
+    measured ones), instead of in the analysed signals.
     """
     ir = np.asarray(ir_bv, dtype=np.float64)
     red = np.asarray(red_bv, dtype=np.float64)
@@ -138,8 +140,8 @@ def assess_quality(ir_bv: np.ndarray, red_bv: np.ndarray, beats: Beats, fs: floa
     skew = float(stats.skew(ir)) if ir.size > 3 and np.std(ir) > 0 else 0.0
     _, tcorr = beat_template(ir, beats)
     hr_spec, purity = spectral_hr(ir, fs)
-    if spectral_reference is not None:
-        hr_spec, _ = spectral_hr(spectral_reference, fs)
+    if reference is not None:
+        hr_spec, _ = spectral_hr(reference[0], fs)
     if red_ir_corr is None:
         a, b = ir - ir.mean(), red - red.mean()
         den = np.sqrt(np.sum(a * a) * np.sum(b * b))
@@ -154,7 +156,7 @@ def assess_quality(ir_bv: np.ndarray, red_bv: np.ndarray, beats: Beats, fs: floa
     valid_frac = float(np.mean(beats.valid_ibi)) if beats.valid_ibi.size else 0.0
     hr_b = beats.hr_bpm
     hr_diff = abs(hr_b - hr_spec) if (hr_b is not None and hr_spec is not None) else np.inf
-    r_spread = _r_spread(ir, red, fs)
+    r_spread = _r_spread(*(reference if reference is not None else (ir, red)), fs)
     motion = float(np.mean(artifact_prob > 0.5)) if artifact_prob is not None else 0.0
 
     comp = {

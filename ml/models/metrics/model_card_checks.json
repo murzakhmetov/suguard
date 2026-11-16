@@ -539,7 +539,7 @@
     }
   },
   "hr_estimator": {
-    "design": "2000 simulated windows without motion (simulator mix of shapes, rates and perfusion), beats on the measured IR, absolute error against the simulator's rate; 'where_beats_found' = windows where both estimates are within 10 bpm (no missed or extra beats)",
+    "design": "2000 simulated windows without motion (simulator mix of shapes, rates and perfusion), beats on the measured IR, absolute error against the simulator's rate (the window's mean rate, 60 / mean of its beat intervals); 'where_beats_found' = windows where both estimates are within 10 bpm (no missed or extra beats); 'true_intervals' = the same estimators on the simulator's beat times, on those windows",
     "windows_with_a_rate": 2000,
     "windows_where_beats_found": 1963,
     "results": {
@@ -554,6 +554,14 @@
         "p95_abs_error_bpm": 1.5777270903977414,
         "median_abs_error_bpm": 0.37622789085226316,
         "mean_abs_error_bpm_where_beats_found": 0.5114863387942333
+      }
+    },
+    "true_intervals": {
+      "mean_of_true_intervals": {
+        "mean_abs_error_bpm_where_beats_found": 0.18332052904764687
+      },
+      "median_of_true_intervals": {
+        "mean_abs_error_bpm_where_beats_found": 0.4420615790829842
       }
     }
   }

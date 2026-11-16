@@ -267,6 +267,14 @@ def edge_cases() -> list[Case]:
         with_signals_flagged("flagged_pulse_with_half_rate_component", 0.01 * half_rate, 0.006 * half_rate),
         Case("classical_pulse_with_half_rate_motion", counts(70_000 * (1 - 0.003 * tone(1.8)) * (1 + 0.001 * tone(0.9))),
              counts(100_000 * (1 - 0.005 * tone(1.8)) * (1 + 0.00175 * tone(0.9)))),
+        # The reference of a clean window: a burst the network flags (15 %) is taken from its output, and
+        # a measured red pulse that grows mid-window fails the ratio stability although the output is steady.
+        Case("clean_window_with_flagged_burst", clean.red_raw,
+             counts(clean.ir_raw * (1 + np.where((t >= 4.0) & (t < 5.5), 0.05 * np.sin(2 * np.pi * 3.1 * t), 0.0))),
+             denoised=(ir_bv, red_bv, np.where((t >= 4.0) & (t < 5.5), 1.0, 0.0))),
+        Case("clean_window_red_pulse_grows", counts(np.median(clean.red_raw) * (1 - np.where(t < t[-1] / 2, 1.0, 1.6)
+                                                                                * (1 - clean.red_raw / np.median(clean.red_raw)))),
+             clean.ir_raw, denoised=(ir_bv, red_bv, np.zeros(n))),
         # Measured signals given directly (core_cli mode 2): inputs raw counts cannot produce.
         given("measured_ir_zeros_clean", np.zeros(n), red_bv, ir_bv, red_bv, np.zeros(n)),
         given("measured_ir_not_finite_clean", with_nan(ir_bv), red_bv, ir_bv, red_bv, np.zeros(n)),

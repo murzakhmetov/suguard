@@ -246,6 +246,7 @@ def check_level_prior() -> dict:
 
 def check_hr_estimator(n: int, seed0: int = 9_300_000) -> dict:
     err = {"mean_of_valid_intervals": [], "median_of_valid_intervals": []}
+    oracle = {"mean_of_true_intervals": [], "median_of_true_intervals": []}
     for i in range(n):
         w = ppg.simulate_window(seed0 + i, kinds=[])
         x, _ = preprocess(w.ir_raw, FS)
@@ -255,15 +256,24 @@ def check_hr_estimator(n: int, seed0: int = 9_300_000) -> dict:
             continue
         err["mean_of_valid_intervals"].append(abs(60.0 / np.mean(good) - w.hr_bpm))
         err["median_of_valid_intervals"].append(abs(60.0 / np.median(good) - w.hr_bpm))
+        # The same estimators on the true beat times: what is left is how well each one estimates
+        # the window's mean rate under heart-rate variability, without detection or peak jitter.
+        rr = np.diff(np.sort(w.beat_onsets))
+        oracle["mean_of_true_intervals"].append(abs(60.0 / np.mean(rr) - w.hr_bpm) if rr.size else np.nan)
+        oracle["median_of_true_intervals"].append(abs(60.0 / np.median(rr) - w.hr_bpm) if rr.size else np.nan)
     both = (np.array(err["mean_of_valid_intervals"]) < 10) & (np.array(err["median_of_valid_intervals"]) < 10)
     return {"design": f"{n} simulated windows without motion (simulator mix of shapes, rates and perfusion), "
-                      "beats on the measured IR, absolute error against the simulator's rate; "
-                      "'where_beats_found' = windows where both estimates are within 10 bpm (no missed or extra beats)",
+                      "beats on the measured IR, absolute error against the simulator's rate (the window's mean "
+                      "rate, 60 / mean of its beat intervals); 'where_beats_found' = windows where both estimates "
+                      "are within 10 bpm (no missed or extra beats); 'true_intervals' = the same estimators on the "
+                      "simulator's beat times, on those windows",
             "windows_with_a_rate": len(err["mean_of_valid_intervals"]), "windows_where_beats_found": int(both.sum()),
             "results": {k: {"mean_abs_error_bpm": float(np.mean(v)), "p95_abs_error_bpm": float(np.percentile(v, 95)),
                             "median_abs_error_bpm": float(np.median(v)),
                             "mean_abs_error_bpm_where_beats_found": float(np.mean(np.array(v)[both]))}
-                        for k, v in err.items()}}
+                        for k, v in err.items()},
+            "true_intervals": {k: {"mean_abs_error_bpm_where_beats_found": float(np.nanmean(np.array(v)[both]))}
+                               for k, v in oracle.items()}}
 
 
 def main():

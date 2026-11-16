@@ -110,7 +110,7 @@ heart rate) only if all of this holds:
 | Quality components: each must reach 0.25 and their geometric mean 0.5 | perfusion (rising over 0.03–0.12 %, falling over 10–20 %); beat-template correlation; spectral purity; beat-amplitude spread; share of plausible beat intervals; agreement of the beat-based and the spectral heart rate; share of samples not flagged as motion. A component that cannot be computed fails | `weak_pulse`, `implausible_amplitude`, `motion`, `irregular_or_noisy` |
 | Motion share | ≤ 70 % of the samples flagged by the network | `motion` |
 | Input support | on the samples the network calls clean (≥ 10 of them), its IR output must correlate with the measured IR signal (≥ 0.7) and have a comparable size (0.7–1.4) | `denoiser_mismatch` |
-| Measured reference | where the network flags at most 20 % of the samples, the spectral rate the beats must agree with comes from the *measured* IR, and SpO2 from the measured red/IR (weighted by the mask); elsewhere both come from the network's output | `motion` (via the heart-rate agreement) |
+| Measured reference | where the network flags at most 20 % of the samples, the *measured* signals are the reference: SpO2 comes from the measured red/IR (weighted by the mask), so do the red/IR correlation and the arterial-ratio rule below (which withholds the heart rate too); the spectral rate the beats must agree with and the stability of the red/IR ratio come from the measured signals with the flagged samples taken from the network's output. Elsewhere all of it comes from the network's output | `motion` (via the heart-rate agreement), `red_ir_inconsistent` |
 | Arterial ratio | where red and IR agree (correlation ≥ 0.9 in the cardiac band), the red/IR ratio R must be one that arterial blood can produce (0.30–1.1). With a lower correlation R is not checked: the window can still get a heart rate, but no SpO2 | `red_ir_inconsistent` |
 
 **SpO2** additionally needs two more quality components — the stability of the red/IR ratio over
@@ -130,15 +130,22 @@ Numbers in this section without another source come from `scripts/check_model_ca
 
 * **Heart rate** — beat detection after Elgendi (two moving averages) with refinement of the
   peak positions. The rate is the mean of the beat intervals that lie within 30 % of their median:
-  the band keeps missed and extra beats out, and the mean cancels the jitter of the peak times
-  (a peak found late lengthens one interval and shortens the next), which the median used before
-  did not (2,000 simulated windows without motion: mean error 0.51 → 0.28 bpm on the 1,963 in which
-  the beats were found, 95th percentile 1.58 → 0.95 bpm over all; `hr_estimator`). There is no
-  fall-back to a spectral estimate or to a previous value. The spectral rate that the beat rate
+  the band keeps missed and extra beats out, and a window's rate is 60 / its mean interval, which
+  the median used before estimates with a bias under heart-rate variability (2,000 simulated windows
+  without motion, the 1,963 in which the beats were found: mean error 0.44 bpm for the median and
+  0.18 for the mean even with the true beat times; with the detected beats 0.51 → 0.28 bpm, where the
+  mean also averages out the jitter of the peak times; 95th percentile over all 2,000 windows
+  1.58 → 0.95 bpm; `hr_estimator`). There is no fall-back to a spectral estimate or to a previous
+  value. The spectral rate that the beat rate
   must agree with (within about 12 bpm) is the cardiac-band peak with the most power in itself and
   its 2nd and 3rd harmonic, among the peaks with at least a quarter of the strongest one's power:
   a real pulse's 2nd harmonic can be stronger than its fundamental, and with a lower share arm
-  swing at half the heart rate won the sum.
+  swing at half the heart rate won the sum. At slow rates the band-pass filters weaken the
+  fundamental: a pulse whose 2nd harmonic is 1.6 times the fundamental (the strongest in the real
+  recordings) is read at its rate from 40 bpm, not at 36–38 bpm; one with twice the fundamental
+  only from about 90–105 bpm. In a window the network calls clean (at most 20 % flagged) this
+  spectral rate comes from the measured IR, with the flagged samples taken from the network's
+  output.
 * **HRV** (Python and API only, from ≥ 60 s of signal; the firmware works on 10.24-s windows and
   has none) — premature beats and their compensatory pauses are removed with the decision rule of
   Lipponen & Tarvainen before SDNN/RMSSD are computed; the output states how many intervals were

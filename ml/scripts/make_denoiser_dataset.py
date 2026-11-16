@@ -2,7 +2,7 @@
 
     python scripts/make_denoiser_dataset.py --out data/denoiser --train 200000 --val 4000 --test 4000
 
-(the defaults; the shipped models were trained on exactly this set)
+(the defaults; the shipped v5 networks were trained on exactly this set)
 
 Each split uses a disjoint seed range, so no window appears twice. The heart
 rate is drawn over the whole band the pipeline accepts (35-210 bpm, see

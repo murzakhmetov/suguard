@@ -22,12 +22,14 @@ class Beats:
     @property
     def hr_bpm(self) -> float | None:
         """Rate from the mean of the valid intervals. The validity band
-        (within 30 % of the median) keeps missed and extra beats out; among
-        the rest, a peak found a little late lengthens one interval and
-        shortens the next, so the mean cancels that jitter where the median
-        does not (1,963 simulated windows without motion in which the beats
-        were found: mean error 0.51 -> 0.28 bpm, 95th percentile of all
-        2,000: 1.58 -> 0.95 bpm; scripts/check_model_card.py, hr_estimator)."""
+        (within 30 % of the median) keeps missed and extra beats out. A
+        window's rate is its beats per minute, 60 / the mean interval; under
+        heart-rate variability the median interval is a biased estimate of it
+        (simulated windows without motion, the 1,963 of 2,000 in which the
+        beats were found: mean error 0.44 bpm for the median and 0.18 for the
+        mean even with the true beat times; with the detected beats 0.51 and
+        0.28, where the mean also averages out the jitter of the peak times;
+        scripts/check_model_card.py, hr_estimator)."""
         good = self.ibi_s[self.valid_ibi]
         if good.size < 2:
             return None
@@ -166,9 +168,11 @@ def pulse_polarity(x: np.ndarray, fs: float = FS, ref_bpm: np.ndarray | None = N
 # half the rate (arm swing while walking) would otherwise win with the
 # pulse's own fundamental as its "2nd harmonic" (a sinusoidal pulse with arm
 # swing at half its rate, 0.35 of its size: 6 of 40 windows got a heart rate
-# on the classical path with 0.1, 40 of 40 with 0.25, all correct). 0.25 still
-# admits a fundamental whose 2nd harmonic is twice as strong (power ratio
-# 0.25: an amplitude ratio of 2; the real recordings reach 1.6, power 0.39).
+# on the classical path with 0.1, 40 of 40 with 0.25, all correct). The price
+# is at slow rates, where the band-pass filters weaken the fundamental: a
+# pulse whose 2nd harmonic is 1.6 times its fundamental (the strongest in the
+# real recordings) is read at its rate from 40 bpm, not at 36-38 bpm; one with
+# twice the fundamental only from about 90-105 bpm (noise-free test pulses).
 HARMONIC_MIN_SHARE = 0.25
 HARMONIC_SPAN = 2
 

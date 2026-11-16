@@ -527,10 +527,11 @@ static double geometric_mean(const double* comp, unsigned mask) {
 }
 
 // quality.assess_quality. `spec` is spectral_hr(ir), except in a clean window, where its
-// validity and rate are those of the measured IR (spectral_reference) and only the purity is
-// that of `ir`; the beats are in w->beats.
-static void assess_quality(const double* ir, const double* red, const double* p_art, int n,
-                           const SgSensorState* sensor, double red_ir_corr, const SpectralHr* spec,
+// validity and rate are those of the reference IR and only the purity is that of `ir`. The
+// red/IR ratio spread is computed on ratio_ir / ratio_red: the reference signals in a clean
+// window, the analysed IR / red otherwise. The beats are in w->beats.
+static void assess_quality(const double* ir, const double* ratio_ir, const double* ratio_red, const double* p_art,
+                           int n, const SgSensorState* sensor, double red_ir_corr, const SpectralHr* spec,
                            SgQuality* q, SgWork* w) {
   const SgBeats* b = &w->beats;
   q->perfusion_index = sg_perfusion_index(ir, n, w);
@@ -540,7 +541,7 @@ static void assess_quality(const double* ir, const double* red, const double* p_
   q->beat_amp_cv = amplitude_cv(ir, n, b, w);
   q->valid_ibi_fraction = b->n > 1 ? (double)b->n_valid / (b->n - 1) : 0.0;
   q->hr_agreement_bpm = b->has_hr && spec->valid ? fabs(b->hr_bpm - spec->bpm) : INFINITY;
-  q->r_spread = r_spread(ir, red, n, w);
+  q->r_spread = r_spread(ratio_ir, ratio_red, n, w);
   q->motion_fraction = motion_fraction(p_art, n);
 
   const double pi = q->perfusion_index;
@@ -645,11 +646,17 @@ void sg_vitals_from_signals(const double* ir_bv, const double* red_bv, const dou
   if (pulse_spectrum(w->pulse, n, w)) spec = spectral_peak(w->fft);
 
   // pipeline.CLEAN_MAX_MOTION: where the network flags (almost) no motion, the measured signals are
-  // the reference. The spectral rate the beats must agree with comes from the measured IR (the
-  // purity stays that of the denoised signal), and SpO2 from the measured red/IR.
+  // the reference, with the flagged samples taken from the network's output (same clipped weight as
+  // the SpO2 fit). The spectral rate the beats must agree with and the red/IR ratio spread come from
+  // the reference (the purity stays that of the denoised signal), SpO2 from the measured red/IR.
   const bool clean = denoised && motion_fraction(p_art, n) <= SG_CLEAN_MAX_MOTION;
   if (clean) {
-    sg_filtfilt(&SG_FILTER_PULSE, ir_bv, n, w->pulse, w->ext);   // the beats are already detected
+    for (int i = 0; i < n; ++i) {
+      const double wt = sample_weight(p_art, i);
+      w->ref_ir[i] = wt * ir_bv[i] + (1.0 - wt) * c_ir[i];
+      w->ref_red[i] = wt * red_bv[i] + (1.0 - wt) * c_red[i];
+    }
+    sg_filtfilt(&SG_FILTER_PULSE, w->ref_ir, n, w->pulse, w->ext);   // the beats are already detected
     SpectralHr ref = {false, 0.0, 0.0};
     if (pulse_spectrum(w->pulse, n, w)) ref = spectral_peak(w->fft);
     spec.valid = ref.valid;
@@ -658,7 +665,8 @@ void sg_vitals_from_signals(const double* ir_bv, const double* red_bv, const dou
 
   const Spo2 sp = clean ? estimate_spo2(red_bv, ir_bv, p_art, n, w) : estimate_spo2(c_red, c_ir, p_art, n, w);
   SgQuality* q = &out->quality;
-  assess_quality(c_ir, c_red, p_art, n, sensor, sp.ratio.corr, &spec, q, w);
+  assess_quality(c_ir, clean ? w->ref_ir : c_ir, clean ? w->ref_red : c_red, p_art, n, sensor, sp.ratio.corr, &spec,
+                 q, w);
 
   bool mismatch = false, red_supported = true;
   if (denoised) {
