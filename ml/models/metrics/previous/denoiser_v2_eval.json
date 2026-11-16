@@ -543,9 +543,9 @@
       "hr_mae": 0.3193902511876642,
       "hr_p95": 1.1748469396809207,
       "hr_errors_over_10bpm": 0,
-      "spo2_coverage": 0.33666666666666667,
-      "spo2_mae": 0.21889559946999237,
-      "spo2_p95": 0.6076964327896894,
+      "spo2_coverage": 0.33,
+      "spo2_mae": 0.20382707206698117,
+      "spo2_p95": 0.5744809378073642,
       "spo2_errors_over_4pts": 0,
       "clean_window_hr_coverage": 0.6115107913669064,
       "clean_window_hr_coverage_by_shape": {
@@ -644,7 +644,7 @@
       "led_channels_swapped": {
         "windows": 300,
         "heart_rate_reported": 5,
-        "spo2_reported": 5
+        "spo2_reported": 1
       },
       "no_pulse_with_motion": {
         "windows": 1500,
@@ -716,9 +716,9 @@
         "hr_mae": 0.26081592529828496,
         "hr_p95": 0.6564597240894301,
         "hr_errors_over_10bpm": 0,
-        "spo2_coverage": 0.8733333333333333,
-        "spo2_mae": 0.5217792299208724,
-        "spo2_p95": 1.9251475274360672,
+        "spo2_coverage": 0.7933333333333333,
+        "spo2_mae": 0.41193389811918113,
+        "spo2_p95": 1.502847889882025,
         "spo2_errors_over_4pts": 0,
         "median_motion_share_flagged": 0.002,
         "reject_reasons": {
@@ -849,9 +849,9 @@
         "hr_mae": 0.23479535581942235,
         "hr_p95": 0.5335043770458299,
         "hr_errors_over_10bpm": 0,
-        "spo2_coverage": 0.14,
-        "spo2_mae": 0.3809116620016754,
-        "spo2_p95": 1.0709055010265445,
+        "spo2_coverage": 0.13333333333333333,
+        "spo2_mae": 0.28868552661668045,
+        "spo2_p95": 1.0329669279578824,
         "spo2_errors_over_4pts": 0,
         "median_motion_share_flagged": 1.0,
         "reject_reasons": {
@@ -1074,9 +1074,9 @@
             "hr_mae": 0.1543367236726323,
             "hr_p95": 0.622756288720808,
             "hr_errors_over_10bpm": 0,
-            "spo2_coverage": 0.6153846153846154,
-            "spo2_mae": 0.3578181624267449,
-            "spo2_p95": 0.9262976955904335,
+            "spo2_coverage": 0.5961538461538461,
+            "spo2_mae": 0.3569160534387544,
+            "spo2_p95": 0.926927169320507,
             "spo2_errors_over_4pts": 0,
             "reject_reasons": {
               "irregular_or_noisy": 20,
@@ -1373,9 +1373,9 @@
             "hr_mae": 0.45921946429990396,
             "hr_p95": 2.5663407077083535,
             "hr_errors_over_10bpm": 0,
-            "spo2_coverage": 0.16346153846153846,
-            "spo2_mae": 0.3107542166385359,
-            "spo2_p95": 0.9365549015026957,
+            "spo2_coverage": 0.16025641025641027,
+            "spo2_mae": 0.31655917821916574,
+            "spo2_p95": 0.9496083378469009,
             "spo2_errors_over_4pts": 0,
             "reject_reasons": {
               "motion": 229,
@@ -1525,10 +1525,10 @@
             "hr_mae": 0.31864995614919933,
             "hr_p95": 1.7286080696806074,
             "hr_errors_over_10bpm": 0,
-            "spo2_coverage": 0.2403846153846154,
-            "spo2_mae": 0.565374267046647,
-            "spo2_p95": 1.5323313505885137,
-            "spo2_errors_over_4pts": 1,
+            "spo2_coverage": 0.23397435897435898,
+            "spo2_mae": 0.5095668729159469,
+            "spo2_p95": 1.4742955065266012,
+            "spo2_errors_over_4pts": 0,
             "reject_reasons": {
               "motion": 201,
               "irregular_or_noisy": 127,
@@ -1642,9 +1642,9 @@
         "windows": 150,
         "heart_rate_reported": 4,
         "heart_rate_wrong": 0,
-        "spo2_reported": 4,
-        "spo2_wrong": 3,
-        "spo2_mean_signed_error": -7.620722174585175
+        "spo2_reported": 2,
+        "spo2_wrong": 2,
+        "spo2_mean_signed_error": -11.311228017676036
       },
       "fast_breathing": {
         "windows": 150,
@@ -1674,9 +1674,9 @@
         "windows": 150,
         "heart_rate_reported": 22,
         "heart_rate_wrong": 0,
-        "spo2_reported": 22,
+        "spo2_reported": 20,
         "spo2_wrong": 0,
-        "spo2_mean_signed_error": 1.164502706973767
+        "spo2_mean_signed_error": 1.0214160501780625
       }
     }
   }

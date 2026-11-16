@@ -91,13 +91,13 @@ rate / an SpO2 value was reported anyway:
 | Noise, no pulse (300) | 0 / 0 | 0 / 0 | 0 / 0 |
 | No pulse in the infrared channel (300) | 0 / 0 | 0 / 0 | 0 / 0 |
 | Pulse in infrared only, none in red ¹ (300) | 283 / 0 | 0 / 0 | 0 / 0 |
-| Red pulse at a fifth of its size, in noise ¹ (300) | 178 / 0 | 44 / 1 | 46 / 0 |
-| The two LED channels swapped ² (300) | 10 / 10 | 6 / 5 | 9 / 9 |
-| A pulse of 0.01 % (below the 0.03 % threshold), the usual motion mix ³ (1500) | 26 / 23 | 5 / 5 | 8 / 8 |
+| Red pulse at a fifth of its size, in noise ¹ (300) | 178 / 0 | 44 / 0 | 46 / 0 |
+| The two LED channels swapped ² (300) | 10 / 10 | 6 / 1 | 9 / 3 |
+| A pulse of 0.01 % (below the 0.03 % threshold), the usual motion mix ³ (1500) | 26 / 23 | 5 / 5 | 8 / 7 |
 | The same pulse, periodic motion as large as a pulse ⁴ (300) | 102 / 82 | 2 / 2 | 2 / 2 |
 
-¹ A heart rate is legitimate here (the infrared pulse is real); an SpO2 value is not. The bracelet
-network gave one (99.8 %).
+¹ A heart rate is legitimate here (the infrared pulse is real); an SpO2 value is not, and none was
+given.
 ² A wiring/configuration fault, caught at bring-up (`led red` on the console); the firmware also
 prints a hint when the red pulse is persistently larger than the infrared one.
 ³ A fifth of these windows have no motion; most of the motion is small. The pulse is below the
@@ -132,14 +132,14 @@ blood could produce, unless stated):
 
 | Input (windows): heart rate reported / wrong, SpO2 reported / wrong | Classical | Bracelet v4 | Bracelet | Server v4 | Server |
 |---|---|---|---|---|---|
-| Steady periodic motion, no pulse (150) | 148 / 148, 148 / 148 | 146 / 146, 146 / 146 | 85 / 85, 85 / 85 | 144 / 144, 144 / 144 | 109 / 109, 109 / 109 |
+| Steady periodic motion, no pulse (150) | 148 / 148, 148 / 148 | 146 / 146, 144 / 144 | 85 / 85, 85 / 85 | 144 / 144, 144 / 144 | 109 / 109, 109 / 109 |
 | Pulse + steady motion 1.5–4× as large at another rate (150) | 88 / 88, 88 / 41 | 44 / 44, 44 / 18 | 18 / 18, 18 / 4 | 41 / 41, 41 / 16 | 13 / 12, 13 / 4 |
-| Pulse + motion at half its rate (arm swing) (150) | 41 / 37, 41 / 6 | 36 / 26, 36 / 4 | 29 / 21, 29 / 4 | 40 / 22, 40 / 1 | 39 / 25, 39 / 3 |
-| Motion locked to the pulse rate, venous red/IR ratio (150) | 109 / 0, 99 / 92 | 31 / 0, 31 / 29 | 16 / 0, 16 / 14 | 22 / 0, 22 / 20 | 13 / 0, 13 / 10 |
+| Pulse + motion at half its rate (arm swing) (150) | 41 / 37, 41 / 6 | 36 / 26, 36 / 4 | 29 / 21, 29 / 4 | 40 / 22, 39 / 1 | 39 / 25, 39 / 3 |
+| Motion locked to the pulse rate, venous red/IR ratio (150) | 109 / 0, 99 / 92 | 31 / 0, 22 / 20 | 16 / 0, 14 / 12 | 22 / 0, 16 / 14 | 13 / 0, 12 / 10 |
 | Fast breathing (27–45 /min) swinging the baseline (150) | 20 / 11, 20 / 9 | 4 / 0, 4 / 0 | 2 / 0, 2 / 0 | 3 / 0, 3 / 0 | 5 / 0, 5 / 0 |
 | Bigeminy with weak premature beats (150) | 12 / 5, 12 / 0 | 12 / 3, 12 / 0 | 12 / 3, 12 / 0 | 13 / 5, 13 / 0 | 12 / 5, 12 / 0 |
 | 35–45 bpm, double-humped pulse, no motion (150) | 28 / 1, 28 / 0 | 33 / 6, 33 / 0 | 30 / 1, 30 / 0 | 35 / 5, 35 / 0 | 30 / 1, 30 / 0 |
-| 150–210 bpm at SpO2 82–90 %, no motion (150) | 123 / 0, 122 / 0 | 119 / 0, 119 / 5 | 119 / 0, 119 / 7 | 121 / 0, 121 / 4 | 121 / 0, 121 / 0 |
+| 150–210 bpm at SpO2 82–90 %, no motion (150) | 123 / 0, 122 / 0 | 119 / 0, 65 / 0 | 119 / 0, 96 / 1 | 121 / 0, 105 / 3 | 121 / 0, 119 / 0 |
 
 * **Steady rhythmic motion without an accelerometer.** Motion of constant amplitude whose red/IR
   proportion lies in the arterial range is, for the sensor, a smooth pulse. Without any pulse
@@ -153,8 +153,8 @@ blood could produce, unless stated):
   looks like a slower, double-humped pulse: when the network keeps the swing, beats and spectrum
   agree on half the rate (21 and 25 wrong heart rates here; the classical path 37).
 * **Motion locked to the pulse rate** (a running cadence) shifts SpO2: here, with a venous-like
-  red/IR ratio, the value shown was off by more than 4 points in 14 of 16 (bracelet) and 10 of 13 (server) values shown — too low, a false
-  desaturation. The heart rate stays right.
+  red/IR ratio, the value shown was off by more than 4 points in 12 of 14 (bracelet) and 10 of 12
+  (server) values shown — too low, a false desaturation. The heart rate stays right.
 * **Fast breathing** (27–45 breaths a minute) swinging the baseline is counted as the pulse by the
   classical path (11 of its 20 values are the breathing rate); the networks rarely report these windows.
 * **Bigeminy with weak premature beats** is reported at half the beat rate when the premature beats
@@ -165,7 +165,9 @@ blood could produce, unless stated):
   its rate on every path (1 window per network here; v4: 6 and 5).
 * **Fast rates at low SpO2**: the networks attenuate red at 150–210 bpm, so their SpO2 reads high,
   which hides a desaturation. In windows the network calls clean, SpO2 now comes from the measured
-  signals; values off by more than 4 points: server 0 of 121 (v4: 4), bracelet 7 of 119 (v4: 5).
+  signals, and the two sources must agree (next point); values off by more than 4 points: server 0
+  of 119, bracelet 1 of 96 (v4: 3 of 105 and 0 of 65 — the agreement withholds more of v4's values,
+  whose red attenuation makes the two sources disagree).
 * **SpO2 from two sources that must agree.** A non-arterial component locked to the heartbeat
   (venous pulsation under a tight strap, a cadence locked to the pulse), which the network partly
   removes but rarely flags, stays in the measured red/IR and pulls their SpO2 down; a network that
@@ -186,7 +188,9 @@ blood could produce, unless stated):
   its rate on every path (1 window per network here; v4: 6 and 5).
 * **Fast rates at low SpO2**: the networks attenuate red at 150–210 bpm, so their SpO2 reads high,
   which hides a desaturation. In windows the network calls clean, SpO2 now comes from the measured
-  signals; values off by more than 4 points: server 0 of 121 (v4: 4), bracelet 7 of 119 (v4: 5).
+  signals, and the two sources must agree (next point); values off by more than 4 points: server 0
+  of 119, bracelet 1 of 96 (v4: 3 of 105 and 0 of 65 — the agreement withholds more of v4's values,
+  whose red attenuation makes the two sources disagree).
 * **The price of measured SpO2 in clean windows**: a non-arterial component locked to the heartbeat
   (venous pulsation under a tight strap, a cadence locked to the pulse), which the network partly
   removes but rarely flags, stays in the measured red/IR and pulls SpO2 down. The red team measured
@@ -206,9 +210,10 @@ blood could produce, unless stated):
   there for diagnostics.
 * SpO2 uses Maxim's generic curve and is **not calibrated** for this enclosure; the estimator's
   own bias in simulation is in the [model card](docs/MODEL_CARD.md#3-heart-rate-hrv-spo2-pulse-shape-features).
-* With the two LED channels swapped, windows still pass when the true saturation is below about
-  85 % (2–3 % of that test set), and the SpO2 shown is then too low (by a median of 6 points).
-  Check the LED order once at bring-up.
+* With the two LED channels swapped, a few windows still pass when the true saturation is below
+  about 85 % (a heart rate in 2–3 % of that test set; an SpO2 value in 3 % on the classical path,
+  0.3–1 % with the networks), and the SpO2 shown is then too low. Check the LED order once at
+  bring-up.
 
 ### Diabetes risk — `models/risk_model.json`
 

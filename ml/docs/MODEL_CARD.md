@@ -197,10 +197,9 @@ Numbers in this section without another source come from `scripts/check_model_ca
   against a medical pulse oximeter (`suguard_ml.signal.spo2.fit_spo2_calibration`). The estimator's
   own bias in simulation (the simulator uses the same curve, so the sensor's error is not in it):
   2,000 simulated windows per condition with true SpO2 82–95 % (`spo2_bias`): below 90 % the mean
-  signed error lies between −0.3 and +0.5 points in every 2-point bin, for every path, with and
-  without motion (the networks +0.2 to +0.5, highest at 82–84 % with motion; the classical path
-  with motion −0.3 to 0.0); at 90–95 % every path is within +0.1 to +0.2 points except the
-  classical path with motion (−0.4). Fast rates at low SpO2 and pulse-locked non-arterial
+  signed error lies between −0.3 and +0.3 points in every 2-point bin, for every path, with and
+  without motion (the networks +0.2 to +0.3; the classical path with motion −0.3 to 0.0); at
+  90–95 % every path is within +0.1 to +0.2 points except the classical path with motion (−0.4). Fast rates at low SpO2 and pulse-locked non-arterial
   components bias it further (README, "Known hard cases"). Real accuracy below 90 % can only be
   established in a controlled desaturation study (ISO 80601-2-61).
 * **Features** — morphology of the average beat, second-derivative (SDPPG) ratios, harmonics,

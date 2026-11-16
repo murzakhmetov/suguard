@@ -543,9 +543,9 @@
       "hr_mae": 0.6593721655203293,
       "hr_p95": 1.6451042041229675,
       "hr_errors_over_10bpm": 2,
-      "spo2_coverage": 0.5466666666666666,
-      "spo2_mae": 0.21005070983006624,
-      "spo2_p95": 0.6333605751469905,
+      "spo2_coverage": 0.5433333333333333,
+      "spo2_mae": 0.21031093066485515,
+      "spo2_p95": 0.6358389508731683,
       "spo2_errors_over_4pts": 1,
       "clean_window_hr_coverage": 0.9496402877697842,
       "clean_window_hr_coverage_by_shape": {
@@ -639,22 +639,22 @@
       "red_pulse_a_fifth_in_noise": {
         "windows": 300,
         "heart_rate_reported": 5,
-        "spo2_reported": 1
+        "spo2_reported": 0
       },
       "led_channels_swapped": {
         "windows": 300,
         "heart_rate_reported": 10,
-        "spo2_reported": 10
+        "spo2_reported": 4
       },
       "no_pulse_with_motion": {
         "windows": 1500,
         "heart_rate_reported": 11,
-        "spo2_reported": 11
+        "spo2_reported": 10
       },
       "periodic_motion_no_pulse": {
         "windows": 300,
         "heart_rate_reported": 18,
-        "spo2_reported": 18
+        "spo2_reported": 15
       }
     }
   },
@@ -1340,9 +1340,9 @@
             "hr_mae": 0.4883248799776245,
             "hr_p95": 2.702206261648233,
             "hr_errors_over_10bpm": 0,
-            "spo2_coverage": 0.44871794871794873,
-            "spo2_mae": 0.4332233498036875,
-            "spo2_p95": 1.5448059820434261,
+            "spo2_coverage": 0.40705128205128205,
+            "spo2_mae": 0.3637580662748582,
+            "spo2_p95": 0.9454678142009881,
             "spo2_errors_over_4pts": 0,
             "reject_reasons": {
               "motion": 156,
@@ -1601,17 +1601,17 @@
         "windows": 150,
         "heart_rate_reported": 40,
         "heart_rate_wrong": 22,
-        "spo2_reported": 40,
+        "spo2_reported": 39,
         "spo2_wrong": 1,
-        "spo2_mean_signed_error": 0.5153127897129135
+        "spo2_mean_signed_error": 0.6128933423523149
       },
       "motion_locked_to_the_pulse_rate_venous_ratio": {
         "windows": 150,
         "heart_rate_reported": 22,
         "heart_rate_wrong": 0,
-        "spo2_reported": 22,
-        "spo2_wrong": 20,
-        "spo2_mean_signed_error": -8.286551568396753
+        "spo2_reported": 16,
+        "spo2_wrong": 14,
+        "spo2_mean_signed_error": -8.539989122198374
       },
       "fast_breathing": {
         "windows": 150,
@@ -1641,9 +1641,9 @@
         "windows": 150,
         "heart_rate_reported": 121,
         "heart_rate_wrong": 0,
-        "spo2_reported": 121,
-        "spo2_wrong": 4,
-        "spo2_mean_signed_error": 0.7557745981248624
+        "spo2_reported": 105,
+        "spo2_wrong": 3,
+        "spo2_mean_signed_error": 0.742214683096169
       }
     }
   }
