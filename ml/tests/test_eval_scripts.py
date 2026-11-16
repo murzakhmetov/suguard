@@ -76,3 +76,30 @@ def test_check_model_card_runs(tmp_path):
     prior = rep["calibration_level_prior"]["results"]
     assert abs(prior["shipped_prior_sd_100"]["readings_of_600"]["after_40"] - 600) < 1.0
     assert rep["hr_estimator"]["windows_where_beats_found"] >= 80
+
+
+def test_training_resumes_exactly(tmp_path):
+    """An interrupted training continues where it stopped: the checkpoint holds the optimiser, the
+    learning-rate schedule and the position in the batch sequence, so a resumed run ends with the
+    same weights as one that was never interrupted (here across epoch boundaries)."""
+    sys.path.insert(0, str(ML / "scripts"))
+    import make_denoiser_dataset as D
+    import torch
+
+    data = tmp_path / "data"
+    data.mkdir()
+    for name, seeds in (("train", range(48)), ("val", range(100, 116))):
+        rows = [D.make_one(s) for s in seeds]
+        np.savez(data / f"{name}.npz", X=np.stack([r[0] for r in rows]), Y=np.stack([r[1] for r in rows]),
+                 M=np.stack([r[2] for r in rows]), meta=np.array([r[3] for r in rows], dtype=np.float32))
+    base = [sys.executable, str(ML / "scripts" / "train_denoiser.py"), "--data", str(data), "--arch", "edge",
+            "--steps", "8", "--bs", "16", "--eval-every", "4", "--threads", "1"]
+    # --stop-after 8 ends both runs at the last step, before the (slow, here irrelevant) ONNX export.
+    subprocess.run(base + ["--out", str(tmp_path / "a"), "--stop-after", "8"], check=True, capture_output=True, cwd=ML)
+    subprocess.run(base + ["--out", str(tmp_path / "b"), "--stop-after", "4"], check=True, capture_output=True, cwd=ML)
+    resumed = subprocess.run(base + ["--out", str(tmp_path / "b"), "--resume", "--stop-after", "8"], check=True,
+                             capture_output=True, text=True, cwd=ML)
+    assert "resumed at step 4" in resumed.stdout
+    a, b = (torch.load(tmp_path / d / "denoiser_edge_state.pt", weights_only=False) for d in ("a", "b"))
+    assert a["step"] == b["step"] == 8
+    assert a["model"].keys() == b["model"].keys() and all(torch.equal(a["model"][k], b["model"][k]) for k in a["model"])

@@ -2,9 +2,11 @@
 
     python scripts/train_denoiser.py --data data/denoiser --steps 16000 --out models
 
-Runs on CPU (about an hour for the default settings on 4 cores) or GPU
-(Colab: a few minutes). Writes models/denoiser.onnx, models/denoiser.pt and
-models/metrics/denoiser_train.json.
+Runs on CPU (server model: about 80 minutes with 2 threads; bracelet model:
+about 35) or GPU (Colab: a few minutes). Writes models/denoiser.onnx,
+models/denoiser.pt and models/metrics/denoiser_train.json. At every
+validation it also writes <out>/<name>_state.pt, from which ``--resume``
+continues an interrupted run exactly where it stopped.
 """
 
 from __future__ import annotations
@@ -31,15 +33,22 @@ def load_split(path: Path):
     return d["X"], d["Y"], d["M"], d["meta"]
 
 
-def batches(X, Y, M, bs, rng):
+def batches(X, Y, M, bs, rng, skip=0):
+    """Mini-batches, a fresh permutation each epoch; ``skip`` drops the first
+    batches without loading them (resuming at a step continues the sequence)."""
     n = X.shape[0]
+    per_epoch = (n - bs) // bs + 1
     while True:
         idx = rng.permutation(n)
-        for i in range(0, n - bs + 1, bs):
+        if skip >= per_epoch:
+            skip -= per_epoch
+            continue
+        for i in range(skip * bs, n - bs + 1, bs):
             j = np.sort(idx[i:i + bs])
             yield (torch.from_numpy(X[j].astype(np.float32)),
                    torch.from_numpy(Y[j].astype(np.float32)),
                    torch.from_numpy(M[j].astype(np.float32)))
+        skip = 0
 
 
 @torch.no_grad()
@@ -110,6 +119,10 @@ def main():
                     help="unet: server model; edge: small model for the ESP32-C3 firmware")
     ap.add_argument("--chans", default=None, help="comma-separated channel widths, e.g. 8,16,24,32")
     ap.add_argument("--name", default=None, help="output file stem (default: denoiser / denoiser_edge)")
+    ap.add_argument("--resume", action="store_true",
+                    help="continue from <out>/<name>_state.pt (written at every validation) if it exists")
+    ap.add_argument("--stop-after", type=int, default=None,
+                    help="stop after this step without exporting, as an interruption would (for tests)")
     a = ap.parse_args()
     chans = [int(c) for c in a.chans.split(",")] if a.chans else None
     name = a.name or ("denoiser" if a.arch == "unet" else "denoiser_edge")
@@ -133,10 +146,19 @@ def main():
         opt, lambda s: min(1.0, (s + 1) / 300) * 0.5 * (1 + math.cos(math.pi * min(s / a.steps, 1.0))))
 
     rng = np.random.default_rng(a.seed)
-    it = batches(Xtr, Ytr, Mtr, a.bs, rng)
-    best, history, t0 = math.inf, [], time.time()
+    best, history, start, elapsed = math.inf, [], 0, 0.0
+    state_path = out / f"{name}_state.pt"
+    if a.resume and state_path.exists():
+        st = torch.load(state_path, map_location=device, weights_only=False)
+        model.load_state_dict(st["model"])
+        opt.load_state_dict(st["opt"])
+        sched.load_state_dict(st["sched"])
+        start, best, history, elapsed = st["step"], st["best"], st["history"], st["seconds"]
+        print(f"resumed at step {start}", flush=True)
+    it = batches(Xtr, Ytr, Mtr, a.bs, rng, skip=start)
+    t0 = time.time() - elapsed
     running = []
-    for step in range(1, a.steps + 1):
+    for step in range(start + 1, a.steps + 1):
         x, y, m = (t.to(device) for t in next(it))
         loss, parts = denoiser_loss(model(x), y, m)
         opt.zero_grad(set_to_none=True)
@@ -163,6 +185,14 @@ def main():
                 best = score
                 torch.save({"state_dict": model.state_dict(), "step": step, "val": res,
                             "arch": a.arch, "chans": chans}, out / f"{name}.pt")
+            # Everything a resumed run needs to continue exactly (written to a temporary file first).
+            torch.save({"model": model.state_dict(), "opt": opt.state_dict(), "sched": sched.state_dict(),
+                        "step": step, "best": best, "history": history, "seconds": time.time() - t0},
+                       state_path.with_suffix(".tmp"))
+            state_path.with_suffix(".tmp").replace(state_path)
+        if a.stop_after is not None and step >= a.stop_after:
+            print(f"stopped after step {step}", flush=True)
+            return
 
     ckpt = torch.load(out / f"{name}.pt", map_location="cpu")
     model.load_state_dict(ckpt["state_dict"])
