@@ -29,6 +29,7 @@
 // Thresholds of the reliability decision (suguard_ml.pipeline).
 #define SG_MAX_ARTIFACT_FRACTION 0.7
 #define SG_CLEAN_MAX_MOTION 0.2         // at most this share flagged: the measured signals are the reference
+#define SG_SPO2_AGREEMENT 2.0           // measured and denoised SpO2 must agree within this many points
 #define SG_MIN_INPUT_PI 0.03
 #define SG_MIN_SUPPORT_CORR 0.7         // denoised signal vs measurement over the clean samples ...
 #define SG_SUPPORT_GAIN_MIN 0.7         // ... and the size at which the measurement contains it

@@ -567,14 +567,20 @@ def test_clean_window_rate_is_checked_against_the_measured_spectrum(monkeypatch)
 
 
 def test_clean_window_spo2_comes_from_the_measured_signals(monkeypatch):
-    """A network that attenuates red reads SpO2 high; in a clean window the measured red/IR count."""
+    """A network that attenuates red reads SpO2 high. In a clean window the measured red/IR count;
+    where the two sources disagree by more than SPO2_AGREEMENT points, no SpO2 is shown at all."""
     import suguard_ml.pipeline as P
 
     w = simulate_window(41, kinds=[], hr_bpm=150.0, spo2=85.0, pi_ir=0.01, shape="wave")
     classical = P.SuGuardPipeline(denoiser=None).analyze(w.red_raw, w.ir_raw, fs=FS)["spo2"]["percent"]
-    pipe = P.SuGuardPipeline(denoiser=_AlteringDenoiser(red_gain=0.9))
-    shown = pipe.analyze(w.red_raw, w.ir_raw, fs=FS)["spo2"]["percent"]
-    assert classical is not None and shown is not None and abs(shown - classical) < 0.2
-    monkeypatch.setattr(P, "CLEAN_MAX_MOTION", -1.0)
-    biased = pipe.analyze(w.red_raw, w.ir_raw, fs=FS)["spo2"]["percent"]
-    assert biased is not None and biased > classical + 2.0                      # the failure it prevents
+    assert classical is not None
+    slight = P.SuGuardPipeline(denoiser=_AlteringDenoiser(red_gain=0.97))     # within the agreement
+    shown = slight.analyze(w.red_raw, w.ir_raw, fs=FS)["spo2"]["percent"]
+    assert shown is not None and abs(shown - classical) < 0.2                  # the measured value
+    strong = P.SuGuardPipeline(denoiser=_AlteringDenoiser(red_gain=0.9))      # about 5 points apart
+    res = strong.analyze(w.red_raw, w.ir_raw, fs=FS)["spo2"]
+    assert res["percent"] is None and res["reason"] == "red_denoiser_mismatch"
+    monkeypatch.setattr(P, "CLEAN_MAX_MOTION", -1.0)                          # the network's value instead
+    biased = slight.analyze(w.red_raw, w.ir_raw, fs=FS)["spo2"]["percent"]
+    assert biased is not None and biased > classical + 1.0
+    assert strong.analyze(w.red_raw, w.ir_raw, fs=FS)["spo2"]["percent"] is None

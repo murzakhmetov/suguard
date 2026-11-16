@@ -16,7 +16,8 @@ the measured pulse is strong enough, the denoiser flags at most
 ``MAX_ARTIFACT_FRACTION`` of the window as motion, its output is supported
 by the measurement (a denoiser can draw a pulse that is not there, so its
 output cannot vouch for itself), the red/IR ratio is physiological, and
-every quality component passes. Where the denoiser flags (almost) nothing
+every quality component passes; SpO2 also needs the measured and the denoised
+signals to agree on it (``SPO2_AGREEMENT``). Where the denoiser flags (almost) nothing
 (``CLEAN_MAX_MOTION``), the measured signals are the reference: SpO2 and the
 red/IR checks (the arterial-ratio rule, which withholds the heart rate too,
 the red/IR correlation and the ratio stability) use them, and so does the
@@ -77,10 +78,19 @@ MIN_SUPPORT_SAMPLES = 10
 # locked to the heartbeat (venous pulsation, a cadence locked to the pulse)
 # that the network partly removes stays in the measured red/IR and pulls SpO2
 # down (red team, previous server network: 69 vs 50 of ~195 windows off by
-# more than 4 points with strong venous pulsation). Measured SpO2 in every
+# more than 4 points with strong venous pulsation); SPO2_AGREEMENT withholds
+# most of those where the network disagrees. Measured SpO2 in every
 # window was worse under motion (server, 600 gated windows: mean error 0.20 ->
 # 0.28 points), so the network's red/IR are kept there.
 CLEAN_MAX_MOTION = 0.2
+# Wherever the denoiser is used, SpO2 is shown only if the measured red/IR (weighted by its mask)
+# and its output give SpO2 values within this many points of each other: where they disagree,
+# one of them carries something the other does not (red amplified or attenuated by the network,
+# a non-arterial component locked to the heartbeat), and it cannot be told which. v5 networks,
+# server / bracelet, values off by more than 4 points without / with this check: venous pulsation
+# 65 / 58 and 59 / 58, a cadence locked to the pulse 17 / 14 and 15 / 12, 150-210 bpm at low SpO2
+# 0 / 0 and 7 / 1; SpO2 values on the 600 gated windows 318 -> 316 and 296 -> 293.
+SPO2_AGREEMENT = 2.0
 # Shorter windows go through the classical path (the denoiser saw 10.24 s).
 MIN_DENOISER_S = 6.0
 MAX_NONFINITE_FRACTION = 0.02
@@ -178,6 +188,11 @@ def vitals_from_signals(ir_bv: np.ndarray, red_bv: np.ndarray, sensor: SensorSta
                        rate_reference=ir_bv if clean else None, ratio_reference=ratio_reference)
     support_ir = input_support(ir_bv, c_ir, p_art) if denoised else None
     support_red = input_support(red_bv, c_red, p_art) if denoised else None
+    # The SpO2 of the other source (SPO2_AGREEMENT): the denoised one in a clean window, else the measured one.
+    agree = True
+    if denoised:
+        other = estimate_spo2(*((c_red, c_ir) if clean else (red_bv, ir_bv)), weights=1 - p_art, **coeffs)
+        agree = sp.spo2 is not None and other.spo2 is not None and abs(sp.spo2 - other.spo2) <= SPO2_AGREEMENT
 
     weak = not (pi_in >= MIN_INPUT_PI)      # also when the measured signal is not finite
     mismatch = denoised and not support_ir.ok
@@ -195,7 +210,7 @@ def vitals_from_signals(ir_bv: np.ndarray, red_bv: np.ndarray, sensor: SensorSta
     reliable = bool(q.usable and q.motion_fraction <= MAX_ARTIFACT_FRACTION
                     and not (weak or mismatch or non_arterial))
 
-    red_supported = not denoised or support_red.ok
+    red_supported = not denoised or (support_red.ok and agree)
     spo2_ok = bool(reliable and q.usable_spo2 and red_supported and sp.spo2 is not None)
     spo2_reason = None
     if reliable and not spo2_ok:

@@ -23,6 +23,8 @@ static_assert(SG_MAX_ARTIFACT_FRACTION == 0x1.6666666666666p-1,
               "SG_MAX_ARTIFACT_FRACTION in sg_core.h differs from pipeline.MAX_ARTIFACT_FRACTION = 0.7");
 static_assert(SG_CLEAN_MAX_MOTION == 0x1.999999999999ap-3,
               "SG_CLEAN_MAX_MOTION in sg_core.h differs from pipeline.CLEAN_MAX_MOTION = 0.2");
+static_assert(SG_SPO2_AGREEMENT == 0x1p+1,
+              "SG_SPO2_AGREEMENT in sg_core.h differs from pipeline.SPO2_AGREEMENT = 2.0");
 static_assert(SG_MIN_INPUT_PI == 0x1.eb851eb851eb8p-6,
               "SG_MIN_INPUT_PI in sg_core.h differs from pipeline.MIN_INPUT_PI = 0.03");
 static_assert(SG_MIN_SUPPORT_CORR == 0x1.6666666666666p-1,

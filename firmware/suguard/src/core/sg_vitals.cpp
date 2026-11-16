@@ -678,7 +678,11 @@ void sg_vitals_from_signals(const double* ir_bv, const double* red_bv, const dou
     out->support_red_corr = red.corr;
     out->support_red_gain = red.gain;
     mismatch = !supported(ir);
-    red_supported = supported(red);
+    // pipeline.SPO2_AGREEMENT: the other source's SpO2 (the denoised one in a clean window, else the
+    // measured one) must exist and lie within SG_SPO2_AGREEMENT points of the one shown.
+    const Spo2 other = clean ? estimate_spo2(c_red, c_ir, p_art, n, w) : estimate_spo2(red_bv, ir_bv, p_art, n, w);
+    const bool agree = sp.has_spo2 && other.has_spo2 && fabs(sp.spo2 - other.spo2) <= SG_SPO2_AGREEMENT;
+    red_supported = supported(red) && agree;
   }
   const bool weak = !(out->pi_in >= SG_MIN_INPUT_PI);   // also when the measured signal is not finite
   // Both wavelengths carry the same waveform, but in a ratio no arterial blood produces.

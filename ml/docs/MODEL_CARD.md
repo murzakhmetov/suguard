@@ -21,7 +21,7 @@ networks shipped before, "v4" and "v2", are scored with the same code and data i
 | Input | (2, 512): IR and red blood-volume signals, 10.24 s at 50 Hz, both divided by the IR standard deviation (one common scale, so the red/IR ratio is preserved) | same |
 | Output | clean IR, clean red, artefact logit per sample | same |
 | Training | 16,000 steps of 128 windows, best at step 15,000; validation mask AUC 0.9956 (`denoiser_train.json`) | 16,000 steps, best at the last step; validation mask AUC 0.9934 (`denoiser_edge_train.json`) |
-| Cost | — | 9.19 million multiply-accumulates per window, 45,056 bytes of working memory, 94,216 bytes of weights; whole pipeline 132 million RV32IMC instructions per window (median; 163 million at most), counted under QEMU, not yet timed on the chip |
+| Cost | — | 9.19 million multiply-accumulates per window, 45,056 bytes of working memory, 94,216 bytes of weights; whole pipeline 146 million RV32IMC instructions per window (median; 176 million at most), counted under QEMU, not yet timed on the chip |
 | Integer vs. float version of the same network | — | waveform SNR 41.4 dB, artefact decisions agree on 99.81 % of samples, no output saturation (`models/metrics/denoiser_edge_export.json`) |
 
 **Training data.** 200,000 windows from a simulator of the MAX30102 (`suguard_ml/synth/ppg.py`,
@@ -119,10 +119,11 @@ mean error and no error above 10 bpm; windows that are mostly motion get no valu
   and below about 38 bpm the band-pass filters make even the measured spectrum agree with a
   doubled count (section 3). Next step: peak-aligned beat templates and an amplitude-aware peak
   selection that still keeps premature beats.
-* SpO2 from the measured signals in clean windows (section 2) trades the networks' high bias at
-  fast rates (which hides a desaturation) for a low bias where a non-arterial component is locked to
-  the heartbeat (venous pulsation, a cadence locked to the pulse), which the network partly removes
-  (README, "Known hard cases").
+* SpO2 needs the measured signals and the network's output to agree within 2 points (section 2).
+  That removes most of the networks' high bias at fast rates (which hides a desaturation) and part of
+  the low bias where a non-arterial component is locked to the heartbeat (venous pulsation, a
+  cadence locked to the pulse), at the cost of withholding more SpO2 values in exactly those
+  windows; what remains wrong is where both sources share the error (README, "Known hard cases").
 
 ## 2. The decision to report a value
 
@@ -143,8 +144,12 @@ heart rate) only if all of this holds:
 **SpO2** additionally needs two more quality components — the stability of the red/IR ratio over
 the window and the red/IR correlation (`red_ir_inconsistent`) — a red/IR correlation of at least
 0.9 in the cardiac band (`spo2_low_red_ir_agreement`) and the same input-support check on the red
-channel (`red_denoiser_mismatch`). So a still but weakly perfused wrist can give a heart rate and
-no SpO2. **Pulse-shape features** (for a future glucose model) are produced only for SpO2-grade
+channel (`red_denoiser_mismatch`), and wherever the network is used the measured red/IR (weighted
+by its mask) and its output must give SpO2 values within 2 points of each other
+(`red_denoiser_mismatch` too): where they disagree, one of them carries something the other does
+not — red amplified or attenuated by the network, a non-arterial component locked to the
+heartbeat — and it cannot be told which. So a still but weakly perfused wrist can give a heart rate
+and no SpO2. **Pulse-shape features** (for a future glucose model) are produced only for SpO2-grade
 windows.
 
 An IR level above 90 % of full scale adds the note `led_current_too_high`; it does not reject a

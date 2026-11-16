@@ -205,6 +205,7 @@ def render() -> str:
     check("SG_FFT_N", NFFT, "the default nfft of beats.spectral_hr")
     check("SG_MAX_ARTIFACT_FRACTION", pipeline.MAX_ARTIFACT_FRACTION, "pipeline.MAX_ARTIFACT_FRACTION")
     check("SG_CLEAN_MAX_MOTION", pipeline.CLEAN_MAX_MOTION, "pipeline.CLEAN_MAX_MOTION")
+    check("SG_SPO2_AGREEMENT", pipeline.SPO2_AGREEMENT, "pipeline.SPO2_AGREEMENT")
     check("SG_MIN_INPUT_PI", pipeline.MIN_INPUT_PI, "pipeline.MIN_INPUT_PI")
     check("SG_MIN_SUPPORT_CORR", pipeline.MIN_SUPPORT_CORR, "pipeline.MIN_SUPPORT_CORR")
     check("SG_SUPPORT_GAIN_MIN", pipeline.SUPPORT_GAIN_RANGE[0], "pipeline.SUPPORT_GAIN_RANGE[0]")

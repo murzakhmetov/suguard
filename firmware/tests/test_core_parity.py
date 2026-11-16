@@ -284,6 +284,13 @@ def edge_cases() -> list[Case]:
         Case("raw_ir_not_finite_given_signals", clean.red_raw, with_nan(clean.ir_raw.astype(float)),
              denoised=(ir_bv, red_bv, np.zeros(n)), measured=(ir_bv, red_bv)),
     ]
+    # pipeline.SPO2_AGREEMENT, at 85 % SpO2 where the curve is steep: red amplified by the network by 15 %
+    # (SpO2 several points apart: withheld, in a clean and in a flagged window) or by 2 % (shown).
+    low = simulate_window(7_200_085, kinds=[], pi_ir=0.02, hr_bpm=72.0, spo2=85.0)
+    l_ir, l_red, _ = as_denoised(low, np.zeros(n))
+    for name, gain, p_art in (("15pct_clean", 1.15, np.zeros(n)), ("15pct_flagged", 1.15, np.where(t < 0.3 * t[-1], 1.0, 0.0)),
+                              ("2pct_clean", 1.02, np.zeros(n))):
+        cases.append(Case(f"denoised_red_amplified_{name}", low.red_raw, low.ir_raw, denoised=(l_ir, gain * l_red, p_art)))
     # An exact 20 % (80 of 400 samples) is clean, 81 is not.
     win400 = simulate_window(7_200_400, n=400, kinds=[], pi_ir=0.02, hr_bpm=72.0)
     doubled400 = np.sin(2 * np.pi * 2.4 * np.arange(400) / FS)

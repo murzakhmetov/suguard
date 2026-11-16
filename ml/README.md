@@ -166,6 +166,27 @@ blood could produce, unless stated):
 * **Fast rates at low SpO2**: the networks attenuate red at 150–210 bpm, so their SpO2 reads high,
   which hides a desaturation. In windows the network calls clean, SpO2 now comes from the measured
   signals; values off by more than 4 points: server 0 of 121 (v4: 4), bracelet 7 of 119 (v4: 5).
+* **SpO2 from two sources that must agree.** A non-arterial component locked to the heartbeat
+  (venous pulsation under a tight strap, a cadence locked to the pulse), which the network partly
+  removes but rarely flags, stays in the measured red/IR and pulls their SpO2 down; a network that
+  amplifies or attenuates red moves its own. SpO2 is therefore shown only when the measured and the
+  network's values agree within 2 points. Measured on the red team's sets with the v5 networks
+  (values off by more than 4 points without / with the agreement; server, then bracelet): venous
+  pulsation at 0.3–0.6 times the arterial pulse 65 / 58 and 59 / 58 of about 160–180 values,
+  a cadence locked to the pulse 17 / 14 and 15 / 12, the fast low-SpO2 set 0 / 0 and 7 / 1 — at the
+  cost of 0.6 % and 1 % of the SpO2 values on the 600 gated windows. What remains wrong is where
+  both sources carry the same error; these sets are not in `hard_cases` yet.
+* **Fast breathing** (27–45 breaths a minute) swinging the baseline is counted as the pulse by the
+  classical path (11 of its 20 values are the breathing rate); the networks rarely report these windows.
+* **Bigeminy with weak premature beats** is reported at half the beat rate when the premature beats
+  are too weak to be detected (the rate of the pulses that reach the wrist, which is what a pulse
+  oximeter shows too).
+* **Slow, double-humped pulses**: below about 38 bpm the band-pass filters weaken the fundamental so
+  much that a pulse whose 2nd harmonic is stronger than the fundamental can be counted at twice
+  its rate on every path (1 window per network here; v4: 6 and 5).
+* **Fast rates at low SpO2**: the networks attenuate red at 150–210 bpm, so their SpO2 reads high,
+  which hides a desaturation. In windows the network calls clean, SpO2 now comes from the measured
+  signals; values off by more than 4 points: server 0 of 121 (v4: 4), bracelet 7 of 119 (v4: 5).
 * **The price of measured SpO2 in clean windows**: a non-arterial component locked to the heartbeat
   (venous pulsation under a tight strap, a cadence locked to the pulse), which the network partly
   removes but rarely flags, stays in the measured red/IR and pulls SpO2 down. The red team measured
@@ -279,6 +300,8 @@ flowchart LR
   reference: SpO2 comes from the measured red/IR, and the beat rate must agree with the measured
   IR's spectrum. A network can make a clean measurement look different from what it is: it
   attenuated red at fast rates and suppressed the fundamental of slow, double-humped pulses.
+* Wherever the network is used, SpO2 is shown only if the measured red/IR and the network's output
+  give values within 2 points of each other.
 * Separate gates: heart rate needs a trustworthy rhythm; SpO2 and the glucose features also need
   both wavelengths to agree.
 * `suguard_ml.pipeline.vitals_from_signals` is the single definition of "reliable". The firmware's
