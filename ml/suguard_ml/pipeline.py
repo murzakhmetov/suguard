@@ -158,7 +158,7 @@ def vitals_from_signals(ir_bv: np.ndarray, red_bv: np.ndarray, sensor: SensorSta
     support_ir = input_support(ir_bv, c_ir, p_art) if denoised else None
     support_red = input_support(red_bv, c_red, p_art) if denoised else None
 
-    weak = pi_in < MIN_INPUT_PI
+    weak = not (pi_in >= MIN_INPUT_PI)      # also when the measured signal is not finite
     mismatch = denoised and not support_ir.ok
     # Both wavelengths carry the same waveform, but in a ratio no arterial
     # blood produces: motion or ambient light common to both LEDs (or the two

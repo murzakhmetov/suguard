@@ -54,6 +54,14 @@ static double median_of(const double* x, int n, double* tmp) {
   return sg_median_sorted(tmp, n);
 }
 
+// np.median(x) including its NaN propagation (sg_sort would put a NaN somewhere and ignore it).
+static double median_nan(const double* x, int n, double* tmp) {
+  for (int i = 0; i < n; ++i) {
+    if (isnan(x[i])) return NAN;
+  }
+  return median_of(x, n, tmp);
+}
+
 // ---------------------------------------------------------------------------
 // Sensor state and preprocessing
 // ---------------------------------------------------------------------------
@@ -66,8 +74,8 @@ void sg_sensor_state(const double* red_raw, const double* ir_raw, int n, double 
     out->reasons = SG_R_NO_CONTACT;
     return;
   }
-  out->ir_dc = median_of(ir_raw, n, w->c);
-  out->red_dc = median_of(red_raw, n, w->c);
+  out->ir_dc = median_nan(ir_raw, n, w->c);     // a NaN count means no contact, as in Python
+  out->red_dc = median_nan(red_raw, n, w->c);
   int saturated = 0;
   for (int i = 0; i < n; ++i) {
     saturated += ir_raw[i] >= SG_SATURATION_LEVEL || red_raw[i] >= SG_SATURATION_LEVEL ||
@@ -101,6 +109,9 @@ void sg_preprocess(const double* raw, int n, double* bv_out, SgWork* w) {
 // (np.percentile(bv, 97) - np.percentile(bv, 3)) * 100
 double sg_perfusion_index(const double* bv, int n, SgWork* w) {
   if (!valid_length(n)) return 0.0;
+  for (int i = 0; i < n; ++i) {
+    if (isnan(bv[i])) return NAN;   // np.percentile propagates NaN
+  }
   memcpy(w->c, bv, (size_t)n * sizeof(double));
   sg_sort(w->c, n);
   return (sg_percentile_sorted(w->c, n, 97) - sg_percentile_sorted(w->c, n, 3)) * 100.0;
@@ -515,7 +526,9 @@ static double geometric_mean(const double* comp, unsigned mask) {
   return exp(sg_mean(logs, count));
 }
 
-// quality.assess_quality. `spec` is spectral_hr(ir); the beats are in w->beats.
+// quality.assess_quality. `spec` is spectral_hr(ir), except in a clean window, where its
+// validity and rate are those of the measured IR (spectral_reference) and only the purity is
+// that of `ir`; the beats are in w->beats.
 static void assess_quality(const double* ir, const double* red, const double* p_art, int n,
                            const SgSensorState* sensor, double red_ir_corr, const SpectralHr* spec,
                            SgQuality* q, SgWork* w) {
@@ -658,7 +671,7 @@ void sg_vitals_from_signals(const double* ir_bv, const double* red_bv, const dou
     mismatch = !supported(ir);
     red_supported = supported(red);
   }
-  const bool weak = out->pi_in < SG_MIN_INPUT_PI;
+  const bool weak = !(out->pi_in >= SG_MIN_INPUT_PI);   // also when the measured signal is not finite
   // Both wavelengths carry the same waveform, but in a ratio no arterial blood produces.
   const bool non_arterial = sp.reason == SG_SPO2_R_OUT_OF_RANGE;
 

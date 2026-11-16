@@ -23,7 +23,8 @@ struct SgBeats {
 struct SgWork {
   float* fft;                                  // 2 * SG_FFT_N floats owned by the caller (sg_work_init)
   double ext[SG_WINDOW + 2 * SG_MAX_PADLEN];   // sg_filtfilt: the padded signal
-  double pulse[SG_WINDOW];                     // 0.5-8 Hz band of the IR signal: beats and spectrum
+  double pulse[SG_WINDOW];                     // 0.5-8 Hz band of the IR signal: beats and spectrum (then, in
+                                               // a clean window, of the measured IR for its spectrum)
   // General-purpose arrays; each function names the role it gives them.
   double a[SG_WINDOW];
   double b[SG_WINDOW];

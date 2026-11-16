@@ -194,3 +194,23 @@ def test_like_for_like_comparison_is_per_vital():
     assert summarize_errors(a, hr_true, spo2_true)["spo2"] == {
         "n": 4, "n_scored": 2, "abstain_rate": 0.5, "mae": 0.0, "median": 0.0, "p90": 0.0,
         "within_tol_counting_abstentions": 0.5}
+
+
+def test_spectral_rate_of_a_signal_that_is_not_finite_is_none():
+    """A NaN or inf sample spreads through the band-pass; there is no spectral rate (as in the C++ twin),
+    and the reliability decision treats the measured pulse as too weak instead of failing."""
+    from suguard_ml.pipeline import vitals_from_signals
+    from suguard_ml.signal.beats import spectral_hr
+    from suguard_ml.signal.filters import preprocess
+    from suguard_ml.signal.quality import sensor_state
+
+    w = simulate_window(5, kinds=[], hr_bpm=70.0, pi_ir=0.01)
+    ir, red = preprocess(w.ir_raw, FS)[0], preprocess(w.red_raw, FS)[0]
+    for bad in (np.nan, np.inf):
+        x = ir.copy()
+        x[100] = bad
+        assert spectral_hr(x, FS) == (None, 0.0)
+        v = vitals_from_signals(x, red, sensor_state(w.red_raw, w.ir_raw), ir, red, np.zeros(ir.size))
+        assert not v.reliable
+        # A NaN makes the measured perfusion NaN, which counts as too weak; one inf sample leaves it finite.
+        assert ("weak_pulse" in v.reasons) == bool(np.isnan(bad))

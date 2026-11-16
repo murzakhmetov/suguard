@@ -78,6 +78,7 @@ class Case:
     red: np.ndarray                 # raw counts
     ir: np.ndarray
     denoised: tuple | None = None   # (c_ir, c_red, p_art) as a denoiser would return them for this window
+    measured: tuple | None = None   # (ir_bv, red_bv) given instead of preprocessed from the raw counts (needs denoised)
 
 
 # --------------------------------------------------------------------------
@@ -116,8 +117,11 @@ def reference(case: Case) -> dict:
     with warnings.catch_warnings(), np.errstate(all="ignore"):
         warnings.simplefilter("ignore")           # degenerate windows make numpy complain
         sensor = sensor_state(case.red, case.ir)
-        ir_bv, _ = preprocess(case.ir, FS)
-        red_bv, _ = preprocess(case.red, FS)
+        if case.measured is not None:
+            ir_bv, red_bv = (np.asarray(a, dtype=np.float64) for a in case.measured)
+        else:
+            ir_bv, _ = preprocess(case.ir, FS)
+            red_bv, _ = preprocess(case.red, FS)
         v = vitals_from_signals(ir_bv, red_bv, sensor, *(case.denoised or ()))
     q = v.quality
     assert v.spo2_ok == (v.spo2 is not None) and (v.hr_bpm is not None or not v.reliable)
@@ -205,6 +209,14 @@ def edge_cases() -> list[Case]:
         return p
 
     half_rate = tone(1.8) + 0.35 * tone(0.9)          # a pulse and arm swing at half its rate
+
+    def given(name, m_ir, m_red, c_ir, c_red, p_art):
+        return Case(name, clean.red_raw, clean.ir_raw, denoised=(c_ir, c_red, p_art), measured=(m_ir, m_red))
+
+    def with_nan(x):
+        x = np.array(x, dtype=np.float64)
+        x[100] = np.nan
+        return x
     ir_bv, red_bv, _ = as_denoised(clean, np.zeros(n))
     doublet = np.zeros(n)             # +1, -1: its spectrum rises monotonically through the cardiac band
     doublet[255:257] = 1.0, -1.0
@@ -242,10 +254,12 @@ def edge_cases() -> list[Case]:
         with_signals("red_signal_not_finite", ir_bv, np.where(np.arange(n) == 100, np.nan, red_bv)),
         with_signals("r_below_plausible_range", ir_bv, 0.1 * ir_bv),
         with_signals("r_below_curve_vertex", ir_bv, 0.3 * ir_bv),
-        # pipeline.CLEAN_MAX_MOTION: 102 of 512 samples flagged is clean, 103 is not.
-        Case("flagged_at_clean_limit", clean.red_raw, clean.ir_raw, denoised=as_denoised(clean, flagged_share(102))),
-        Case("flagged_just_above_clean_limit", clean.red_raw, clean.ir_raw,
-             denoised=as_denoised(clean, flagged_share(103))),
+        # pipeline.CLEAN_MAX_MOTION: 102 of 512 samples flagged is clean, 103 is not. The denoised beats are at
+        # twice the measured rate, so the branch shows: only the clean window fails the rate agreement.
+        Case("flagged_102_of_512_denoised_doubled", clean.red_raw, clean.ir_raw,
+             denoised=(0.01 * tone(2.4), 0.006 * tone(2.4), flagged_share(102))),
+        Case("flagged_103_of_512_denoised_doubled", clean.red_raw, clean.ir_raw,
+             denoised=(0.01 * tone(2.4), 0.006 * tone(2.4), flagged_share(103))),
         # Clean window, denoised beats at twice the measured rate: the measured spectrum disagrees.
         with_signals("denoised_at_twice_the_measured_rate", 0.01 * tone(2.4), 0.006 * tone(2.4)),
         with_signals_flagged("flagged_denoised_at_twice_the_rate", 0.01 * tone(2.4), 0.006 * tone(2.4)),
@@ -253,7 +267,22 @@ def edge_cases() -> list[Case]:
         with_signals_flagged("flagged_pulse_with_half_rate_component", 0.01 * half_rate, 0.006 * half_rate),
         Case("classical_pulse_with_half_rate_motion", counts(70_000 * (1 - 0.003 * tone(1.8)) * (1 + 0.001 * tone(0.9))),
              counts(100_000 * (1 - 0.005 * tone(1.8)) * (1 + 0.00175 * tone(0.9)))),
+        # Measured signals given directly (core_cli mode 2): inputs raw counts cannot produce.
+        given("measured_ir_zeros_clean", np.zeros(n), red_bv, ir_bv, red_bv, np.zeros(n)),
+        given("measured_ir_not_finite_clean", with_nan(ir_bv), red_bv, ir_bv, red_bv, np.zeros(n)),
+        given("measured_ir_not_finite_flagged", with_nan(ir_bv), red_bv, ir_bv, red_bv, np.where(t < 0.3 * t[-1], 1.0, 0.0)),
+        given("measured_red_not_finite_clean", ir_bv, with_nan(red_bv), ir_bv, red_bv, np.zeros(n)),
+        Case("raw_ir_not_finite_given_signals", clean.red_raw, with_nan(clean.ir_raw.astype(float)),
+             denoised=(ir_bv, red_bv, np.zeros(n)), measured=(ir_bv, red_bv)),
     ]
+    # An exact 20 % (80 of 400 samples) is clean, 81 is not.
+    win400 = simulate_window(7_200_400, n=400, kinds=[], pi_ir=0.02, hr_bpm=72.0)
+    doubled400 = np.sin(2 * np.pi * 2.4 * np.arange(400) / FS)
+    for k in (80, 81):
+        p = np.zeros(400)
+        p[:k] = 0.9
+        cases.append(Case(f"flagged_{k}_of_400_denoised_doubled", win400.red_raw, win400.ir_raw,
+                          denoised=(0.01 * doubled400, 0.006 * doubled400, p)))
     for length in (100, 256, 400):
         for seed, kinds in ((7_300_000, []), (7_300_001, None)):
             win = simulate_window(seed + length, n=length, kinds=kinds)
@@ -271,8 +300,10 @@ def edge_cases() -> list[Case]:
 def write_vectors(path, cases):
     parts = [[len(cases)]]
     for case in cases:
-        parts.append([case.ir.size, 0 if case.denoised is None else 1, FINGER_IR_DC_MIN])
-        parts += [case.red, case.ir, *(case.denoised or ())]
+        assert case.measured is None or case.denoised is not None
+        mode = 0 if case.denoised is None else (1 if case.measured is None else 2)
+        parts.append([case.ir.size, mode, FINGER_IR_DC_MIN])
+        parts += [case.red, case.ir, *(case.measured or ()), *(case.denoised or ())]
     np.concatenate([np.asarray(p, dtype="<f8").ravel() for p in parts]).tofile(path)
 
 
@@ -337,6 +368,15 @@ def rel_err(a, b):
     return abs(a - b) / max(abs(a), abs(b))
 
 
+def array_err(a, b):
+    """Largest absolute difference of two signals; infinite unless their NaNs sit at the same samples."""
+    a, b = np.asarray(a), np.asarray(b)
+    if not np.array_equal(np.isnan(a), np.isnan(b)):
+        return math.inf
+    fin = np.isfinite(a) & np.isfinite(b)
+    return float(np.max(np.abs(a[fin] - b[fin]))) if fin.any() else 0.0
+
+
 def abs_err(a, b):
     return 0.0 if a == b or (math.isnan(a) and math.isnan(b)) else abs(a - b)
 
@@ -357,7 +397,7 @@ def compare(cases, results, label):
             if got[key] != ref[key]:
                 problems.append(f"{case.name}: {key} = {got[key]:g}, reference {ref[key]}")
         for key in ("ir_bv", "red_bv"):
-            err = float(np.max(np.abs(got[key] - ref[key])))
+            err = array_err(got[key], ref[key])
             track("bv", err, f"{case.name} {key}")
             if not err <= BV_ABS:
                 problems.append(f"{case.name}: {key} differs by {err:.3g}")
@@ -575,7 +615,7 @@ def test_rv32_matches_host(cli, build_dir):
             if (key in EXACT and t[key] != h[key]) or not err <= 1e-12:
                 problems.append(f"{case.name}: {key} = {t[key]!r} on RV32, {h[key]!r} on the host")
         for key in ("ir_bv", "red_bv"):
-            err = float(np.max(np.abs(t[key] - h[key]), initial=0.0))
+            err = array_err(t[key], h[key])
             if err > worst[0]:
                 worst = (err, f"{case.name} {key}")
             if not err <= 1e-12:

@@ -10,13 +10,16 @@
 // Windows
 //   in :  n_cases, then for each case
 //           n, mode, ir_dc_min, red_raw[n], ir_raw[n]
-//           and for mode 1 also c_ir[n], c_red[n], p_art[n]
+//           for mode 1 also c_ir[n], c_red[n], p_art[n]
+//           for mode 2 also ir_bv[n], red_bv[n], c_ir[n], c_red[n], p_art[n]
 //   out:  n_cases, n_fields, sg_work_size(), then for each case
 //           the scalar outputs in --fields order, ir_bv[n], red_bv[n]
-//   Every case computes the sensor state and both preprocessed signals from
-//   the raw counts. The vitals then come from
+//   Every case computes the sensor state from the raw counts, and in modes 0
+//   and 1 both preprocessed signals as well. The vitals then come from
 //     mode 0 (classical): the preprocessed signals alone
 //     mode 1 (denoised) : the preprocessed signals and the given c_ir, c_red and p_art
+//     mode 2 (given)    : the given measured signals ir_bv, red_bv and c_ir, c_red, p_art
+//                         (inputs the raw counts cannot produce, e.g. a non-finite measured signal)
 //
 // Building blocks (--dsp)
 //   in :  for each call  op (DspOp), n, m, param, a[n], b[m]
@@ -105,17 +108,20 @@ static bool run_case(FILE* in, FILE* out) {
   const int n = (int)head[0];
   const int mode = (int)head[1];
   const double ir_dc_min = head[2];
-  if (n < 0 || n > MAX_N || (mode != 0 && mode != 1)) return false;
+  if (n < 0 || n > MAX_N || mode < 0 || mode > 2) return false;
   if (!read_doubles(in, red_raw, n) || !read_doubles(in, ir_raw, n)) return false;
-  if (mode == 1 && !(read_doubles(in, c_ir, n) && read_doubles(in, c_red, n) && read_doubles(in, p_art, n))) {
+  if (mode == 2 && !(read_doubles(in, ir_bv, n) && read_doubles(in, red_bv, n))) return false;
+  if (mode >= 1 && !(read_doubles(in, c_ir, n) && read_doubles(in, c_red, n) && read_doubles(in, p_art, n))) {
     return false;
   }
 
   SgSensorState sensor;
   SgVitals v;
   sg_sensor_state(red_raw, ir_raw, n, ir_dc_min, &sensor, &work);
-  sg_preprocess(ir_raw, n, ir_bv, &work);
-  sg_preprocess(red_raw, n, red_bv, &work);
+  if (mode < 2) {
+    sg_preprocess(ir_raw, n, ir_bv, &work);
+    sg_preprocess(red_raw, n, red_bv, &work);
+  }
   if (mode == 0) {
     sg_vitals_from_signals(ir_bv, red_bv, NULL, NULL, NULL, n, &sensor, &v, &work);
   } else {

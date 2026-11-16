@@ -191,7 +191,7 @@ def spectral_hr(bv: np.ndarray, fs: float = FS, prior_bpm: float | None = None,
     the heart rate through short periods of motion.
     """
     x = bandpass(np.asarray(bv, dtype=np.float64), fs, 0.5, 8.0)
-    if x.size < 8 or not np.any(x):
+    if x.size < 8 or not np.all(np.isfinite(x)) or not np.any(x):    # a non-finite sample spreads through the filter
         return None, 0.0
     w = signal.windows.hann(x.size)
     spec = np.abs(np.fft.rfft((x - x.mean()) * w, n=max(nfft, x.size))) ** 2
