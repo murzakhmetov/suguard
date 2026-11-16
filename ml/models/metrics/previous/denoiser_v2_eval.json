@@ -521,19 +521,27 @@
       "by_motion_share": {
         "0-0.05": {
           "windows": 139,
-          "hr_coverage": 0.935251798561151
+          "hr_coverage": 0.935251798561151,
+          "hr_errors_over_10bpm": 0,
+          "spo2_errors_over_4pts": 0
         },
         "0.05-0.3": {
           "windows": 90,
-          "hr_coverage": 0.4444444444444444
+          "hr_coverage": 0.4444444444444444,
+          "hr_errors_over_10bpm": 0,
+          "spo2_errors_over_4pts": 0
         },
         "0.3-0.7": {
           "windows": 131,
-          "hr_coverage": 0.183206106870229
+          "hr_coverage": 0.183206106870229,
+          "hr_errors_over_10bpm": 1,
+          "spo2_errors_over_4pts": 0
         },
         "0.7-1.01": {
           "windows": 240,
-          "hr_coverage": 0.10416666666666667
+          "hr_coverage": 0.10416666666666667,
+          "hr_errors_over_10bpm": 6,
+          "spo2_errors_over_4pts": 10
         }
       }
     },
@@ -565,19 +573,27 @@
       "by_motion_share": {
         "0-0.05": {
           "windows": 139,
-          "hr_coverage": 0.6115107913669064
+          "hr_coverage": 0.6115107913669064,
+          "hr_errors_over_10bpm": 0,
+          "spo2_errors_over_4pts": 0
         },
         "0.05-0.3": {
           "windows": 90,
-          "hr_coverage": 0.6
+          "hr_coverage": 0.6,
+          "hr_errors_over_10bpm": 0,
+          "spo2_errors_over_4pts": 0
         },
         "0.3-0.7": {
           "windows": 131,
-          "hr_coverage": 0.48854961832061067
+          "hr_coverage": 0.48854961832061067,
+          "hr_errors_over_10bpm": 0,
+          "spo2_errors_over_4pts": 0
         },
         "0.7-1.01": {
           "windows": 240,
-          "hr_coverage": 0.008333333333333333
+          "hr_coverage": 0.008333333333333333,
+          "hr_errors_over_10bpm": 0,
+          "spo2_errors_over_4pts": 0
         }
       }
     }
@@ -1550,133 +1566,165 @@
     "classical": {
       "steady_periodic_motion_no_pulse": {
         "windows": 150,
-        "heart_rate_reported": 148,
-        "heart_rate_wrong": 148,
-        "spo2_reported": 148,
-        "spo2_wrong": 148,
+        "heart_rate_reported": 146,
+        "heart_rate_wrong": 146,
+        "spo2_reported": 146,
+        "spo2_wrong": 146,
         "spo2_mean_signed_error": null
       },
       "pulse_with_steady_motion_at_another_rate": {
         "windows": 150,
-        "heart_rate_reported": 88,
-        "heart_rate_wrong": 88,
-        "spo2_reported": 88,
-        "spo2_wrong": 41,
-        "spo2_mean_signed_error": -2.2474867553006828
+        "heart_rate_reported": 92,
+        "heart_rate_wrong": 92,
+        "spo2_reported": 92,
+        "spo2_wrong": 35,
+        "spo2_mean_signed_error": -1.6138874720530898
       },
       "pulse_with_motion_at_half_the_rate": {
         "windows": 150,
-        "heart_rate_reported": 41,
-        "heart_rate_wrong": 37,
-        "spo2_reported": 41,
-        "spo2_wrong": 6,
-        "spo2_mean_signed_error": -0.22048864981678315
+        "heart_rate_reported": 37,
+        "heart_rate_wrong": 34,
+        "spo2_reported": 37,
+        "spo2_wrong": 8,
+        "spo2_mean_signed_error": -1.7627055112750902
       },
       "motion_locked_to_the_pulse_rate_venous_ratio": {
         "windows": 150,
-        "heart_rate_reported": 109,
+        "heart_rate_reported": 108,
         "heart_rate_wrong": 0,
-        "spo2_reported": 99,
-        "spo2_wrong": 92,
-        "spo2_mean_signed_error": -11.837333460729177
+        "spo2_reported": 100,
+        "spo2_wrong": 95,
+        "spo2_mean_signed_error": -11.517323477955188
       },
       "fast_breathing": {
         "windows": 150,
-        "heart_rate_reported": 20,
-        "heart_rate_wrong": 11,
-        "spo2_reported": 20,
-        "spo2_wrong": 9,
-        "spo2_mean_signed_error": -5.4015350838288185
+        "heart_rate_reported": 30,
+        "heart_rate_wrong": 14,
+        "spo2_reported": 30,
+        "spo2_wrong": 14,
+        "spo2_mean_signed_error": -5.668426285729778
       },
       "bigeminy_weak_premature_beats": {
         "windows": 150,
-        "heart_rate_reported": 12,
-        "heart_rate_wrong": 5,
-        "spo2_reported": 12,
+        "heart_rate_reported": 11,
+        "heart_rate_wrong": 6,
+        "spo2_reported": 11,
         "spo2_wrong": 0,
-        "spo2_mean_signed_error": 0.21232363186339734
+        "spo2_mean_signed_error": 0.1521956881650549
       },
       "slow_35_45bpm_double_humped": {
         "windows": 150,
-        "heart_rate_reported": 28,
-        "heart_rate_wrong": 1,
-        "spo2_reported": 28,
+        "heart_rate_reported": 37,
+        "heart_rate_wrong": 3,
+        "spo2_reported": 36,
         "spo2_wrong": 0,
-        "spo2_mean_signed_error": 0.03018048017892586
+        "spo2_mean_signed_error": 0.02664763399483287
       },
       "fast_150_210bpm_spo2_82_90": {
         "windows": 150,
-        "heart_rate_reported": 123,
+        "heart_rate_reported": 131,
         "heart_rate_wrong": 0,
-        "spo2_reported": 122,
+        "spo2_reported": 129,
         "spo2_wrong": 0,
-        "spo2_mean_signed_error": 0.439001280257776
+        "spo2_mean_signed_error": 0.6036498138158819
+      },
+      "venous_pulsation_locked_to_the_beat": {
+        "windows": 150,
+        "heart_rate_reported": 148,
+        "heart_rate_wrong": 0,
+        "spo2_reported": 137,
+        "spo2_wrong": 45,
+        "spo2_mean_signed_error": -2.800785700055896
+      },
+      "cadence_locked_to_the_pulse": {
+        "windows": 150,
+        "heart_rate_reported": 107,
+        "heart_rate_wrong": 0,
+        "spo2_reported": 90,
+        "spo2_wrong": 47,
+        "spo2_mean_signed_error": -5.889084927641078
       }
     },
     "denoiser": {
       "steady_periodic_motion_no_pulse": {
         "windows": 150,
-        "heart_rate_reported": 17,
-        "heart_rate_wrong": 17,
-        "spo2_reported": 17,
-        "spo2_wrong": 17,
+        "heart_rate_reported": 23,
+        "heart_rate_wrong": 23,
+        "spo2_reported": 22,
+        "spo2_wrong": 22,
         "spo2_mean_signed_error": null
       },
       "pulse_with_steady_motion_at_another_rate": {
         "windows": 150,
-        "heart_rate_reported": 6,
-        "heart_rate_wrong": 6,
-        "spo2_reported": 6,
-        "spo2_wrong": 2,
-        "spo2_mean_signed_error": -0.743207200628909
+        "heart_rate_reported": 9,
+        "heart_rate_wrong": 8,
+        "spo2_reported": 9,
+        "spo2_wrong": 5,
+        "spo2_mean_signed_error": -1.208871572552607
       },
       "pulse_with_motion_at_half_the_rate": {
         "windows": 150,
-        "heart_rate_reported": 8,
-        "heart_rate_wrong": 0,
-        "spo2_reported": 8,
+        "heart_rate_reported": 7,
+        "heart_rate_wrong": 1,
+        "spo2_reported": 7,
         "spo2_wrong": 0,
-        "spo2_mean_signed_error": -0.05604719181500961
+        "spo2_mean_signed_error": -0.059388682862807025
       },
       "motion_locked_to_the_pulse_rate_venous_ratio": {
         "windows": 150,
-        "heart_rate_reported": 4,
+        "heart_rate_reported": 2,
         "heart_rate_wrong": 0,
         "spo2_reported": 2,
         "spo2_wrong": 2,
-        "spo2_mean_signed_error": -11.311228017676036
+        "spo2_mean_signed_error": -5.892967381037067
       },
       "fast_breathing": {
         "windows": 150,
-        "heart_rate_reported": 3,
+        "heart_rate_reported": 7,
         "heart_rate_wrong": 0,
-        "spo2_reported": 3,
+        "spo2_reported": 7,
         "spo2_wrong": 0,
-        "spo2_mean_signed_error": -0.5384291069873987
+        "spo2_mean_signed_error": -0.06833091055546804
       },
       "bigeminy_weak_premature_beats": {
         "windows": 150,
-        "heart_rate_reported": 12,
-        "heart_rate_wrong": 4,
-        "spo2_reported": 12,
+        "heart_rate_reported": 13,
+        "heart_rate_wrong": 7,
+        "spo2_reported": 13,
         "spo2_wrong": 0,
-        "spo2_mean_signed_error": 0.14850593429513262
+        "spo2_mean_signed_error": 0.13961307427038713
       },
       "slow_35_45bpm_double_humped": {
         "windows": 150,
-        "heart_rate_reported": 0,
+        "heart_rate_reported": 2,
         "heart_rate_wrong": 0,
-        "spo2_reported": 0,
+        "spo2_reported": 2,
         "spo2_wrong": 0,
-        "spo2_mean_signed_error": null
+        "spo2_mean_signed_error": -1.17032222287542
       },
       "fast_150_210bpm_spo2_82_90": {
         "windows": 150,
-        "heart_rate_reported": 22,
+        "heart_rate_reported": 17,
         "heart_rate_wrong": 0,
-        "spo2_reported": 20,
+        "spo2_reported": 14,
         "spo2_wrong": 0,
-        "spo2_mean_signed_error": 1.0214160501780625
+        "spo2_mean_signed_error": 0.8211412730732519
+      },
+      "venous_pulsation_locked_to_the_beat": {
+        "windows": 150,
+        "heart_rate_reported": 32,
+        "heart_rate_wrong": 0,
+        "spo2_reported": 25,
+        "spo2_wrong": 6,
+        "spo2_mean_signed_error": -2.3830120895662743
+      },
+      "cadence_locked_to_the_pulse": {
+        "windows": 150,
+        "heart_rate_reported": 17,
+        "heart_rate_wrong": 0,
+        "spo2_reported": 13,
+        "spo2_wrong": 1,
+        "spo2_mean_signed_error": 0.06762388440616007
       }
     }
   }

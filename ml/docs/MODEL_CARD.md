@@ -50,9 +50,9 @@ periodic motion that always wandered in amplitude by about 30 %. An independent 
 they took steady rhythmic motion with an arterial-like red/IR ratio for a pulse, and counted a
 slow (35–45 bpm), double-humped pulse at twice its rate. v5 is trained over the whole band and with
 steady motion as well. On the same evaluation data (v5 / v4; bracelet, then server): steady
-periodic motion without a pulse reported, always wrongly, in 85 / 146 and 109 / 144 of 150
-windows; a pulse with steady motion at another rate given a wrong heart rate in 18 / 44 and
-12 / 41; slow double-humped pulses in 1 / 6 and 1 / 5; heart-rate errors above 10 bpm 0 / 1 and
+periodic motion without a pulse reported, always wrongly, in 96 / 145 and 118 / 147 of 150
+windows; a pulse with steady motion at another rate given a wrong heart rate in 19 / 55 and
+20 / 49; slow double-humped pulses in 2 / 5 and 2 / 5; heart-rate errors above 10 bpm 0 / 1 and
 0 / 2 in the 600 gated windows and 1 / 7 and 0 / 5 on the real recordings with motion — for 2.2
 and 1.8 points less heart-rate coverage in the gated set (50.7 / 52.8 % and 53.7 / 55.5 %;
 README, "Known hard cases"; `previous/denoiser*_v4_eval.json`).
@@ -109,7 +109,7 @@ mean error and no error above 10 bpm; windows that are mostly motion get no valu
   appearing on most windows of a real recording would mean the network does not fit the signal.
 * No accelerometer: motion is recognised only by the shape of the signal and the red/IR
   proportion. Rhythmic motion whose red/IR proportion lies in the arterial range cannot be told
-  from a pulse in principle: steady arm swing without a pulse is reported as one (85 / 109 of 150
+  from a pulse in principle: steady arm swing without a pulse is reported as one (96 / 118 of 150
   windows, bracelet / server), next to a real pulse it can win, swing at half the pulse rate looks
   like a slower double-humped pulse, and motion locked to the pulse rate shifts SpO2
   (README, "Known hard cases").
@@ -117,7 +117,7 @@ mean error and no error above 10 bpm; windows that are mostly motion get no valu
 * Shapes with two humps per beat are hard for the beat detector: a large diastolic wave is
   sometimes counted as a beat, and the onset of a beat is ambiguous when the notch dips below the
   foot. The checks reject most of these windows (deep-notch test shape at 50–110 bpm: 86–89 %
-  reported, none wrong); at 35–45 bpm 1 of 150 windows per network was reported at twice its rate,
+  reported, none wrong); at 35–45 bpm 2 of 150 windows per network were reported at twice its rate,
   and below about 38 bpm the band-pass filters make even the measured spectrum agree with a
   doubled count (section 3). Next step: peak-aligned beat templates and an amplitude-aware peak
   selection that still keeps premature beats.

@@ -132,53 +132,56 @@ blood could produce, unless stated):
 
 | Input (windows): heart rate reported / wrong, SpO2 reported / wrong | Classical | Bracelet v4 | Bracelet | Server v4 | Server |
 |---|---|---|---|---|---|
-| Steady periodic motion, no pulse (150) | 148 / 148, 148 / 148 | 146 / 146, 144 / 144 | 85 / 85, 85 / 85 | 144 / 144, 144 / 144 | 109 / 109, 109 / 109 |
-| Pulse + steady motion 1.5–4× as large at another rate (150) | 88 / 88, 88 / 41 | 44 / 44, 44 / 18 | 18 / 18, 18 / 4 | 41 / 41, 41 / 16 | 13 / 12, 13 / 4 |
-| Pulse + motion at half its rate (arm swing) (150) | 41 / 37, 41 / 6 | 36 / 26, 36 / 4 | 29 / 21, 29 / 4 | 40 / 22, 39 / 1 | 39 / 25, 39 / 3 |
-| Motion locked to the pulse rate, venous red/IR ratio (150) | 109 / 0, 99 / 92 | 31 / 0, 22 / 20 | 16 / 0, 14 / 12 | 22 / 0, 16 / 14 | 13 / 0, 12 / 10 |
-| Fast breathing (27–45 /min) swinging the baseline (150) | 20 / 11, 20 / 9 | 4 / 0, 4 / 0 | 2 / 0, 2 / 0 | 3 / 0, 3 / 0 | 5 / 0, 5 / 0 |
-| Bigeminy with weak premature beats (150) | 12 / 5, 12 / 0 | 12 / 3, 12 / 0 | 12 / 3, 12 / 0 | 13 / 5, 13 / 0 | 12 / 5, 12 / 0 |
-| 35–45 bpm, double-humped pulse, no motion (150) | 28 / 1, 28 / 0 | 33 / 6, 33 / 0 | 30 / 1, 30 / 0 | 35 / 5, 35 / 0 | 30 / 1, 30 / 0 |
-| 150–210 bpm at SpO2 82–90 %, no motion (150) | 123 / 0, 122 / 0 | 119 / 0, 65 / 0 | 119 / 0, 96 / 1 | 121 / 0, 105 / 3 | 121 / 0, 119 / 0 |
+| Steady periodic motion, no pulse (150) | 146 / 146, 146 / 146 | 145 / 145, 142 / 142 | 96 / 96, 94 / 94 | 147 / 147, 147 / 147 | 118 / 118, 118 / 118 |
+| Pulse + steady motion 1.5–4× as large at another rate (150) | 92 / 92, 92 / 35 | 55 / 55, 55 / 15 | 19 / 19, 19 / 5 | 50 / 49, 50 / 15 | 20 / 20, 20 / 7 |
+| Pulse + motion at half its rate (arm swing) (150) | 37 / 34, 37 / 8 | 29 / 18, 29 / 2 | 28 / 17, 28 / 1 | 36 / 16, 35 / 1 | 34 / 16, 34 / 1 |
+| Motion locked to the pulse rate, venous red/IR ratio (150) | 108 / 0, 100 / 95 | 35 / 0, 29 / 25 | 17 / 0, 15 / 13 | 23 / 0, 19 / 17 | 18 / 0, 16 / 15 |
+| Fast breathing (27–45 /min) swinging the baseline (150) | 30 / 14, 30 / 14 | 7 / 0, 6 / 0 | 6 / 0, 6 / 0 | 9 / 0, 8 / 0 | 8 / 0, 7 / 0 |
+| Bigeminy with weak premature beats (150) | 11 / 6, 11 / 0 | 10 / 5, 10 / 0 | 12 / 6, 12 / 0 | 11 / 6, 11 / 0 | 12 / 6, 12 / 0 |
+| 35–45 bpm, double-humped pulse, no motion (150) | 37 / 3, 36 / 0 | 37 / 5, 37 / 0 | 36 / 2, 36 / 0 | 40 / 5, 40 / 0 | 37 / 2, 37 / 0 |
+| 150–210 bpm at SpO2 82–90 %, no motion (150) | 131 / 0, 129 / 0 | 130 / 0, 72 / 1 | 129 / 0, 105 / 1 | 125 / 0, 112 / 0 | 129 / 0, 126 / 2 |
+| Venous pulsation locked to the beat (0.3–0.6×), no motion (150) | 148 / 0, 137 / 45 | 82 / 0, 75 / 22 | 76 / 0, 62 / 21 | 99 / 0, 71 / 21 | 92 / 0, 65 / 21 |
+| Cadence locked to the pulse (0.3–1×), the simulator's motion gains (150) | 107 / 0, 90 / 47 | 46 / 0, 41 / 8 | 40 / 0, 35 / 6 | 50 / 0, 42 / 9 | 43 / 0, 37 / 8 |
 
 * **Steady rhythmic motion without an accelerometer.** Motion of constant amplitude whose red/IR
   proportion lies in the arterial range is, for the sensor, a smooth pulse. Without any pulse
-  underneath it was reported — always wrongly — in 85 (bracelet) and 109 (server) of 150 windows
-  (v4: 146 and 144), and next to a real pulse it often wins: a wrong heart rate in 18 and 12 windows
-  (v4: 44 and 41). The v5 networks, trained over the whole rate band and with steady motion as well,
+  underneath it was reported — always wrongly — in 96 (bracelet) and 118 (server) of 150 windows
+  (v4: 145 and 147), and next to a real pulse it often wins: a wrong heart rate in 19 and 20 windows
+  (v4: 55 and 49). The v5 networks, trained over the whole rate band and with steady motion as well,
   report fewer of these windows than v4; it cannot be removed. The remedy is an
   accelerometer ([HARDWARE.md](../firmware/docs/HARDWARE.md), note 10). With the simulator's own
   motion gains, which are mostly not arterial-like, the networks report almost none of it (inputs
   that must not produce a value, last row).
 * **Motion at half the pulse rate** (arm swing while walking) with an arterial-like red/IR ratio
   looks like a slower, double-humped pulse: when the network keeps the swing, beats and spectrum
-  agree on half the rate (21 and 25 wrong heart rates here; the classical path 37).
+  agree on half the rate (17 and 16 wrong heart rates here; the classical path 34).
 * **Motion locked to the pulse rate** (a running cadence) shifts SpO2: here, with a venous-like
-  red/IR ratio, the value shown was off by more than 4 points in 12 of 14 (bracelet) and 10 of 12
+  red/IR ratio, the value shown was off by more than 4 points in 13 of 15 (bracelet) and 15 of 16
   (server) values shown — too low, a false desaturation. The heart rate stays right.
 * **Fast breathing** (27–45 breaths a minute) swinging the baseline is counted as the pulse by the
-  classical path (11 of its 20 values are the breathing rate); the networks rarely report these windows.
+  classical path (14 of its 30 values are the breathing rate); the networks rarely report these windows.
 * **Bigeminy with weak premature beats** is reported at half the beat rate when the premature beats
   are too weak to be detected (the rate of the pulses that reach the wrist, which is what a pulse
   oximeter shows too).
 * **Slow, double-humped pulses**: below about 38 bpm the band-pass filters weaken the fundamental so
   much that a pulse whose 2nd harmonic is stronger than the fundamental can be counted at twice
-  its rate on every path (1 window per network here; v4: 6 and 5).
+  its rate on every path (2 windows per network here; v4: 5 and 5).
 * **Fast rates at low SpO2**: the networks attenuate red at 150–210 bpm, so their SpO2 reads high,
   which hides a desaturation. In windows the network calls clean, SpO2 now comes from the measured
-  signals, and the two sources must agree (next point); values off by more than 4 points: server 0
-  of 119, bracelet 1 of 96 (v4: 3 of 105 and 0 of 65 — the agreement withholds more of v4's values,
-  whose red attenuation makes the two sources disagree).
+  signals, and the two sources must agree (next point); values off by more than 4 points: server 2
+  of 126, bracelet 1 of 105 (v4: 0 of 112 and 1 of 72 — the agreement withholds more of v4's
+  values, whose red attenuation makes the two sources disagree).
 * **SpO2 from two sources that must agree.** A non-arterial component locked to the heartbeat
   (venous pulsation under a tight strap, a cadence locked to the pulse), which the network partly
   removes but rarely flags, stays in the measured red/IR and pulls their SpO2 down; a network that
   amplifies or attenuates red moves its own. SpO2 is therefore shown only when the measured and the
-  network's values agree within 2 points. Measured on the red team's sets with the v5 networks
-  (values off by more than 4 points without / with the agreement; server, then bracelet): venous
-  pulsation at 0.3–0.6 times the arterial pulse 65 / 58 and 59 / 58 of about 160–180 values,
-  a cadence locked to the pulse 17 / 14 and 15 / 12, the fast low-SpO2 set 0 / 0 and 7 / 1 — at the
-  cost of 0.6 % and 1 % of the SpO2 values on the 600 gated windows. What remains wrong is where
-  both sources carry the same error; these sets are not in `hard_cases` yet.
+  network's values agree within 2 points. What remains wrong is where both sources share the error
+  (last two rows): venous pulsation at 0.3–0.6 times the arterial pulse gives values off by more
+  than 4 points in 21 of 62 (bracelet) and 21 of 65 (server) values shown, against 45 of 137 on the
+  classical path; a cadence locked to the pulse in 6 of 35 and 8 of 37 (classical 47 of 90). The
+  check was adopted after an A/B on the red team's sets (numbers at `SPO2_AGREEMENT` in
+  `suguard_ml/pipeline.py`); it costs 0.6 % (server) and 1 % (bracelet) of the SpO2 values on the
+  600 gated windows.
 * Not in the set: ambient-light flicker. The MAX30102 subtracts ambient light in every sample; the
   red team's flicker attack assumed flicker that survives this cancellation.
 

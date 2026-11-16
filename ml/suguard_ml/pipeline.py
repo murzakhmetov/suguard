@@ -70,9 +70,10 @@ MIN_SUPPORT_SAMPLES = 10
 # hiding a desaturation) and suppressed the fundamental of slow, double-humped
 # pulses, so the denoised spectrum agreed with a doubled beat count. With the
 # v5 networks, scripts/eval_denoiser.py hard_cases, 150 windows each, rule on /
-# off (before SPO2_AGREEMENT, which removes most of the rest): SpO2 off by more
-# than 4 points at 150-210 bpm and 82-90 % bracelet 7 / 14, server 0 / 0; wrong
-# heart rates at 35-45 bpm 1 / 3 and 1 / 1. It covers
+# off: wrong heart rates at 35-45 bpm 2 / 4 (server) and 2 / 3 (bracelet). At
+# 150-210 bpm and 82-90 % the rule halved the bracelet's SpO2 errors on an
+# earlier draw of that set (7 / 14) before SPO2_AGREEMENT existed; with the
+# agreement check the errors are the same either way (2 and 1). It covers
 # only windows flagged up to this share: slow pulses the network flags more
 # heavily keep the denoised reference. No change in reported values or errors
 # above 4 points on the standard sets. The price: a non-arterial component
