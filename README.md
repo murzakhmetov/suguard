@@ -14,7 +14,7 @@ screening, and a research pipeline towards non-invasive glucose estimation.
 
 | Part | State |
 |---|---|
-| Signal processing and motion-artefact removal | Trained and evaluated on simulated sensor data and on real PPG recordings with simulated motion ([results](ml/README.md#results)). Not yet tried on a wrist. |
+| Signal processing and motion-artefact removal | Trained and evaluated on simulated sensor data and on real PPG recordings with simulated motion ([results](ml/README.md#results)). Not yet tried on a wrist: the first check is the bracelet against a pulse oximeter or chest strap with `ml/scripts/validate_vitals.py` ([how](ml/docs/DATA_COLLECTION.md#6-checking-heart-rate-and-spo2-against-a-reference)). |
 | Firmware | Written for the board in the KiCad files; tested on a PC against a simulated sensor and type-checked against the Arduino-ESP32 headers. **Never built with the ESP32 toolchain and never run on the board** — start with the [bring-up checklist](firmware/README.md#bring-up-checklist). |
 | Diabetes-risk screening | Trained and cross-validated on NHANES 2017–2018 (AUC 0.77 for HbA1c ≥ 5.7 %). A screening estimate, not a diagnosis; to be confirmed on local data. |
 | Glucose | **No model.** PPG-only glucose estimation has not held up under subject-independent testing in the literature, and no paired PPG/glucose data from this bracelet exists yet. The firmware and the API therefore report no glucose value. What is needed to change that: [`ml/docs/DATA_COLLECTION.md`](ml/docs/DATA_COLLECTION.md). |
