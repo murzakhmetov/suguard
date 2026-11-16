@@ -113,3 +113,35 @@ def test_doc_tables_print_from_the_shipped_metrics():
                   "results without gates"):
         assert f"<!-- README: {title} -->" in out or f"<!-- MODEL_CARD section 1: {title} -->" in out, title
     assert "| Windows that get a heart rate |" in out
+
+
+def test_validate_vitals_against_a_reference_file(tmp_path):
+    """Recorded windows + a 1-Hz reference oximeter log with local times: the script pairs them by
+    time, finds the reference's delay and scores every path."""
+    import json
+
+    t0, lag = 1_763_100_000.0, 4.0
+    windows, ref_rows = [], []
+    for i in range(14):
+        w = simulate_window(9_400_000 + i, kinds=[], pi_ir=0.01, hr_bpm=float(60 + 3 * i), spo2=97.0)
+        ts = t0 + i * 512 / FS
+        windows.append({"user_id": "u01", "ts": ts, "fs": FS, "seq": i, "red": w.red_raw.tolist(), "ir": w.ir_raw.tolist()})
+        for k in range(10):           # the oximeter shows each window's values 4 s later, in Almaty time
+            t = ts + 0.5 + k + lag
+            stamp = (np.datetime64(int(round(t)), "s") + np.timedelta64(5, "h")).astype(str).replace("T", " ")
+            ref_rows.append(f"{stamp},{w.hr_bpm:.0f},{round(w.spo2)}")
+    (tmp_path / "windows.jsonl").write_text("\n".join(json.dumps(w) for w in windows) + "\n")
+    (tmp_path / "oximeter.csv").write_text("Time,PR,SpO2\n" + "\n".join(ref_rows) + "\n0,0,0\n")
+    out = subprocess.run([sys.executable, str(ML / "scripts" / "validate_vitals.py"), "--windows",
+                          str(tmp_path / "windows.jsonl"), "--reference", str(tmp_path / "oximeter.csv"),
+                          "--tz-offset-h", "5", "--ref-lag-s", "auto", "--out", str(tmp_path / "rep.json"),
+                          "--per-window", str(tmp_path / "per_window.csv")],
+                         check=True, capture_output=True, text=True, cwd=ML)
+    rep = json.loads((tmp_path / "rep.json").read_text())
+    assert rep["reference_columns"] == {"time": "Time", "hr": "PR", "spo2": "SpO2"}, out.stdout
+    assert abs(rep["ref_lag_s"] - lag) <= 1.0 and rep["windows"]["with_reference"] == 14
+    for path in ("classical", "bracelet", "server"):
+        hr, sp = rep["paths"][path]["hr"], rep["paths"][path]["spo2"]
+        assert hr["coverage"] >= 0.8 and hr["mae"] < 1.5 and hr["over_10bpm"] == 0, (path, hr)
+        assert sp["n"] >= 8 and abs(sp["bias"]) < 2.0 and sp["reference_range"] == [97.0, 97.0], (path, sp)
+    assert (tmp_path / "per_window.csv").read_text().count("\n") == 15

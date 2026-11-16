@@ -417,6 +417,9 @@ python scripts/check_model_card.py --out models/metrics
 # the result tables of this README and of the model card, printed from models/metrics
 python scripts/doc_tables.py
 
+# recorded bracelet windows against a reference oximeter or chest strap (docs/DATA_COLLECTION.md, section 6)
+python scripts/validate_vitals.py --windows rec/windows.jsonl --reference oximeter.csv --ref-lag-s auto
+
 # glucose, once paired data exists (docs/DATA_COLLECTION.md)
 python scripts/train_glucose.py --table data/suguard_paired.parquet --out models --name suguard
 ```

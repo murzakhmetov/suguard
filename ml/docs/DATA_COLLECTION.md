@@ -92,3 +92,28 @@ The SpO2(R) curve in use is Maxim's reference curve. For your enclosure it has t
 against a medical pulse oximeter (`suguard_ml.signal.spo2.fit_spo2_calibration`). The range
 94–100 % can be checked on resting volunteers; accuracy below 90 % can only be established in a
 controlled desaturation study in a laboratory (ISO 80601-2-61).
+
+## 6. Checking heart rate and SpO2 against a reference
+
+Before any glucose study, check the whole chain on your wrist: record windows with the PC tool
+while a reference device records next to it — a chest strap (the best heart-rate reference) or a
+fingertip pulse oximeter that exports its readings (for SpO2) — at rest, then walking, then with
+hand movements. Then:
+
+```bash
+python ml/scripts/validate_vitals.py --windows rec/windows.jsonl --reference oximeter.csv \
+    --tz-offset-h 5 --ref-lag-s auto --out rec/validation.json --per-window rec/per_window.csv
+```
+
+The reference file needs a time column (unix seconds or date and time; times without an offset
+are taken as local time at `--tz-offset-h`) and a heart-rate and/or SpO2 column; the usual names
+(`time`, `hr`, `pulse`, `PR`, `SpO2`, ...) are recognised, others are given with `--time-col`,
+`--hr-col`, `--spo2-col`. Each window is compared with the median of the readings inside its
+10.24 s; `--ref-lag-s auto` finds the delay of the reference (oximeters average over several
+seconds) and absorbs clock differences up to 15 s, so set the reference device's clock and the PC's
+(or the bracelet's, with Wi-Fi) to the same time. The report gives, for the classical path, the bracelet network and the server network:
+how many windows get a value, the mean error (bias), the mean absolute error, the 95 % limits of
+agreement, the heart-rate errors beyond 5 and 10 bpm, the SpO2 ARMS and why the other windows got
+nothing. What to look for: at rest almost every window with a heart rate within a few bpm and no
+SpO2 bias beyond 1–2 points (else calibrate SpO2, section 5); `denoiser_mismatch` or `motion` on
+most resting windows means the networks do not fit your signal.
