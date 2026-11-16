@@ -116,8 +116,9 @@ def test_doc_tables_print_from_the_shipped_metrics():
 
 
 def test_validate_vitals_against_a_reference_file(tmp_path):
-    """Recorded windows + a 1-Hz reference oximeter log with local times: the script pairs them by
-    time, finds the reference's delay and scores every path."""
+    """Recorded windows + a 1-Hz reference oximeter log (date and time of day in two columns, day
+    first, local time, units in the column names, a placeholder row) and a recording cut off
+    mid-line: the script pairs them by time, finds the reference's delay and scores every path."""
     import json
 
     t0, lag = 1_763_100_000.0, 4.0
@@ -127,21 +128,44 @@ def test_validate_vitals_against_a_reference_file(tmp_path):
         ts = t0 + i * 512 / FS
         windows.append({"user_id": "u01", "ts": ts, "fs": FS, "seq": i, "red": w.red_raw.tolist(), "ir": w.ir_raw.tolist()})
         for k in range(10):           # the oximeter shows each window's values 4 s later, in Almaty time
-            t = ts + 0.5 + k + lag
-            stamp = (np.datetime64(int(round(t)), "s") + np.timedelta64(5, "h")).astype(str).replace("T", " ")
-            ref_rows.append(f"{stamp},{w.hr_bpm:.0f},{round(w.spo2)}")
-    (tmp_path / "windows.jsonl").write_text("\n".join(json.dumps(w) for w in windows) + "\n")
-    (tmp_path / "oximeter.csv").write_text("Time,PR,SpO2\n" + "\n".join(ref_rows) + "\n0,0,0\n")
+            local = np.datetime64(int(round(ts + 0.5 + k + lag)), "s") + np.timedelta64(5, "h")
+            day, clock = str(local).split("T")
+            y, m, d = day.split("-")
+            ref_rows.append(f"{d}.{m}.{y},{clock},{w.hr_bpm:.0f},{round(w.spo2)}")
+    (tmp_path / "windows.jsonl").write_text("\n".join(json.dumps(w) for w in windows) + '\n{"user_id": "u01", "ts": 17')
+    (tmp_path / "oximeter.csv").write_text("Date,Time,PR (bpm),SpO2 (%)\n" + "\n".join(ref_rows) + "\n--,--,0,0\n")
     out = subprocess.run([sys.executable, str(ML / "scripts" / "validate_vitals.py"), "--windows",
                           str(tmp_path / "windows.jsonl"), "--reference", str(tmp_path / "oximeter.csv"),
                           "--tz-offset-h", "5", "--ref-lag-s", "auto", "--out", str(tmp_path / "rep.json"),
                           "--per-window", str(tmp_path / "per_window.csv")],
                          check=True, capture_output=True, text=True, cwd=ML)
     rep = json.loads((tmp_path / "rep.json").read_text())
-    assert rep["reference_columns"] == {"time": "Time", "hr": "PR", "spo2": "SpO2"}, out.stdout
-    assert abs(rep["ref_lag_s"] - lag) <= 1.0 and rep["windows"]["with_reference"] == 14
+    assert rep["reference_columns"] == {"time": "Time", "date": "Date", "hr": "PR (bpm)", "spo2": "SpO2 (%)"}, out.stdout
+    assert rep["ref_lag"]["status"] == "found" and abs(rep["ref_lag"]["lag_s"] - lag) <= 1.0, rep["ref_lag"]
+    assert rep["windows"] == {"dated": 14, "undated": 0, "unreadable": 1, "with_reference": 14}
     for path in ("classical", "bracelet", "server"):
         hr, sp = rep["paths"][path]["hr"], rep["paths"][path]["spo2"]
         assert hr["coverage"] >= 0.8 and hr["mae"] < 1.5 and hr["over_10bpm"] == 0, (path, hr)
         assert sp["n"] >= 8 and abs(sp["bias"]) < 2.0 and sp["reference_range"] == [97.0, 97.0], (path, sp)
     assert (tmp_path / "per_window.csv").read_text().count("\n") == 15
+    # The same reference an hour off (a wrong time zone): nothing overlaps, the script says so and fails.
+    bad = subprocess.run([sys.executable, str(ML / "scripts" / "validate_vitals.py"), "--windows",
+                          str(tmp_path / "windows.jsonl"), "--reference", str(tmp_path / "oximeter.csv"),
+                          "--tz-offset-h", "6"], capture_output=True, text=True, cwd=ML)
+    assert bad.returncode == 2 and "about 1 h apart" in bad.stdout, bad.stdout
+
+
+def test_validate_vitals_keeps_no_shift_without_heart_rate_changes():
+    """At a steady heart rate any reference shift fits about as well: the search must not pick one."""
+    import pandas as pd
+
+    sys.path.insert(0, str(ML / "scripts"))
+    import validate_vitals as V
+
+    rng = np.random.default_rng(0)
+    rows = [{"ts": 10.24 * i, "t_end": 10.24 * (i + 1), "results": {"classical": {"hr": 70.0 + rng.normal(0, 0.5)}}}
+            for i in range(30)]
+    t = np.arange(0.0, 310.0, 1.0)
+    ref = pd.DataFrame({"t": t, "hr": np.round(70 + rng.normal(0, 1, t.size)), "spo2": np.nan})
+    lag = V.choose_lag(rows, ref, 3)
+    assert lag["lag_s"] == 0.0 and lag["status"].startswith("not determinable"), lag

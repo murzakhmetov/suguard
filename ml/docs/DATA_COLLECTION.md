@@ -105,15 +105,21 @@ python ml/scripts/validate_vitals.py --windows rec/windows.jsonl --reference oxi
     --tz-offset-h 5 --ref-lag-s auto --out rec/validation.json --per-window rec/per_window.csv
 ```
 
-The reference file needs a time column (unix seconds or date and time; times without an offset
-are taken as local time at `--tz-offset-h`) and a heart-rate and/or SpO2 column; the usual names
-(`time`, `hr`, `pulse`, `PR`, `SpO2`, ...) are recognised, others are given with `--time-col`,
-`--hr-col`, `--spo2-col`. Each window is compared with the median of the readings inside its
-10.24 s; `--ref-lag-s auto` finds the delay of the reference (oximeters average over several
-seconds) and absorbs clock differences up to 15 s, so set the reference device's clock and the PC's
-(or the bracelet's, with Wi-Fi) to the same time. The report gives, for the classical path, the bracelet network and the server network:
-how many windows get a value, the mean error (bias), the mean absolute error, the 95 % limits of
-agreement, the heart-rate errors beyond 5 and 10 bpm, the SpO2 ARMS and why the other windows got
-nothing. What to look for: at rest almost every window with a heart rate within a few bpm and no
+The reference file needs a time (one column, or a date and a time-of-day column; unix seconds or
+milliseconds, or date and time — text without an offset is local time at `--tz-offset-h`, default
+this computer's time zone; dotted dates such as 05.11.2025 are read day first, slashed ones with
+`--dayfirst yes|no` where it is ambiguous) and a heart-rate and/or SpO2 column. The usual names, with
+or without units (`Time`, `Date`, `HR`, `Pulse Rate`, `PR (bpm)`, `SpO2 (%)`, ...), are recognised,
+others are given with `--time-col`, `--date-col`, `--hr-col`, `--spo2-col`; the report's first lines
+say which columns were used. Each window is compared with the median of the readings inside its
+10.24 s. `--ref-lag-s auto` looks for the delay of the reference (oximeters average over several
+seconds) within ±15 s and keeps one only if it clearly fits better than none, which needs
+heart-rate changes in the recording (rest, then walking); the report says whether a delay was found.
+Set the reference device's clock and the PC's (or the bracelet's, with Wi-Fi) to the same time: if
+nothing overlaps, the script prints both time ranges, hints at a wrong `--tz-offset-h` and exits with
+code 2. The report gives, for the classical path, the bracelet network and the server network: how
+many windows get a value, the mean error (bias, bracelet minus reference), the mean absolute error,
+the 95 % limits of agreement, the share of heart rates within 5 bpm and the number beyond 10 bpm,
+the SpO2 ARMS and why the other windows got nothing. What to look for: at rest almost every window with a heart rate within a few bpm and no
 SpO2 bias beyond 1–2 points (else calibrate SpO2, section 5); `denoiser_mismatch` or `motion` on
 most resting windows means the networks do not fit your signal.

@@ -336,7 +336,7 @@ flowchart LR
 cd ml
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
-python -m pytest -q                      # 75 tests
+python -m pytest -q                      # 76 tests
 uvicorn api.app:app --port 8000
 ```
 
@@ -418,7 +418,7 @@ python scripts/check_model_card.py --out models/metrics
 python scripts/doc_tables.py
 
 # recorded bracelet windows against a reference oximeter or chest strap (docs/DATA_COLLECTION.md, section 6)
-python scripts/validate_vitals.py --windows rec/windows.jsonl --reference oximeter.csv --ref-lag-s auto
+python scripts/validate_vitals.py --windows rec/windows.jsonl --reference oximeter.csv --tz-offset-h 5 --ref-lag-s auto
 
 # glucose, once paired data exists (docs/DATA_COLLECTION.md)
 python scripts/train_glucose.py --table data/suguard_paired.parquet --out models --name suguard
