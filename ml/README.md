@@ -126,7 +126,7 @@ errors on the same windows, the v2 networks reported only 62–75 % of the resti
 recordings have a stronger 2nd harmonic than any shape the v2 training simulator made).
 
 **Known hard cases** (`hard_cases`). An independent red team searched for inputs that make the
-gated pipeline show a wrong value; the evaluation now measures each failure mode it found, so the
+gated pipeline show a wrong value; the evaluation now measures the failure modes it found, so the
 limits stay visible (150 windows each; motion common to both LEDs with a red/IR gain that arterial
 blood could produce, unless stated):
 
@@ -145,7 +145,8 @@ blood could produce, unless stated):
   proportion lies in the arterial range is, for the sensor, a smooth pulse. Without any pulse
   underneath it was reported — always wrongly — in 85 (bracelet) and 109 (server) of 150 windows
   (v4: 146 and 144), and next to a real pulse it often wins: a wrong heart rate in 18 and 12 windows
-  (v4: 44 and 41). Training on steady motion (v5) reduced this; it cannot remove it. The remedy is an
+  (v4: 44 and 41). The v5 networks, trained over the whole rate band and with steady motion as well,
+  report fewer of these windows than v4; it cannot be removed. The remedy is an
   accelerometer ([HARDWARE.md](../firmware/docs/HARDWARE.md), note 10). With the simulator's own
   motion gains, which are mostly not arterial-like, the networks report almost none of it (inputs
   that must not produce a value, last row).
@@ -178,26 +179,6 @@ blood could produce, unless stated):
   a cadence locked to the pulse 17 / 14 and 15 / 12, the fast low-SpO2 set 0 / 0 and 7 / 1 — at the
   cost of 0.6 % and 1 % of the SpO2 values on the 600 gated windows. What remains wrong is where
   both sources carry the same error; these sets are not in `hard_cases` yet.
-* **Fast breathing** (27–45 breaths a minute) swinging the baseline is counted as the pulse by the
-  classical path (11 of its 20 values are the breathing rate); the networks rarely report these windows.
-* **Bigeminy with weak premature beats** is reported at half the beat rate when the premature beats
-  are too weak to be detected (the rate of the pulses that reach the wrist, which is what a pulse
-  oximeter shows too).
-* **Slow, double-humped pulses**: below about 38 bpm the band-pass filters weaken the fundamental so
-  much that a pulse whose 2nd harmonic is stronger than the fundamental can be counted at twice
-  its rate on every path (1 window per network here; v4: 6 and 5).
-* **Fast rates at low SpO2**: the networks attenuate red at 150–210 bpm, so their SpO2 reads high,
-  which hides a desaturation. In windows the network calls clean, SpO2 now comes from the measured
-  signals, and the two sources must agree (next point); values off by more than 4 points: server 0
-  of 119, bracelet 1 of 96 (v4: 3 of 105 and 0 of 65 — the agreement withholds more of v4's values,
-  whose red attenuation makes the two sources disagree).
-* **The price of measured SpO2 in clean windows**: a non-arterial component locked to the heartbeat
-  (venous pulsation under a tight strap, a cadence locked to the pulse), which the network partly
-  removes but rarely flags, stays in the measured red/IR and pulls SpO2 down. The red team measured
-  it with the previous server network (v4): with venous pulsation at 0.3–0.6 times the arterial
-  pulse, 69 of about 195 values were off by more than 4 points with the rule and 50 without; with a
-  cadence locked to the pulse 23 and 16 of 131. With the v5 bracelet network: 59 and 50, 16 and 13.
-  The rule trades a hidden desaturation for a false one; not in `hard_cases` yet.
 * Not in the set: ambient-light flicker. The MAX30102 subtracts ambient light in every sample; the
   red team's flicker attack assumed flicker that survives this cancellation.
 

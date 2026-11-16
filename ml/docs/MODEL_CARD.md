@@ -53,7 +53,7 @@ steady motion as well. On the same evaluation data (v5 / v4; bracelet, then serv
 periodic motion without a pulse reported, always wrongly, in 85 / 146 and 109 / 144 of 150
 windows; a pulse with steady motion at another rate given a wrong heart rate in 18 / 44 and
 12 / 41; slow double-humped pulses in 1 / 6 and 1 / 5; heart-rate errors above 10 bpm 0 / 1 and
-0 / 2 in the 600 gated windows and 1 / 7 and 0 / 5 on the real recordings with motion — for 2.1
+0 / 2 in the 600 gated windows and 1 / 7 and 0 / 5 on the real recordings with motion — for 2.2
 and 1.8 points less heart-rate coverage in the gated set (50.7 / 52.8 % and 53.7 / 55.5 %;
 README, "Known hard cases"; `previous/denoiser*_v4_eval.json`).
 
@@ -64,7 +64,7 @@ the red/IR ratio. The mask marks a sample as artefact when either channel is dis
 gated pipeline; 3,300 windows that must not produce a value; 1,200 clean windows of eight pulse
 shapes built outside the training simulator; real PPG recordings (heartpy, 835 s) with a simulated
 second wavelength and simulated motion, scored without checks and through the complete pipeline;
-1,200 windows of eight known hard cases (`hard_cases`).
+1,500 windows of ten known hard cases (`hard_cases`).
 Files: `models/metrics/denoiser_eval.json` (server), `denoiser_edge_eval.json` (bracelet model,
 integer arithmetic exactly as on the device).
 
@@ -90,8 +90,10 @@ windows that are clean / lightly / moderately / heavily disturbed: 20 % / 21 % /
 | Gestures, pressure changes (312) | 5.23 bpm (8.42) | 1.28 (0.67) | 0.99 (0.59) |
 | Mixed (312) | 12.42 bpm (4.95) | 3.56 (0.63) | 2.20 (0.51) |
 
-The heart-rate column is over all windows; the SpO2 values in brackets are over the windows where
-the network and no network both give a value (from each network's own file; the "no network"
+The heart-rate column is over the windows where that path gives a heart rate (all of them except
+309 of 312 gesture and 307 of 312 mixed windows without a network, 311 of 312 walking windows on the
+bracelet); the SpO2 values in brackets are over the windows where the network and no network both
+give a value (from each network's own file; the "no network"
 value from the server's file). At rest the networks make SpO2 slightly worse (0.25 → 0.35 points
 bracelet, 0.28 server): a clean signal has nothing to gain, which is one reason why, in windows the
 network calls clean, the pipeline takes SpO2 from the measured signals.
@@ -207,7 +209,7 @@ Numbers in this section without another source come from `scripts/check_model_ca
   averaged beat by three standard errors. Clean simulated windows whose noise-free beat has no
   notch, at a perfusion of 1 / 0.3 / 0.1 %: beats without a reflected wave get a notch reported in
   0 / 3 / 11 % of the windows with this rule and in 41 / 73 / 94 % without it; the simulator's
-  whole shape family in 3 / 4 / 17 % and 66 / 77 / 91 %. The price: a notch the noise-free beat
+  whole shape family in 3 / 3 / 17 % and 66 / 77 / 91 %. The price: a notch the noise-free beat
   does have is missed in 6 / 14 / 13 % of those windows (30–35 each).
 
 ## 4. Diabetes risk — `models/risk_model.json` (v1.1.0)

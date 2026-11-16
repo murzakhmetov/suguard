@@ -9,7 +9,8 @@ What it does:
   detection, recovery from sensor resets and lost samples);
 * runs the whole signal pipeline **on the bracelet**: a small neural network (integer arithmetic,
   no FPU needed) removes motion artefacts, then heart rate, SpO2 and nine signal-quality checks are
-  computed; a value is reported only if the window passes every check;
+  computed; a heart rate is reported only if the window passes the sensor and denoiser checks and
+  the seven pulse checks, an SpO2 value only if it also passes the two red/IR checks;
 * USB console (115200 baud): live results as JSON lines, settings, raw-data streaming for the PC tools;
 * optional upload to Firebase: one averaged record per minute, sent in a short Wi-Fi session every
   five minutes; about four hours of records are kept while there is no connection.
@@ -111,7 +112,8 @@ One line per window on USB:
 control lowers the current). `spo2_why` is filled only for an accepted window without an SpO2
 value: `no_common_pulse`, `spo2_low_red_ir_agreement`, `red_ir_inconsistent` (the two
 wavelengths do not agree well enough) or `red_denoiser_mismatch` (the cleaned-up red pulse is not
-supported by the measurement). `hr` is corrected for the sensor's clock error (`fs` is the measured
+supported by the measurement, or the SpO2 from the measured red/IR and from the network's output
+differ by more than 2 points). `hr` is corrected for the sensor's clock error (`fs` is the measured
 sample rate). The rules behind each reason are listed in
 [../ml/docs/MODEL_CARD.md](../ml/docs/MODEL_CARD.md#2-the-decision-to-report-a-value).
 
@@ -182,7 +184,8 @@ Behaviour worth knowing:
   size within 0.7–1.4) or the window (IR) / the SpO2 value (red) is withheld. Where it flags at
   most 20 % of the window as motion, the measured signals are the reference: SpO2 comes from the
   measured red/IR, the rate of the detected beats must agree with the spectrum of the measured IR,
-  and the red/IR ratio must be stable in the measured signals (a network can attenuate red at fast
+  and the red/IR ratio must be stable in the measured signals (with the few samples it flags taken
+  from its output; a network can attenuate red at fast
   rates, or suppress the fundamental of a slow, double-humped pulse; windows it flags more heavily
   keep its own output as the reference). Wherever the network is used, SpO2 is shown only if the
   measured red/IR (weighted by its mask) and its output give values within 2 points of each other.
@@ -199,7 +202,7 @@ packages from GitHub, about 370 MB); it needs `arm-none-eabi-g++`.
 | What | How | Result |
 |---|---|---|
 | Sources against the real Arduino API | `tools/typecheck_arduino.sh`: the sketch and every source file through a GCC front end with the headers, include paths and defines of Arduino core 2.0.17 (ESP-IDF 4.4, as C++17) and 3.3.12 (ESP-IDF 5.5, as C++20) | no error, no warning; **not a build** (generic 32-bit compiler, nothing generated or linked) |
-| Signal core = Python reference | C++ built for the host, compared on simulated windows: 300 classical, 200 denoised, 50 degenerate or constructed inputs (some with the measured signals given directly) | every decision identical; the tests allow 10⁻⁹ (relative) for double-precision values and 10⁻⁴ (absolute) for FFT-dependent ones; the largest differences measured are 1.7·10⁻¹⁴ and 5.4·10⁻⁷ |
+| Signal core = Python reference | C++ built for the host, compared on simulated windows: 300 classical, 200 denoised, 55 degenerate or constructed inputs (some with the measured signals given directly) | every decision identical; the tests allow 10⁻⁹ (relative) for double-precision values and 10⁻⁴ (absolute) for FFT-dependent ones; the largest differences measured are 1.7·10⁻¹⁴ and 5.4·10⁻⁷ |
 | Integer network = Python reference | the C++ engine against the NumPy integer reference, random models and the shipped one | bit-exact |
 | Whole pipeline per window | `sg_process_window` against the Python pipeline, 316 windows × 2 modes, incl. inputs where the network must be overruled | same decisions and reasons; heart rate and SpO2 within 10⁻⁶ |
 | Device layer | driver, sampler, record store, upload scheduler and battery guard against a register-level MAX30102 simulator, with ASan/UBSan | 24 scenarios pass |
@@ -228,10 +231,16 @@ signal quality on a real wrist.
 ## Regenerating generated files
 
 ```bash
-python ml/scripts/export_edge_model.py     # src/core/sg_model.h from ml/data/edge_s/denoiser_edge.pt
 python firmware/tools/gen_tables.py        # src/core/sg_tables.h (filter coefficients, FFT table)
 python firmware/tools/gen_certs.py         # src/certs.h (TLS root certificates)
 ```
+
+`src/core/sg_model.h` (the bracelet network) is written by
+`python ml/scripts/export_edge_model.py --ckpt <checkpoint> --data <dataset>` after a retraining:
+the dataset and the checkpoint come from the training steps in
+[../ml/README.md](../ml/README.md#training) (`make_denoiser_dataset.py`, then
+`train_denoiser.py --arch edge`) and are not in the repository. Without a retraining, leave the
+committed header as it is.
 
 ## Recording data with a PC
 

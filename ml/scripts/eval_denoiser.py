@@ -133,6 +133,10 @@ def eval_pipeline(den: Denoiser, n: int = 600, seed0: int = 4_000_000) -> dict:
     for name, pipe in (("classical", SuGuardPipeline(denoiser=None)), ("denoiser", SuGuardPipeline(denoiser=den))):
         res = [pipe.analyze(w.red_raw, w.ir_raw, fs=w.fs) for w in wins]
         given = np.array([r["reliable"] for r in res])
+        hr_bad = np.array([r["heart_rate"]["bpm"] is not None and abs(r["heart_rate"]["bpm"] - t) > 10.0
+                           for r, t in zip(res, hr_t)])
+        sp_bad = np.array([r["spo2"]["percent"] is not None and abs(r["spo2"]["percent"] - t) > 4.0
+                           for r, t in zip(res, sp_t)])
         clean = mf < 0.05
         out[name] = {
             **score_pipeline(res, hr_t, sp_t),
@@ -141,7 +145,9 @@ def eval_pipeline(den: Denoiser, n: int = 600, seed0: int = 4_000_000) -> dict:
                                                       "hr_coverage": float(given[clean & (fam == f)].mean())}
                                                   for f in sorted(set(fam)) if (clean & (fam == f)).any()},
             "by_motion_share": {f"{lo}-{hi}": {"windows": int(((mf >= lo) & (mf < hi)).sum()),
-                                               "hr_coverage": float(given[(mf >= lo) & (mf < hi)].mean())}
+                                               "hr_coverage": float(given[(mf >= lo) & (mf < hi)].mean()),
+                                               "hr_errors_over_10bpm": int(hr_bad[(mf >= lo) & (mf < hi)].sum()),
+                                               "spo2_errors_over_4pts": int(sp_bad[(mf >= lo) & (mf < hi)].sum())}
                                 for lo, hi in ((0, 0.05), (0.05, 0.3), (0.3, 0.7), (0.7, 1.01))},
         }
         print(name, json.dumps({k: v for k, v in out[name].items() if not isinstance(v, dict)}), flush=True)
@@ -378,7 +384,8 @@ def eval_hard_cases(den: Denoiser, n: int = 150, seed: int = 4_800_000) -> dict:
     sets = {k: [] for k in ("steady_periodic_motion_no_pulse", "pulse_with_steady_motion_at_another_rate",
                             "pulse_with_motion_at_half_the_rate", "motion_locked_to_the_pulse_rate_venous_ratio",
                             "fast_breathing", "bigeminy_weak_premature_beats", "slow_35_45bpm_double_humped",
-                            "fast_150_210bpm_spo2_82_90")}
+                            "fast_150_210bpm_spo2_82_90", "venous_pulsation_locked_to_the_beat",
+                            "cadence_locked_to_the_pulse")}
     for i in range(n):
         s = seed + 16 * i
         # No visible pulse (0.01 %), steady motion of 0.1-6 % of the light level at 0.7-3.2 Hz over the whole window.
@@ -427,6 +434,20 @@ def eval_hard_cases(den: Denoiser, n: int = 150, seed: int = 4_800_000) -> dict:
         w = simulate_window(s + 7, kinds=[], hr_bpm=float(rng.uniform(150, 210)), spo2=float(rng.uniform(82, 90)),
                             pi_ir=loguni(0.001, 0.003), shape="rich_harmonics")
         sets["fast_150_210bpm_spo2_82_90"].append((w.red_raw, w.ir_raw, w.hr_bpm, w.spo2))
+        # Venous pulsation (a tight strap): the window's own pulse, 0.05-0.3 s later, at 0.3-0.6 of its size,
+        # with the red/IR ratio of 65-80 % saturated blood. No motion.
+        w = simulate_window(s + 8, kinds=[], pi_ir=loguni(0.003, 0.03), spo2=float(rng.uniform(90, 99.5)))
+        clean = w.ir_clean_raw.astype(float)
+        p = bandpass(-(clean - clean.mean()) / clean.mean(), FS, 0.4, 12.0)
+        v = np.roll(p, int(rng.uniform(0.05, 0.3) * FS)) * rng.uniform(0.3, 0.6)
+        sets["venous_pulsation_locked_to_the_beat"].append(
+            (*_modulated(w, -v, -r_from_spo2(float(rng.uniform(65, 80))) * v), w.hr_bpm, w.spo2))
+        # A cadence locked to the pulse (+-2 %), 0.3-1x the pulse, with the simulator's own motion red/IR gains.
+        pi = loguni(0.003, 0.03)
+        w = simulate_window(s + 9, kinds=[], hr_bpm=float(rng.uniform(55, 110)), pi_ir=pi,
+                            spo2=float(rng.uniform(90, 99.5)))
+        m = pi * rng.uniform(0.3, 1.0) * _steady_periodic(rng, w.hr_bpm / 60.0 * rng.uniform(0.98, 1.02))
+        sets["cadence_locked_to_the_pulse"].append((*_modulated(w, m, rng.uniform(0.5, 1.8) * m), w.hr_bpm, w.spo2))
     out = {}
     for name, pipe in (("classical", SuGuardPipeline(denoiser=None)), ("denoiser", SuGuardPipeline(denoiser=den))):
         out[name] = {}

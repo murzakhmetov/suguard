@@ -53,7 +53,9 @@ HARD_LABEL = {"steady_periodic_motion_no_pulse": "Steady periodic motion, no pul
               "fast_breathing": "Fast breathing (27–45 /min) swinging the baseline",
               "bigeminy_weak_premature_beats": "Bigeminy with weak premature beats",
               "slow_35_45bpm_double_humped": "35–45 bpm, double-humped pulse, no motion",
-              "fast_150_210bpm_spo2_82_90": "150–210 bpm at SpO2 82–90 %, no motion"}
+              "fast_150_210bpm_spo2_82_90": "150–210 bpm at SpO2 82–90 %, no motion",
+              "venous_pulsation_locked_to_the_beat": "Venous pulsation locked to the beat (0.3–0.6×), no motion",
+              "cadence_locked_to_the_pulse": "Cadence locked to the pulse (0.3–1×), the simulator's motion gains"}
 
 
 class Tables:
