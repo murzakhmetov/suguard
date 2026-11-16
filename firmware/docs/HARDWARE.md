@@ -83,10 +83,11 @@ These are observations from the schematic. None of them was measured — I do no
 
 10. **No accelerometer and no MCU-controlled LED.** Motion is detected from the PPG itself (the
     denoiser uses the two wavelengths). Rhythmic motion whose red/IR proportion lies in the range
-    arterial blood produces is the one thing a PPG sensor alone cannot tell from a pulse: steady arm
-    swing without any pulse underneath is still reported as a pulse in a large share of such
-    windows, and next to a real pulse the swing can win (measured in `ml/README.md`, "Known hard
-    cases"). A 3-axis accelerometer on the same I²C bus (e.g. LIS2DH12, BMA400) is the standard
+    arterial blood produces cannot be told from a pulse by a PPG sensor alone: steady arm swing
+    without any pulse underneath is still reported as a pulse in a large share of such windows, and
+    next to a real pulse the swing can win. Motion locked to the pulse rate shifts SpO2 even with a
+    venous red/IR proportion (bracelet network: 13 of the 15 values shown off by more than 4 points;
+    all measured in `ml/README.md`, "Known hard cases"). A 3-axis accelerometer on the same I²C bus (e.g. LIS2DH12, BMA400) is the standard
     remedy and the most valuable addition for the next revision. A status LED would help pairing and debugging: today the only feedback
     for a button press is the USB console.
 

@@ -23,7 +23,7 @@ file it comes from.
 Three ways of processing a 10.24-s window are compared:
 
 * **classical** — filters, beat detection and quality checks, no network (firmware: `use_nn 0`);
-* **bracelet** — the integer network that runs on the ESP32-C3 (94,667 weights, 45 kB of working memory);
+* **bracelet** — the integer network that runs on the ESP32-C3 (94,667 parameters, 45 kB of working memory);
 * **server** — the larger network (457,267 parameters, ONNX).
 
 The simulated test data comes from a simulator of the MAX30102 whose pulse shapes span four
@@ -41,7 +41,7 @@ perfusion 0.08–5 %; `models/metrics/denoiser_eval.json` and `denoiser_edge_eva
 |  | Classical | Bracelet | Server |
 |---|---|---|---|
 | Windows that get a heart rate | 36 % | 52 % | 54 % |
-| … of the windows without motion | 94 % | 94 % | 94 % |
+| … of the windows with less than 5 % motion | 94 % | 94 % | 94 % |
 | Heart rate: mean / 95th-percentile error | 2.06 / 2.1 bpm | 0.39 / 1.5 bpm | 0.33 / 1.1 bpm |
 | Heart-rate errors above 10 bpm | 7 | 0 | 0 |
 | Windows that get an SpO2 value | 32 % | 49 % | 53 % |
@@ -61,7 +61,9 @@ The last row is intended: when most of a window is motion, the pulse cannot be r
 value is given. The classical path still answers there in 10 % of the windows, and that is where
 its large errors come from (6 of its 7 heart-rate errors above 10 bpm, all 10 SpO2 errors above 4
 points). The networks answer in 4–5 % of them (2.5 and 3 % without the low-perfusion rule below:
-the motion there is too small to hide a weak pulse), none wrong.
+the motion there is too small to hide a weak pulse), none wrong. Numbers "without the rule" outside
+the next table are those of the metrics committed before it (`git show cd9986f:ml/models/metrics/denoiser_eval.json`,
+`…/denoiser_edge_eval.json`), scored with the same draws.
 
 **Windows without motion, by pulse size** (`rest_by_perfusion`: 1,000 simulated windows without
 motion, binned by the simulated perfusion; share that gets a heart rate / an SpO2 value). At a small
@@ -134,7 +136,9 @@ hard cases below).
 
 **Real PPG recordings** (heartpy, 835 s: real pulse shapes and rhythm) with a simulated second
 wavelength and simulated motion (`real_ppg_simulated_motion` → `pipeline`), through the complete
-pipeline — share of windows that get a heart rate, mean error, errors above 10 bpm:
+pipeline — share of windows that get a heart rate, mean error, errors above 10 bpm (the error is
+against the rate the beat detector finds on the uncorrupted recording, which also selects the
+segments: there is no independent reference):
 
 | Scenario (windows) | Classical | Bracelet | Server |
 |---|---|---|---|
@@ -161,7 +165,7 @@ blood could produce, unless stated):
 | Pulse + steady motion 1.5–4× as large at another rate (150) | 92 / 92, 92 / 35 | 55 / 55, 55 / 15 | 19 / 19, 19 / 5 | 50 / 49, 50 / 15 | 20 / 20, 20 / 7 |
 | Pulse + motion at half its rate (arm swing) (150) | 37 / 34, 37 / 8 | 29 / 18, 29 / 2 | 28 / 17, 28 / 1 | 36 / 16, 35 / 1 | 34 / 16, 34 / 1 |
 | Motion locked to the pulse rate, venous red/IR ratio (150) | 108 / 0, 100 / 95 | 35 / 0, 29 / 25 | 17 / 0, 15 / 13 | 23 / 0, 19 / 17 | 18 / 0, 16 / 15 |
-| Fast breathing (27–45 /min) swinging the baseline (150) | 30 / 14, 30 / 14 | 7 / 0, 6 / 0 | 6 / 0, 6 / 0 | 9 / 0, 8 / 0 | 8 / 0, 7 / 0 |
+| Fast breathing (27–45 /min) swinging the baseline, red/IR gain 0.8–1.3 (150) | 30 / 14, 30 / 14 | 7 / 0, 6 / 0 | 6 / 0, 6 / 0 | 9 / 0, 8 / 0 | 8 / 0, 7 / 0 |
 | Bigeminy with weak premature beats (150) | 11 / 6, 11 / 0 | 10 / 5, 10 / 0 | 12 / 6, 12 / 0 | 11 / 6, 11 / 0 | 12 / 6, 12 / 0 |
 | 35–45 bpm, double-humped pulse, no motion (150) | 37 / 3, 36 / 0 | 37 / 5, 37 / 0 | 36 / 2, 36 / 0 | 40 / 5, 40 / 0 | 37 / 2, 37 / 0 |
 | 150–210 bpm at SpO2 82–90 %, no motion (150) | 131 / 0, 129 / 0 | 130 / 0, 72 / 1 | 129 / 0, 105 / 1 | 127 / 0, 112 / 0 | 130 / 0, 126 / 2 |
@@ -183,11 +187,13 @@ blood could produce, unless stated):
 * **Motion locked to the pulse rate** (a running cadence) shifts SpO2: here, with a venous-like
   red/IR ratio, the value shown was off by more than 4 points in 13 of 15 (bracelet) and 15 of 16
   (server) values shown — too low, a false desaturation. The heart rate stays right.
-* **Fast breathing** (27–45 breaths a minute) swinging the baseline is counted as the pulse by the
-  classical path (14 of its 30 values are the breathing rate); the networks rarely report these windows.
-* **Bigeminy with weak premature beats** is reported at half the beat rate when the premature beats
-  are too weak to be detected (the rate of the pulses that reach the wrist, which is what a pulse
-  oximeter shows too).
+* **Fast breathing** (27–45 breaths a minute) swinging the baseline, with a red/IR gain of 0.8–1.3,
+  can be counted as the pulse by the classical path: 14 of its 30 values are off by more than 10 bpm.
+  The networks rarely report these windows.
+* **Bigeminy with weak premature beats**: half of the values (6 of 11–12 on every path) are off by
+  more than 10 bpm. The mechanism: premature beats too weak to be detected leave only the normal
+  beats, so the rate shown is that of the pulses that reach the wrist (about half the beat rate,
+  which is what a pulse oximeter shows too).
 * **Slow, double-humped pulses**: below about 38 bpm the band-pass filters weaken the fundamental so
   much that a pulse whose 2nd harmonic is stronger than the fundamental can be counted at twice
   its rate on every path (2 windows per network here; v4: 5 and 5).
@@ -204,9 +210,9 @@ blood could produce, unless stated):
   (last two rows): venous pulsation at 0.3–0.6 times the arterial pulse gives values off by more
   than 4 points in 21 of 62 (bracelet) and 21 of 65 (server) values shown, against 45 of 137 on the
   classical path; a cadence locked to the pulse in 6 of 35 and 8 of 37 (classical 47 of 90). The
-  check was adopted after an A/B on the red team's sets (numbers at `SPO2_AGREEMENT` in
-  `suguard_ml/pipeline.py`); it costs 0.6 % (server) and 1 % (bracelet) of the SpO2 values on the
-  600 gated windows.
+  check was adopted after an A/B on the red team's own draws of these sets, before the low-perfusion
+  rule (numbers at `SPO2_AGREEMENT` in `suguard_ml/pipeline.py`; they are not those of the table);
+  there it cost 0.6 % (server) and 1 % (bracelet) of the SpO2 values on the 600 gated windows.
 * **A red/IR phase check does not separate these.** Arterial blood pulses in phase at both
   wavelengths, and a venous wave that lags opens the red-vs-IR loop (the idea behind venous-pulsation
   detectors in pulse-oximeter patents). Measured on a separate draw of the venous set with a one-off

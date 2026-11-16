@@ -9,8 +9,9 @@ What it does:
   detection, recovery from sensor resets and lost samples);
 * runs the whole signal pipeline **on the bracelet**: a small neural network (integer arithmetic,
   no FPU needed) removes motion artefacts, then heart rate, SpO2 and nine signal-quality checks are
-  computed; a heart rate is reported only if the window passes the sensor and denoiser checks and
-  the seven pulse checks, an SpO2 value only if it also passes the two red/IR checks;
+  computed; a heart rate is reported only if the window passes the sensor and denoiser checks, the
+  seven pulse checks and the arterial red/IR ratio rule, an SpO2 value only if it also passes the
+  two red/IR quality checks and the SpO2 agreement;
 * USB console (115200 baud): live results as JSON lines, settings, raw-data streaming for the PC tools;
 * optional upload to Firebase: one averaged record per minute, sent in a short Wi-Fi session every
   five minutes; about four hours of records are kept while there is no connection.
@@ -203,7 +204,8 @@ Behaviour worth knowing:
 ## Verification
 
 Everything below except the first row runs with `python -m pytest firmware/tests` (45 tests; needs
-`g++`; the RV32 tests also need `gcc-riscv64-unknown-elf`, `picolibc-riscv64-unknown-elf` and
+`g++` and the Python packages of `ml/` — `pip install -r ml/requirements.txt`; without onnxruntime the
+200 denoised-path windows are skipped; the RV32 tests also need `gcc-riscv64-unknown-elf`, `picolibc-riscv64-unknown-elf` and
 `qemu-system-misc`). The first row is a 46th test that runs when `SG_ARDUINO_CACHE` names a folder
 that `tools/typecheck_arduino.sh <folder>` has filled once (that first run downloads the Arduino
 packages from GitHub, about 370 MB); it needs `arm-none-eabi-g++`.
@@ -231,7 +233,7 @@ signal quality on a real wrist.
 
 | | Value | Source |
 |---|---|---|
-| Instructions per window, with the network | 147 million (median), 216 million (max: a weak pulse the network flags as motion also goes through the classical checks; a window the network calls clean also gets the spectrum of the measured signal); the second SpO2 estimate of the agreement check costs about 13 million | counted exactly under QEMU for RV32IMC (`docs/rv32_benchmark.json`) |
+| Instructions per window, with the network | 147 million (median), 216 million (max: a weak pulse the network flags as motion also goes through the classical checks; a window the network calls clean also gets the spectrum of the measured signal) | counted exactly under QEMU for RV32IMC (`docs/rv32_benchmark.json`) |
 | ... classical processing only | 77 million | same |
 | Time per 10.24-s window | about 1.4–3.4 s at 160 MHz (2.8–6.8 s at 80 MHz) | estimate: 1.5–2.5 cycles per instruction; **not measured on the chip** — read `proc_ms` |
 | Static RAM of the signal pipeline | 117 kB | size of the pipeline's memory block |

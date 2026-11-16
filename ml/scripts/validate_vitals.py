@@ -24,6 +24,9 @@ value, mean error (bias, device minus reference), mean absolute error, 95 % limi
 (Bland-Altman), the share of heart rates within 5 bpm and the number beyond 10 bpm, SpO2 ARMS (the
 accuracy measure of ISO 80601-2-61) and why the other windows got nothing.
 
+With --per-window, every window's values, its red/IR ratio R (``<path>_r``, the input of
+suguard_ml.signal.spo2.fit_spo2_calibration) and the reference readings go to a CSV.
+
 The reference has its own error (a fingertip oximeter about ±2 bpm and 2-3 points of SpO2; a chest
 strap is the better heart-rate reference), and at home SpO2 stays at 94-99 %: this measures the
 bias at normal saturation, not the accuracy over 70-100 % that only a controlled desaturation
@@ -201,10 +204,10 @@ def analyze_windows(windows: list[dict], pipes: dict) -> list[dict]:
             try:
                 r = pipe.analyze(w["red"], w["ir"], fs=fs, temperature_c=w.get("temp_c"))
             except (ValueError, TypeError, KeyError) as e:
-                row["results"][name] = {"hr": None, "spo2": None, "reasons": [f"invalid_window: {e}"],
+                row["results"][name] = {"hr": None, "spo2": None, "r": None, "reasons": [f"invalid_window: {e}"],
                                         "spo2_reason": None, "fallback": False}
                 continue
-            row["results"][name] = {"hr": r["heart_rate"]["bpm"], "spo2": r["spo2"]["percent"],
+            row["results"][name] = {"hr": r["heart_rate"]["bpm"], "spo2": r["spo2"]["percent"], "r": r["spo2"]["r_ratio"],
                                     "reasons": list(r.get("reason") or []), "spo2_reason": r["spo2"]["reason"],
                                     "fallback": bool(r.get("low_perfusion_fallback"))}
         rows.append(row)
@@ -416,7 +419,8 @@ def main(argv=None):
         for row, (r_hr, r_sp) in zip(rows, refs):
             rec = {"ts": row["ts"], "seq": row["seq"], "ref_hr": r_hr, "ref_spo2": r_sp}
             for p, res in row["results"].items():
-                rec.update({f"{p}_hr": res["hr"], f"{p}_spo2": res["spo2"], f"{p}_reasons": ";".join(res["reasons"])})
+                rec.update({f"{p}_hr": res["hr"], f"{p}_spo2": res["spo2"], f"{p}_r": res["r"],
+                            f"{p}_reasons": ";".join(res["reasons"])})
             recs.append(rec)
         pd.DataFrame(recs).to_csv(a.per_window, index=False)
         print("wrote", a.per_window)

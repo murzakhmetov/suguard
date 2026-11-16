@@ -83,7 +83,7 @@ windows that are clean / lightly / moderately / heavily disturbed: 20 % / 21 % /
 ² Over the 3,946 of 4,000 windows where it gives a heart rate; the networks give one in 4,000
 (server) and 3,999 (bracelet).
 
-| Real PPG + simulated motion, no checks: heart-rate error (SpO2 error on the windows where that network and no network both give one) | No network | Bracelet | Server |
+| Real PPG + simulated motion, no checks: heart-rate error against the beat detector's rate on the uncorrupted recording (SpO2 error on the windows where that network and no network both give one) | No network | Bracelet | Server |
 |---|---|---|---|
 | At rest (52) | 0.04 bpm (0.25) | 0.08 (0.35) | 0.08 (0.28) |
 | Walking: periodic motion, a quarter of it near the pulse rate (312) | 21.04 bpm (5.80) | 4.65 (0.67) | 3.73 (0.59) |
@@ -178,7 +178,8 @@ Numbers in this section without another source come from `scripts/check_model_ca
   swing at half the heart rate won the sum. At slow rates the band-pass filters weaken the
   fundamental: a pulse whose 2nd harmonic is 1.6 times the fundamental (the strongest in the real
   recordings) is read at its rate from 40 bpm, not at 36–38 bpm; one with twice the fundamental
-  only from about 90–105 bpm. In a window the network calls clean (at most 20 % flagged) this
+  only from about 90–105 bpm (noise-free test pulses; comment at `HARMONIC_MIN_SHARE` in
+  `suguard_ml/signal/beats.py`). In a window the network calls clean (at most 20 % flagged) this
   spectral rate comes from the measured IR as it is: excluding the flagged samples let a window
   through whose flagged part held the true pulse. A motion burst within that 20 % can therefore
   withhold the heart rate of a long recording (the API's 60-s HRV path); it does not make a wrong

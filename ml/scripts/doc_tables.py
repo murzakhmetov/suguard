@@ -51,7 +51,7 @@ HARD_LABEL = {"steady_periodic_motion_no_pulse": "Steady periodic motion, no pul
               "pulse_with_steady_motion_at_another_rate": "Pulse + steady motion 1.5–4× as large at another rate",
               "pulse_with_motion_at_half_the_rate": "Pulse + motion at half its rate (arm swing)",
               "motion_locked_to_the_pulse_rate_venous_ratio": "Motion locked to the pulse rate, venous red/IR ratio",
-              "fast_breathing": "Fast breathing (27–45 /min) swinging the baseline",
+              "fast_breathing": "Fast breathing (27–45 /min) swinging the baseline, red/IR gain 0.8–1.3",
               "bigeminy_weak_premature_beats": "Bigeminy with weak premature beats",
               "slow_35_45bpm_double_humped": "35–45 bpm, double-humped pulse, no motion",
               "fast_150_210bpm_spo2_82_90": "150–210 bpm at SpO2 82–90 %, no motion",
@@ -89,7 +89,7 @@ class Tables:
 
     def pipeline(self):
         rows = [("Windows that get a heart rate", lambda p: pct(p["hr_coverage"])),
-                ("… of the windows without motion", lambda p: pct(p["clean_window_hr_coverage"])),
+                ("… of the windows with less than 5 % motion", lambda p: pct(p["clean_window_hr_coverage"])),
                 ("Heart rate: mean / 95th-percentile error", lambda p: f"{num(p['hr_mae'])} / {num(p['hr_p95'], 1)} bpm"),
                 ("Heart-rate errors above 10 bpm", lambda p: str(p["hr_errors_over_10bpm"])),
                 ("Windows that get an SpO2 value", lambda p: pct(p["spo2_coverage"])),
@@ -161,8 +161,9 @@ class Tables:
         return "\n".join(out)
 
     def real_no_checks(self):
-        out = ["| Real PPG + simulated motion, no checks: heart-rate error (SpO2 error on the windows where that "
-               "network and no network both give one) | No network | Bracelet | Server |", "|---|---|---|---|"]
+        out = ["| Real PPG + simulated motion, no checks: heart-rate error against the beat detector's rate on the "
+               "uncorrupted recording (SpO2 error on the windows where that network and no network both give one) "
+               "| No network | Bracelet | Server |", "|---|---|---|---|"]
         for s, v in self.srv["real_ppg_simulated_motion"]["scenarios"].items():
             e = self.edge["real_ppg_simulated_motion"]["scenarios"][s]
             out.append(f"| {SCENARIO_LABEL.get(s, s)} ({v['windows']}) | {v['raw']['hr']['mae']:.2f} bpm "

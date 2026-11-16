@@ -89,7 +89,8 @@ validated model.
 ## 5. SpO2
 
 The SpO2(R) curve in use is Maxim's reference curve. For your enclosure it has to be calibrated
-against a medical pulse oximeter (`suguard_ml.signal.spo2.fit_spo2_calibration`). The range
+against a medical pulse oximeter (`suguard_ml.signal.spo2.fit_spo2_calibration`, with the ratio R of
+each window from the per-window file of section 6, `classical_r`, and the reference SpO2). The range
 94–100 % can be checked on resting volunteers; accuracy below 90 % can only be established in a
 controlled desaturation study in a laboratory (ISO 80601-2-61).
 
