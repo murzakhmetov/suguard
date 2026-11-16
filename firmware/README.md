@@ -216,11 +216,11 @@ signal quality on a real wrist.
 
 | | Value | Source |
 |---|---|---|
-| Instructions per window, with the network | 132 million (median), 134 million (max) | counted exactly under QEMU for RV32IMC |
+| Instructions per window, with the network | 132 million (median), 162 million (max: a window the network calls clean also gets the spectrum of the measured signal) | counted exactly under QEMU for RV32IMC (`docs/rv32_benchmark.json`) |
 | ... classical processing only | 77 million | same |
-| Time per 10.24-s window | about 1.2–2 s at 160 MHz (2.5–4 s at 80 MHz) | estimate: 1.5–2.5 cycles per instruction; **not measured on the chip** — read `proc_ms` |
-| Static RAM of the signal pipeline | 109 kB | size of the pipeline's memory block |
-| Code and constants of the signal core | 184 kB (94 kB of it network weights, in flash) | linker map of the RV32 build |
+| Time per 10.24-s window | about 1.2–2.5 s at 160 MHz (2.5–5 s at 80 MHz) | estimate: 1.5–2.5 cycles per instruction; **not measured on the chip** — read `proc_ms` |
+| Static RAM of the signal pipeline | 117 kB | size of the pipeline's memory block |
+| Code and constants of the signal core | 126 kB (94 kB of it network weights, in flash), plus the C library's maths and soft-float routines it calls | `size` of the core's RV32 object files; the whole benchmark program (with its harness, picolibc and 24.6 kB of test windows) is 184 kB |
 
 ## Regenerating generated files
 

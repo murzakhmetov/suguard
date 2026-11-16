@@ -3,33 +3,33 @@
   "chans": null,
   "params": 95563,
   "steps": 16000,
-  "best_step": 15000,
+  "best_step": 16000,
   "best_val": {
-    "wave": 0.07531362539157271,
-    "deriv": 0.07177084987051785,
-    "mask": 0.09351109899580479,
-    "ratio": 0.009551066847052425,
-    "mask_auc": 0.9946768340804473,
+    "wave": 0.06718220375478268,
+    "deriv": 0.0690868787933141,
+    "mask": 0.10437288461253047,
+    "ratio": 0.010486100072739646,
+    "mask_auc": 0.9934309087551628,
     "vitals_raw": {
       "n": 600,
       "selected_fraction": 1.0,
       "hr": {
         "n": 600,
-        "n_scored": 595,
-        "abstain_rate": 0.008333333333333304,
-        "mae": 10.573761389530786,
-        "median": 0.9004508137828822,
-        "p90": 40.627800481398744,
-        "within_tol_counting_abstentions": 0.7116666666666667
+        "n_scored": 594,
+        "abstain_rate": 0.010000000000000009,
+        "mae": 13.894736541180697,
+        "median": 1.2108459520682793,
+        "p90": 51.81228106262385,
+        "within_tol_counting_abstentions": 0.6783333333333333
       },
       "spo2": {
         "n": 600,
-        "n_scored": 390,
-        "abstain_rate": 0.35,
-        "mae": 3.905932858043147,
-        "median": 1.0697640035014757,
-        "p90": 13.68145553207672,
-        "within_tol_counting_abstentions": 0.37333333333333335
+        "n_scored": 414,
+        "abstain_rate": 0.31000000000000005,
+        "mae": 3.8726466993715065,
+        "median": 0.84456880420516,
+        "p90": 13.212937081923958,
+        "within_tol_counting_abstentions": 0.415
       }
     },
     "vitals_denoised": {
@@ -39,18 +39,18 @@
         "n": 600,
         "n_scored": 600,
         "abstain_rate": 0.0,
-        "mae": 3.765691510506255,
-        "median": 0.31109119427068066,
-        "p90": 5.866833006316937,
-        "within_tol_counting_abstentions": 0.895
+        "mae": 4.500463198097263,
+        "median": 0.30793861070782924,
+        "p90": 6.522826250526017,
+        "within_tol_counting_abstentions": 0.8833333333333333
       },
       "spo2": {
         "n": 600,
-        "n_scored": 481,
-        "abstain_rate": 0.19833333333333336,
-        "mae": 0.4406587330117934,
-        "median": 0.15360940866221995,
-        "p90": 1.1641366250932776,
+        "n_scored": 491,
+        "abstain_rate": 0.18166666666666664,
+        "mae": 0.545939851653117,
+        "median": 0.17925066012587365,
+        "p90": 1.3772978061978307,
         "within_tol_counting_abstentions": 0.7683333333333333
       }
     },
@@ -58,44 +58,44 @@
       "n": 600,
       "selected_fraction": 1.0,
       "hr": {
-        "n": 595,
-        "n_scored": 595,
+        "n": 594,
+        "n_scored": 594,
         "abstain_rate": 0.0,
-        "mae": 10.573761389530786,
-        "median": 0.9004508137828822,
-        "p90": 40.627800481398744,
-        "within_tol_counting_abstentions": 0.7176470588235294
+        "mae": 13.894736541180697,
+        "median": 1.2108459520682793,
+        "p90": 51.81228106262385,
+        "within_tol_counting_abstentions": 0.6851851851851852
       },
       "spo2": {
-        "n": 348,
-        "n_scored": 348,
+        "n": 372,
+        "n_scored": 372,
         "abstain_rate": 0.0,
-        "mae": 3.190336918913011,
-        "median": 0.6953332575530737,
-        "p90": 10.040631272266813,
-        "within_tol_counting_abstentions": 0.6206896551724138
+        "mae": 3.2386935879023357,
+        "median": 0.4574093397779464,
+        "p90": 11.672959326905213,
+        "within_tol_counting_abstentions": 0.6559139784946236
       }
     },
     "vitals_denoised_common": {
       "n": 600,
       "selected_fraction": 1.0,
       "hr": {
-        "n": 595,
-        "n_scored": 595,
+        "n": 594,
+        "n_scored": 594,
         "abstain_rate": 0.0,
-        "mae": 3.770618543332745,
-        "median": 0.3072030924566178,
-        "p90": 5.724927770066122,
-        "within_tol_counting_abstentions": 0.8957983193277311
+        "mae": 4.537267583437632,
+        "median": 0.3072156310803784,
+        "p90": 6.534832065816851,
+        "within_tol_counting_abstentions": 0.8821548821548821
       },
       "spo2": {
-        "n": 348,
-        "n_scored": 348,
+        "n": 372,
+        "n_scored": 372,
         "abstain_rate": 0.0,
-        "mae": 0.3886324288884698,
-        "median": 0.13759097739911397,
-        "p90": 0.8272246239577515,
-        "within_tol_counting_abstentions": 0.9655172413793104
+        "mae": 0.47074635226582917,
+        "median": 0.1495377491752805,
+        "p90": 1.2147669141888984,
+        "within_tol_counting_abstentions": 0.946236559139785
       }
     },
     "vitals_denoised_confident": {
@@ -105,50 +105,50 @@
         "n": 298,
         "n_scored": 298,
         "abstain_rate": 0.0,
-        "mae": 1.4785850208582314,
-        "median": 0.2229950455161145,
-        "p90": 1.1486461991408539,
-        "within_tol_counting_abstentions": 0.9630872483221476
+        "mae": 1.619686943474276,
+        "median": 0.22632410262202995,
+        "p90": 1.3563563102820604,
+        "within_tol_counting_abstentions": 0.9731543624161074
       },
       "spo2": {
         "n": 298,
         "n_scored": 298,
         "abstain_rate": 0.0,
-        "mae": 0.18886431884808366,
-        "median": 0.10040669574922134,
-        "p90": 0.41498105399939683,
+        "mae": 0.2110719596694616,
+        "median": 0.10991432175587335,
+        "p90": 0.44427323132686086,
         "within_tol_counting_abstentions": 0.9932885906040269
       }
     },
-    "step": 15000
+    "step": 16000
   },
   "history": [
     {
-      "wave": 0.11024122359231114,
-      "deriv": 0.10778935020789504,
-      "mask": 0.19884986151009798,
-      "ratio": 0.01832809136249125,
-      "mask_auc": 0.9768147680968238,
+      "wave": 0.10563654405996203,
+      "deriv": 0.11068800976499915,
+      "mask": 0.23686109483242035,
+      "ratio": 0.018881181720644236,
+      "mask_auc": 0.96355828715447,
       "vitals_raw": {
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
           "n": 600,
-          "n_scored": 595,
-          "abstain_rate": 0.008333333333333304,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7116666666666667
+          "n_scored": 594,
+          "abstain_rate": 0.010000000000000009,
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6783333333333333
         },
         "spo2": {
           "n": 600,
-          "n_scored": 390,
-          "abstain_rate": 0.35,
-          "mae": 3.905932858043147,
-          "median": 1.0697640035014757,
-          "p90": 13.68145553207672,
-          "within_tol_counting_abstentions": 0.37333333333333335
+          "n_scored": 414,
+          "abstain_rate": 0.31000000000000005,
+          "mae": 3.8726466993715065,
+          "median": 0.84456880420516,
+          "p90": 13.212937081923958,
+          "within_tol_counting_abstentions": 0.415
         }
       },
       "vitals_denoised": {
@@ -158,181 +158,63 @@
           "n": 600,
           "n_scored": 600,
           "abstain_rate": 0.0,
-          "mae": 5.04973387896807,
-          "median": 0.4098549339149997,
-          "p90": 9.84580847311247,
-          "within_tol_counting_abstentions": 0.8366666666666667
+          "mae": 7.053840989272758,
+          "median": 0.4297431968395031,
+          "p90": 18.614825730427775,
+          "within_tol_counting_abstentions": 0.8383333333333334
         },
         "spo2": {
           "n": 600,
-          "n_scored": 520,
-          "abstain_rate": 0.1333333333333333,
-          "mae": 1.0030804547129841,
-          "median": 0.3711562906560175,
-          "p90": 2.782182715670294,
-          "within_tol_counting_abstentions": 0.7383333333333333
+          "n_scored": 556,
+          "abstain_rate": 0.07333333333333336,
+          "mae": 1.452154378326798,
+          "median": 0.43005580039662306,
+          "p90": 4.392809410975424,
+          "within_tol_counting_abstentions": 0.7333333333333333
         }
       },
       "vitals_raw_common": {
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
-          "n": 595,
-          "n_scored": 595,
+          "n": 594,
+          "n_scored": 594,
           "abstain_rate": 0.0,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7176470588235294
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6851851851851852
         },
         "spo2": {
-          "n": 368,
-          "n_scored": 368,
+          "n": 399,
+          "n_scored": 399,
           "abstain_rate": 0.0,
-          "mae": 3.5349331080928454,
-          "median": 0.8426010798709243,
-          "p90": 11.448068398666198,
-          "within_tol_counting_abstentions": 0.6005434782608695
+          "mae": 3.7597439822390704,
+          "median": 0.6937212900041487,
+          "p90": 12.930436299219703,
+          "within_tol_counting_abstentions": 0.6140350877192983
         }
       },
       "vitals_denoised_common": {
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
-          "n": 595,
-          "n_scored": 595,
+          "n": 594,
+          "n_scored": 594,
           "abstain_rate": 0.0,
-          "mae": 5.05271876349938,
-          "median": 0.40605035911268317,
-          "p90": 9.731479073418203,
-          "within_tol_counting_abstentions": 0.8369747899159664
+          "mae": 7.083013448583496,
+          "median": 0.42030507923998783,
+          "p90": 19.630423322863006,
+          "within_tol_counting_abstentions": 0.8400673400673401
         },
         "spo2": {
-          "n": 368,
-          "n_scored": 368,
+          "n": 399,
+          "n_scored": 399,
           "abstain_rate": 0.0,
-          "mae": 0.8154777711199862,
-          "median": 0.325520962540395,
-          "p90": 2.20073096019093,
-          "within_tol_counting_abstentions": 0.8858695652173914
-        }
-      },
-      "vitals_denoised_confident": {
-        "n": 312,
-        "selected_fraction": 0.52,
-        "hr": {
-          "n": 312,
-          "n_scored": 312,
-          "abstain_rate": 0.0,
-          "mae": 2.108391590715288,
-          "median": 0.2393854466763301,
-          "p90": 1.965944881802109,
-          "within_tol_counting_abstentions": 0.9519230769230769
-        },
-        "spo2": {
-          "n": 312,
-          "n_scored": 312,
-          "abstain_rate": 0.0,
-          "mae": 0.49041776918651,
-          "median": 0.2761840028312861,
-          "p90": 0.9713336810994025,
-          "within_tol_counting_abstentions": 0.9583333333333334
-        }
-      },
-      "step": 1000
-    },
-    {
-      "wave": 0.10023877676576376,
-      "deriv": 0.0968321762047708,
-      "mask": 0.14592850161716342,
-      "ratio": 0.035015829373151064,
-      "mask_auc": 0.9872089584495062,
-      "vitals_raw": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 600,
-          "n_scored": 595,
-          "abstain_rate": 0.008333333333333304,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7116666666666667
-        },
-        "spo2": {
-          "n": 600,
-          "n_scored": 390,
-          "abstain_rate": 0.35,
-          "mae": 3.905932858043147,
-          "median": 1.0697640035014757,
-          "p90": 13.68145553207672,
-          "within_tol_counting_abstentions": 0.37333333333333335
-        }
-      },
-      "vitals_denoised": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 600,
-          "n_scored": 600,
-          "abstain_rate": 0.0,
-          "mae": 4.845490343464776,
-          "median": 0.3473107525578101,
-          "p90": 11.487404742601484,
-          "within_tol_counting_abstentions": 0.8583333333333333
-        },
-        "spo2": {
-          "n": 600,
-          "n_scored": 510,
-          "abstain_rate": 0.15000000000000002,
-          "mae": 1.0669020153612547,
-          "median": 0.7797062536210078,
-          "p90": 2.2630376664039304,
-          "within_tol_counting_abstentions": 0.7483333333333333
-        }
-      },
-      "vitals_raw_common": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 595,
-          "n_scored": 595,
-          "abstain_rate": 0.0,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7176470588235294
-        },
-        "spo2": {
-          "n": 362,
-          "n_scored": 362,
-          "abstain_rate": 0.0,
-          "mae": 3.431113564691074,
-          "median": 0.7962218671414547,
-          "p90": 11.320670662741852,
-          "within_tol_counting_abstentions": 0.6049723756906077
-        }
-      },
-      "vitals_denoised_common": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 595,
-          "n_scored": 595,
-          "abstain_rate": 0.0,
-          "mae": 4.858781033871681,
-          "median": 0.3460410351624432,
-          "p90": 11.880247038115662,
-          "within_tol_counting_abstentions": 0.8588235294117647
-        },
-        "spo2": {
-          "n": 362,
-          "n_scored": 362,
-          "abstain_rate": 0.0,
-          "mae": 1.0608555086803835,
-          "median": 0.7603597431338116,
-          "p90": 2.248344983711049,
-          "within_tol_counting_abstentions": 0.8812154696132597
+          "mae": 1.169086211138493,
+          "median": 0.36776780643450024,
+          "p90": 3.3234816847027298,
+          "within_tol_counting_abstentions": 0.8345864661654135
         }
       },
       "vitals_denoised_confident": {
@@ -342,49 +224,167 @@
           "n": 311,
           "n_scored": 311,
           "abstain_rate": 0.0,
-          "mae": 1.537508023271862,
-          "median": 0.22916796919049176,
-          "p90": 1.5900660174568202,
-          "within_tol_counting_abstentions": 0.9646302250803859
+          "mae": 2.7275851303366867,
+          "median": 0.24190766243901862,
+          "p90": 2.4037023879047013,
+          "within_tol_counting_abstentions": 0.954983922829582
         },
         "spo2": {
           "n": 311,
           "n_scored": 311,
           "abstain_rate": 0.0,
-          "mae": 0.9105382701037188,
-          "median": 0.7228779907756859,
-          "p90": 1.7484019209850317,
+          "mae": 0.5787229930177469,
+          "median": 0.2664812937926655,
+          "p90": 1.3087894817399501,
           "within_tol_counting_abstentions": 0.932475884244373
+        }
+      },
+      "step": 1000
+    },
+    {
+      "wave": 0.09777969820424914,
+      "deriv": 0.1002503982745111,
+      "mask": 0.17506637331098318,
+      "ratio": 0.01688214228488505,
+      "mask_auc": 0.9820804590131662,
+      "vitals_raw": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 600,
+          "n_scored": 594,
+          "abstain_rate": 0.010000000000000009,
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6783333333333333
+        },
+        "spo2": {
+          "n": 600,
+          "n_scored": 414,
+          "abstain_rate": 0.31000000000000005,
+          "mae": 3.8726466993715065,
+          "median": 0.84456880420516,
+          "p90": 13.212937081923958,
+          "within_tol_counting_abstentions": 0.415
+        }
+      },
+      "vitals_denoised": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 600,
+          "n_scored": 600,
+          "abstain_rate": 0.0,
+          "mae": 6.834228957896499,
+          "median": 0.40531812357509267,
+          "p90": 16.71493649251218,
+          "within_tol_counting_abstentions": 0.8466666666666667
+        },
+        "spo2": {
+          "n": 600,
+          "n_scored": 528,
+          "abstain_rate": 0.12,
+          "mae": 1.03270889613524,
+          "median": 0.32683586996002845,
+          "p90": 2.6760894400463275,
+          "within_tol_counting_abstentions": 0.75
+        }
+      },
+      "vitals_raw_common": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 594,
+          "n_scored": 594,
+          "abstain_rate": 0.0,
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6851851851851852
+        },
+        "spo2": {
+          "n": 400,
+          "n_scored": 400,
+          "abstain_rate": 0.0,
+          "mae": 3.7161234086643344,
+          "median": 0.7431256034098297,
+          "p90": 12.75021808797632,
+          "within_tol_counting_abstentions": 0.6175
+        }
+      },
+      "vitals_denoised_common": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 594,
+          "n_scored": 594,
+          "abstain_rate": 0.0,
+          "mae": 6.873298459715074,
+          "median": 0.4039850288756526,
+          "p90": 16.80079075775909,
+          "within_tol_counting_abstentions": 0.8468013468013468
+        },
+        "spo2": {
+          "n": 400,
+          "n_scored": 400,
+          "abstain_rate": 0.0,
+          "mae": 1.0091648296213034,
+          "median": 0.2911230115940526,
+          "p90": 2.805545978784388,
+          "within_tol_counting_abstentions": 0.8475
+        }
+      },
+      "vitals_denoised_confident": {
+        "n": 288,
+        "selected_fraction": 0.48,
+        "hr": {
+          "n": 288,
+          "n_scored": 288,
+          "abstain_rate": 0.0,
+          "mae": 1.9344538071502864,
+          "median": 0.22275995200320864,
+          "p90": 1.4747814529497596,
+          "within_tol_counting_abstentions": 0.9722222222222222
+        },
+        "spo2": {
+          "n": 288,
+          "n_scored": 288,
+          "abstain_rate": 0.0,
+          "mae": 0.43190993151204654,
+          "median": 0.14744965960994705,
+          "p90": 1.0136581148135597,
+          "within_tol_counting_abstentions": 0.9409722222222222
         }
       },
       "step": 2000
     },
     {
-      "wave": 0.09281288320198655,
-      "deriv": 0.08759307162836194,
-      "mask": 0.1322511942125857,
-      "ratio": 0.01834941387642175,
-      "mask_auc": 0.9898141794429722,
+      "wave": 0.08968953927978873,
+      "deriv": 0.09137792373076081,
+      "mask": 0.15568599943071604,
+      "ratio": 0.02265870408155024,
+      "mask_auc": 0.9859949818969438,
       "vitals_raw": {
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
           "n": 600,
-          "n_scored": 595,
-          "abstain_rate": 0.008333333333333304,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7116666666666667
+          "n_scored": 594,
+          "abstain_rate": 0.010000000000000009,
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6783333333333333
         },
         "spo2": {
           "n": 600,
-          "n_scored": 390,
-          "abstain_rate": 0.35,
-          "mae": 3.905932858043147,
-          "median": 1.0697640035014757,
-          "p90": 13.68145553207672,
-          "within_tol_counting_abstentions": 0.37333333333333335
+          "n_scored": 414,
+          "abstain_rate": 0.31000000000000005,
+          "mae": 3.8726466993715065,
+          "median": 0.84456880420516,
+          "p90": 13.212937081923958,
+          "within_tol_counting_abstentions": 0.415
         }
       },
       "vitals_denoised": {
@@ -392,117 +392,117 @@
         "selected_fraction": 1.0,
         "hr": {
           "n": 600,
-          "n_scored": 600,
-          "abstain_rate": 0.0,
-          "mae": 4.8641870220937395,
-          "median": 0.33321079637369166,
-          "p90": 9.929939236099003,
-          "within_tol_counting_abstentions": 0.855
+          "n_scored": 599,
+          "abstain_rate": 0.0016666666666667052,
+          "mae": 5.51063598603389,
+          "median": 0.3979074866499275,
+          "p90": 8.511256936456942,
+          "within_tol_counting_abstentions": 0.8766666666666667
         },
         "spo2": {
           "n": 600,
-          "n_scored": 495,
-          "abstain_rate": 0.17500000000000004,
-          "mae": 0.6967235118944084,
-          "median": 0.33955254179929284,
-          "p90": 1.652595017261473,
-          "within_tol_counting_abstentions": 0.7683333333333333
+          "n_scored": 541,
+          "abstain_rate": 0.09833333333333338,
+          "mae": 1.1580790431839603,
+          "median": 0.48648640889250316,
+          "p90": 2.6871396143170614,
+          "within_tol_counting_abstentions": 0.76
         }
       },
       "vitals_raw_common": {
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
-          "n": 595,
-          "n_scored": 595,
+          "n": 593,
+          "n_scored": 593,
           "abstain_rate": 0.0,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7176470588235294
+          "mae": 13.733794536004003,
+          "median": 1.184856403252958,
+          "p90": 51.534752822907166,
+          "within_tol_counting_abstentions": 0.6863406408094435
         },
         "spo2": {
-          "n": 355,
-          "n_scored": 355,
+          "n": 402,
+          "n_scored": 402,
           "abstain_rate": 0.0,
-          "mae": 3.361889096405499,
-          "median": 0.7294791750633465,
-          "p90": 10.957213336217649,
-          "within_tol_counting_abstentions": 0.6112676056338028
+          "mae": 3.609189323455333,
+          "median": 0.7077425748120163,
+          "p90": 12.296712110871326,
+          "within_tol_counting_abstentions": 0.6169154228855721
         }
       },
       "vitals_denoised_common": {
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
-          "n": 595,
-          "n_scored": 595,
+          "n": 593,
+          "n_scored": 593,
           "abstain_rate": 0.0,
-          "mae": 4.848569626119562,
-          "median": 0.33135344204687556,
-          "p90": 9.616035506594514,
-          "within_tol_counting_abstentions": 0.8554621848739495
+          "mae": 5.55444476366841,
+          "median": 0.3881601145452862,
+          "p90": 8.546366105601829,
+          "within_tol_counting_abstentions": 0.8768971332209107
         },
         "spo2": {
-          "n": 355,
-          "n_scored": 355,
+          "n": 402,
+          "n_scored": 402,
           "abstain_rate": 0.0,
-          "mae": 0.6245416738376243,
-          "median": 0.3163254837390923,
-          "p90": 1.3324108817897715,
-          "within_tol_counting_abstentions": 0.9408450704225352
+          "mae": 1.1093914395911537,
+          "median": 0.47202932844966483,
+          "p90": 2.442681961451757,
+          "within_tol_counting_abstentions": 0.8606965174129353
         }
       },
       "vitals_denoised_confident": {
-        "n": 307,
-        "selected_fraction": 0.5116666666666667,
+        "n": 311,
+        "selected_fraction": 0.5183333333333333,
         "hr": {
-          "n": 307,
-          "n_scored": 307,
+          "n": 311,
+          "n_scored": 311,
           "abstain_rate": 0.0,
-          "mae": 1.5188642832752648,
-          "median": 0.231491750534218,
-          "p90": 1.214573361114609,
-          "within_tol_counting_abstentions": 0.9641693811074918
+          "mae": 2.2391971151412844,
+          "median": 0.22840305408986694,
+          "p90": 1.710253664920046,
+          "within_tol_counting_abstentions": 0.9678456591639871
         },
         "spo2": {
-          "n": 307,
-          "n_scored": 307,
+          "n": 311,
+          "n_scored": 311,
           "abstain_rate": 0.0,
-          "mae": 0.37236165961371953,
-          "median": 0.27111082384388396,
-          "p90": 0.7380452892571417,
-          "within_tol_counting_abstentions": 0.990228013029316
+          "mae": 0.520506332405042,
+          "median": 0.3733195112126708,
+          "p90": 0.9504518477204869,
+          "within_tol_counting_abstentions": 0.9646302250803859
         }
       },
       "step": 3000
     },
     {
-      "wave": 0.08954384876415133,
-      "deriv": 0.08479968644678593,
-      "mask": 0.11763007659465075,
-      "ratio": 0.012814610498026013,
-      "mask_auc": 0.9917379649378504,
+      "wave": 0.08340115193277597,
+      "deriv": 0.08504274347797036,
+      "mask": 0.1369092334061861,
+      "ratio": 0.013103803503327072,
+      "mask_auc": 0.9888132017923954,
       "vitals_raw": {
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
           "n": 600,
-          "n_scored": 595,
-          "abstain_rate": 0.008333333333333304,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7116666666666667
+          "n_scored": 594,
+          "abstain_rate": 0.010000000000000009,
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6783333333333333
         },
         "spo2": {
           "n": 600,
-          "n_scored": 390,
-          "abstain_rate": 0.35,
-          "mae": 3.905932858043147,
-          "median": 1.0697640035014757,
-          "p90": 13.68145553207672,
-          "within_tol_counting_abstentions": 0.37333333333333335
+          "n_scored": 414,
+          "abstain_rate": 0.31000000000000005,
+          "mae": 3.8726466993715065,
+          "median": 0.84456880420516,
+          "p90": 13.212937081923958,
+          "within_tol_counting_abstentions": 0.415
         }
       },
       "vitals_denoised": {
@@ -512,115 +512,115 @@
           "n": 600,
           "n_scored": 600,
           "abstain_rate": 0.0,
-          "mae": 4.886636720588664,
-          "median": 0.34640725805301287,
-          "p90": 11.56919981647704,
-          "within_tol_counting_abstentions": 0.845
+          "mae": 5.7955764073184906,
+          "median": 0.39062375464758503,
+          "p90": 9.80448177310861,
+          "within_tol_counting_abstentions": 0.8633333333333333
         },
         "spo2": {
           "n": 600,
-          "n_scored": 492,
-          "abstain_rate": 0.18000000000000005,
-          "mae": 0.6735774994092716,
-          "median": 0.26960598977868955,
-          "p90": 1.5131514834323794,
-          "within_tol_counting_abstentions": 0.7583333333333333
+          "n_scored": 515,
+          "abstain_rate": 0.14166666666666672,
+          "mae": 0.8159548790952226,
+          "median": 0.21705416430950208,
+          "p90": 2.214093205546245,
+          "within_tol_counting_abstentions": 0.7633333333333333
         }
       },
       "vitals_raw_common": {
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
-          "n": 595,
-          "n_scored": 595,
+          "n": 594,
+          "n_scored": 594,
           "abstain_rate": 0.0,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7176470588235294
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6851851851851852
         },
         "spo2": {
-          "n": 354,
-          "n_scored": 354,
+          "n": 388,
+          "n_scored": 388,
           "abstain_rate": 0.0,
-          "mae": 3.1933234765591867,
-          "median": 0.7199561139584318,
-          "p90": 9.670079115332774,
-          "within_tol_counting_abstentions": 0.615819209039548
+          "mae": 3.4787209246128805,
+          "median": 0.525926865679871,
+          "p90": 12.553703930153668,
+          "within_tol_counting_abstentions": 0.634020618556701
         }
       },
       "vitals_denoised_common": {
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
-          "n": 595,
-          "n_scored": 595,
+          "n": 594,
+          "n_scored": 594,
           "abstain_rate": 0.0,
-          "mae": 4.845594148838181,
-          "median": 0.3414536404953452,
-          "p90": 11.512623161446097,
-          "within_tol_counting_abstentions": 0.8453781512605042
+          "mae": 5.8456487012196225,
+          "median": 0.38431716566632446,
+          "p90": 10.715237894564872,
+          "within_tol_counting_abstentions": 0.8619528619528619
         },
         "spo2": {
-          "n": 354,
-          "n_scored": 354,
+          "n": 388,
+          "n_scored": 388,
           "abstain_rate": 0.0,
-          "mae": 0.6123070804839271,
-          "median": 0.22530950224085444,
-          "p90": 1.225223449224242,
-          "within_tol_counting_abstentions": 0.9350282485875706
+          "mae": 0.7328803156417035,
+          "median": 0.20524132039815157,
+          "p90": 2.140463895173281,
+          "within_tol_counting_abstentions": 0.8943298969072165
         }
       },
       "vitals_denoised_confident": {
-        "n": 309,
-        "selected_fraction": 0.515,
+        "n": 305,
+        "selected_fraction": 0.5083333333333333,
         "hr": {
-          "n": 309,
-          "n_scored": 309,
+          "n": 305,
+          "n_scored": 305,
           "abstain_rate": 0.0,
-          "mae": 1.6418647784470033,
-          "median": 0.22932661770960294,
-          "p90": 1.5876819839124685,
-          "within_tol_counting_abstentions": 0.9611650485436893
+          "mae": 2.471401350144969,
+          "median": 0.22845558043722747,
+          "p90": 1.9568475322966923,
+          "within_tol_counting_abstentions": 0.9672131147540983
         },
         "spo2": {
-          "n": 309,
-          "n_scored": 309,
+          "n": 305,
+          "n_scored": 305,
           "abstain_rate": 0.0,
-          "mae": 0.31562996327673587,
-          "median": 0.18332303941895134,
-          "p90": 0.7070845760473469,
-          "within_tol_counting_abstentions": 0.9902912621359223
+          "mae": 0.3439570933994145,
+          "median": 0.13341180553685206,
+          "p90": 0.6166964713855837,
+          "within_tol_counting_abstentions": 0.9606557377049181
         }
       },
       "step": 4000
     },
     {
-      "wave": 0.08613221300765872,
-      "deriv": 0.08113987278193235,
-      "mask": 0.11523143481463194,
-      "ratio": 0.014553715533111244,
-      "mask_auc": 0.991990905297994,
+      "wave": 0.08588167140260339,
+      "deriv": 0.08490329049527645,
+      "mask": 0.15035520726814866,
+      "ratio": 0.02745653933379799,
+      "mask_auc": 0.9866567499171317,
       "vitals_raw": {
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
           "n": 600,
-          "n_scored": 595,
-          "abstain_rate": 0.008333333333333304,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7116666666666667
+          "n_scored": 594,
+          "abstain_rate": 0.010000000000000009,
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6783333333333333
         },
         "spo2": {
           "n": 600,
-          "n_scored": 390,
-          "abstain_rate": 0.35,
-          "mae": 3.905932858043147,
-          "median": 1.0697640035014757,
-          "p90": 13.68145553207672,
-          "within_tol_counting_abstentions": 0.37333333333333335
+          "n_scored": 414,
+          "abstain_rate": 0.31000000000000005,
+          "mae": 3.8726466993715065,
+          "median": 0.84456880420516,
+          "p90": 13.212937081923958,
+          "within_tol_counting_abstentions": 0.415
         }
       },
       "vitals_denoised": {
@@ -630,115 +630,115 @@
           "n": 600,
           "n_scored": 600,
           "abstain_rate": 0.0,
-          "mae": 4.363509423594142,
-          "median": 0.33510261401200125,
-          "p90": 9.393464871237592,
-          "within_tol_counting_abstentions": 0.8566666666666667
+          "mae": 4.525668051166712,
+          "median": 0.3658226228968573,
+          "p90": 7.10753695780657,
+          "within_tol_counting_abstentions": 0.8733333333333333
         },
         "spo2": {
           "n": 600,
-          "n_scored": 493,
-          "abstain_rate": 0.17833333333333334,
-          "mae": 0.6566219339065775,
-          "median": 0.2823890839342056,
-          "p90": 1.538324886439597,
-          "within_tol_counting_abstentions": 0.77
+          "n_scored": 510,
+          "abstain_rate": 0.15000000000000002,
+          "mae": 1.141065337124781,
+          "median": 0.5977269551482678,
+          "p90": 2.7230179400791665,
+          "within_tol_counting_abstentions": 0.725
         }
       },
       "vitals_raw_common": {
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
-          "n": 595,
-          "n_scored": 595,
+          "n": 594,
+          "n_scored": 594,
           "abstain_rate": 0.0,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7176470588235294
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6851851851851852
         },
         "spo2": {
-          "n": 352,
-          "n_scored": 352,
+          "n": 382,
+          "n_scored": 382,
           "abstain_rate": 0.0,
-          "mae": 3.3357659743819905,
-          "median": 0.7109627447068405,
-          "p90": 11.118353464291944,
-          "within_tol_counting_abstentions": 0.6136363636363636
+          "mae": 3.31044116259458,
+          "median": 0.5048243516818545,
+          "p90": 11.70085650145781,
+          "within_tol_counting_abstentions": 0.6465968586387435
         }
       },
       "vitals_denoised_common": {
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
-          "n": 595,
-          "n_scored": 595,
+          "n": 594,
+          "n_scored": 594,
           "abstain_rate": 0.0,
-          "mae": 4.323180008408729,
-          "median": 0.32422774135108057,
-          "p90": 9.196341404878853,
-          "within_tol_counting_abstentions": 0.8571428571428571
+          "mae": 4.5433477738342845,
+          "median": 0.3620243282061466,
+          "p90": 7.016561970939182,
+          "within_tol_counting_abstentions": 0.8737373737373737
         },
         "spo2": {
-          "n": 352,
-          "n_scored": 352,
+          "n": 382,
+          "n_scored": 382,
           "abstain_rate": 0.0,
-          "mae": 0.5695012362020487,
-          "median": 0.2224934528002862,
-          "p90": 1.225271480742737,
-          "within_tol_counting_abstentions": 0.9517045454545454
+          "mae": 1.13049980493502,
+          "median": 0.606058008456813,
+          "p90": 2.6145658231166475,
+          "within_tol_counting_abstentions": 0.856020942408377
         }
       },
       "vitals_denoised_confident": {
-        "n": 308,
-        "selected_fraction": 0.5133333333333333,
+        "n": 281,
+        "selected_fraction": 0.4683333333333333,
         "hr": {
-          "n": 308,
-          "n_scored": 308,
+          "n": 281,
+          "n_scored": 281,
           "abstain_rate": 0.0,
-          "mae": 1.7414692719680611,
-          "median": 0.2311397480643791,
-          "p90": 1.3351729171446862,
-          "within_tol_counting_abstentions": 0.9577922077922078
+          "mae": 1.429176084093581,
+          "median": 0.22617536479697264,
+          "p90": 1.358125834929929,
+          "within_tol_counting_abstentions": 0.9750889679715302
         },
         "spo2": {
-          "n": 308,
-          "n_scored": 308,
+          "n": 281,
+          "n_scored": 281,
           "abstain_rate": 0.0,
-          "mae": 0.32464461062783634,
-          "median": 0.20727472148467996,
-          "p90": 0.642435975891354,
-          "within_tol_counting_abstentions": 0.987012987012987
+          "mae": 0.8001472948259287,
+          "median": 0.5542359635151826,
+          "p90": 1.6230130126664761,
+          "within_tol_counting_abstentions": 0.9217081850533808
         }
       },
       "step": 5000
     },
     {
-      "wave": 0.08642987255007029,
-      "deriv": 0.08087519463151693,
-      "mask": 0.1144221038557589,
-      "ratio": 0.011533200973644853,
-      "mask_auc": 0.9927908025304675,
+      "wave": 0.07715087570250034,
+      "deriv": 0.07884257147088647,
+      "mask": 0.12691868422552943,
+      "ratio": 0.02356087078806013,
+      "mask_auc": 0.9903374572035689,
       "vitals_raw": {
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
           "n": 600,
-          "n_scored": 595,
-          "abstain_rate": 0.008333333333333304,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7116666666666667
+          "n_scored": 594,
+          "abstain_rate": 0.010000000000000009,
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6783333333333333
         },
         "spo2": {
           "n": 600,
-          "n_scored": 390,
-          "abstain_rate": 0.35,
-          "mae": 3.905932858043147,
-          "median": 1.0697640035014757,
-          "p90": 13.68145553207672,
-          "within_tol_counting_abstentions": 0.37333333333333335
+          "n_scored": 414,
+          "abstain_rate": 0.31000000000000005,
+          "mae": 3.8726466993715065,
+          "median": 0.84456880420516,
+          "p90": 13.212937081923958,
+          "within_tol_counting_abstentions": 0.415
         }
       },
       "vitals_denoised": {
@@ -748,18 +748,18 @@
           "n": 600,
           "n_scored": 600,
           "abstain_rate": 0.0,
-          "mae": 4.056410351272274,
-          "median": 0.33424724643135306,
-          "p90": 7.024950531822427,
-          "within_tol_counting_abstentions": 0.86
+          "mae": 4.845682156709191,
+          "median": 0.3675852449363717,
+          "p90": 7.638389700499354,
+          "within_tol_counting_abstentions": 0.8783333333333333
         },
         "spo2": {
           "n": 600,
-          "n_scored": 506,
-          "abstain_rate": 0.15666666666666662,
-          "mae": 0.7316420423442003,
-          "median": 0.2512818756454678,
-          "p90": 1.8262412805332175,
+          "n_scored": 502,
+          "abstain_rate": 0.16333333333333333,
+          "mae": 0.900752323669367,
+          "median": 0.48462294676623685,
+          "p90": 1.7672111539224193,
           "within_tol_counting_abstentions": 0.7616666666666667
         }
       },
@@ -767,162 +767,44 @@
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
-          "n": 595,
-          "n_scored": 595,
+          "n": 594,
+          "n_scored": 594,
           "abstain_rate": 0.0,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7176470588235294
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6851851851851852
         },
         "spo2": {
-          "n": 361,
-          "n_scored": 361,
+          "n": 379,
+          "n_scored": 379,
           "abstain_rate": 0.0,
-          "mae": 3.379476173230191,
-          "median": 0.770907267408063,
-          "p90": 11.172066840316688,
-          "within_tol_counting_abstentions": 0.6094182825484764
+          "mae": 3.3821135503387394,
+          "median": 0.4882061070312034,
+          "p90": 12.34682295167665,
+          "within_tol_counting_abstentions": 0.6464379947229552
         }
       },
       "vitals_denoised_common": {
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
-          "n": 595,
-          "n_scored": 595,
+          "n": 594,
+          "n_scored": 594,
           "abstain_rate": 0.0,
-          "mae": 4.061496283097338,
-          "median": 0.32979987394827504,
-          "p90": 6.932497494721176,
-          "within_tol_counting_abstentions": 0.8605042016806723
+          "mae": 4.862240686868614,
+          "median": 0.33852368899700735,
+          "p90": 7.466324588385541,
+          "within_tol_counting_abstentions": 0.8787878787878788
         },
         "spo2": {
-          "n": 361,
-          "n_scored": 361,
+          "n": 379,
+          "n_scored": 379,
           "abstain_rate": 0.0,
-          "mae": 0.6585245734645611,
-          "median": 0.2344414164984414,
-          "p90": 1.2991100188607447,
-          "within_tol_counting_abstentions": 0.9196675900277008
-        }
-      },
-      "vitals_denoised_confident": {
-        "n": 314,
-        "selected_fraction": 0.5233333333333333,
-        "hr": {
-          "n": 314,
-          "n_scored": 314,
-          "abstain_rate": 0.0,
-          "mae": 1.5150685168311042,
-          "median": 0.23194308660471563,
-          "p90": 1.2653544137088057,
-          "within_tol_counting_abstentions": 0.9617834394904459
-        },
-        "spo2": {
-          "n": 314,
-          "n_scored": 314,
-          "abstain_rate": 0.0,
-          "mae": 0.33402184150088254,
-          "median": 0.19564933635219006,
-          "p90": 0.6950408904023858,
-          "within_tol_counting_abstentions": 0.9808917197452229
-        }
-      },
-      "step": 6000
-    },
-    {
-      "wave": 0.0842673727311194,
-      "deriv": 0.07913558697327971,
-      "mask": 0.1112568024545908,
-      "ratio": 0.013377437833696604,
-      "mask_auc": 0.9924602749657446,
-      "vitals_raw": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 600,
-          "n_scored": 595,
-          "abstain_rate": 0.008333333333333304,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7116666666666667
-        },
-        "spo2": {
-          "n": 600,
-          "n_scored": 390,
-          "abstain_rate": 0.35,
-          "mae": 3.905932858043147,
-          "median": 1.0697640035014757,
-          "p90": 13.68145553207672,
-          "within_tol_counting_abstentions": 0.37333333333333335
-        }
-      },
-      "vitals_denoised": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 600,
-          "n_scored": 600,
-          "abstain_rate": 0.0,
-          "mae": 4.181457527819777,
-          "median": 0.3209261955468534,
-          "p90": 6.6789226665248975,
-          "within_tol_counting_abstentions": 0.88
-        },
-        "spo2": {
-          "n": 600,
-          "n_scored": 487,
-          "abstain_rate": 0.18833333333333335,
-          "mae": 0.5963090666243043,
-          "median": 0.2193612871307664,
-          "p90": 1.3613293940821571,
-          "within_tol_counting_abstentions": 0.7616666666666667
-        }
-      },
-      "vitals_raw_common": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 595,
-          "n_scored": 595,
-          "abstain_rate": 0.0,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7176470588235294
-        },
-        "spo2": {
-          "n": 354,
-          "n_scored": 354,
-          "abstain_rate": 0.0,
-          "mae": 3.237271100131504,
-          "median": 0.7199561139584318,
-          "p90": 10.359591075849986,
-          "within_tol_counting_abstentions": 0.615819209039548
-        }
-      },
-      "vitals_denoised_common": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 595,
-          "n_scored": 595,
-          "abstain_rate": 0.0,
-          "mae": 4.136576862790805,
-          "median": 0.3168216275751803,
-          "p90": 6.637603112043318,
-          "within_tol_counting_abstentions": 0.880672268907563
-        },
-        "spo2": {
-          "n": 354,
-          "n_scored": 354,
-          "abstain_rate": 0.0,
-          "mae": 0.540065118567278,
-          "median": 0.17962605491452166,
-          "p90": 1.1036791774329031,
-          "within_tol_counting_abstentions": 0.9463276836158192
+          "mae": 0.820182883874144,
+          "median": 0.47187994967053726,
+          "p90": 1.5460587349913253,
+          "within_tol_counting_abstentions": 0.9182058047493403
         }
       },
       "vitals_denoised_confident": {
@@ -932,49 +814,49 @@
           "n": 296,
           "n_scored": 296,
           "abstain_rate": 0.0,
-          "mae": 1.5680505183729012,
-          "median": 0.21699524399674885,
-          "p90": 1.2313804782991369,
-          "within_tol_counting_abstentions": 0.9662162162162162
+          "mae": 1.3725701277405618,
+          "median": 0.22984900440176403,
+          "p90": 1.3493171013081309,
+          "within_tol_counting_abstentions": 0.9797297297297297
         },
         "spo2": {
           "n": 296,
           "n_scored": 296,
           "abstain_rate": 0.0,
-          "mae": 0.25308177996620945,
-          "median": 0.1480211866569192,
-          "p90": 0.49552490041926944,
-          "within_tol_counting_abstentions": 0.9898648648648649
+          "mae": 0.5176601763419056,
+          "median": 0.437656603726154,
+          "p90": 0.8699721235482585,
+          "within_tol_counting_abstentions": 0.9831081081081081
         }
       },
-      "step": 7000
+      "step": 6000
     },
     {
-      "wave": 0.0813120398670435,
-      "deriv": 0.07676098356023431,
-      "mask": 0.1024529431015253,
-      "ratio": 0.011254393495619297,
-      "mask_auc": 0.9936357993038022,
+      "wave": 0.07496173353865743,
+      "deriv": 0.07621112233027816,
+      "mask": 0.12074293941259384,
+      "ratio": 0.011981299321632832,
+      "mask_auc": 0.9913603987463224,
       "vitals_raw": {
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
           "n": 600,
-          "n_scored": 595,
-          "abstain_rate": 0.008333333333333304,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7116666666666667
+          "n_scored": 594,
+          "abstain_rate": 0.010000000000000009,
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6783333333333333
         },
         "spo2": {
           "n": 600,
-          "n_scored": 390,
-          "abstain_rate": 0.35,
-          "mae": 3.905932858043147,
-          "median": 1.0697640035014757,
-          "p90": 13.68145553207672,
-          "within_tol_counting_abstentions": 0.37333333333333335
+          "n_scored": 414,
+          "abstain_rate": 0.31000000000000005,
+          "mae": 3.8726466993715065,
+          "median": 0.84456880420516,
+          "p90": 13.212937081923958,
+          "within_tol_counting_abstentions": 0.415
         }
       },
       "vitals_denoised": {
@@ -984,63 +866,535 @@
           "n": 600,
           "n_scored": 600,
           "abstain_rate": 0.0,
-          "mae": 3.546663210774976,
-          "median": 0.2993055714484001,
-          "p90": 6.157566575231181,
-          "within_tol_counting_abstentions": 0.885
+          "mae": 4.841788363847852,
+          "median": 0.31841545590192055,
+          "p90": 6.395920751077102,
+          "within_tol_counting_abstentions": 0.8783333333333333
         },
         "spo2": {
           "n": 600,
-          "n_scored": 493,
-          "abstain_rate": 0.17833333333333334,
-          "mae": 0.5891707274752024,
-          "median": 0.20050623609677132,
-          "p90": 1.5757843062280672,
-          "within_tol_counting_abstentions": 0.7666666666666667
+          "n_scored": 502,
+          "abstain_rate": 0.16333333333333333,
+          "mae": 0.7820483755887618,
+          "median": 0.2140906668337479,
+          "p90": 2.0278506848787208,
+          "within_tol_counting_abstentions": 0.7483333333333333
         }
       },
       "vitals_raw_common": {
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
-          "n": 595,
-          "n_scored": 595,
+          "n": 594,
+          "n_scored": 594,
           "abstain_rate": 0.0,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7176470588235294
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6851851851851852
         },
         "spo2": {
-          "n": 355,
-          "n_scored": 355,
+          "n": 378,
+          "n_scored": 378,
           "abstain_rate": 0.0,
-          "mae": 3.3183629202894505,
-          "median": 0.7270715421035447,
-          "p90": 10.957213336217649,
-          "within_tol_counting_abstentions": 0.6140845070422535
+          "mae": 3.27210492695019,
+          "median": 0.48580223344015394,
+          "p90": 11.663245745429728,
+          "within_tol_counting_abstentions": 0.6507936507936508
         }
       },
       "vitals_denoised_common": {
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
-          "n": 595,
-          "n_scored": 595,
+          "n": 594,
+          "n_scored": 594,
           "abstain_rate": 0.0,
-          "mae": 3.559770726661777,
-          "median": 0.29683795840371374,
-          "p90": 6.26304286940139,
-          "within_tol_counting_abstentions": 0.8840336134453781
+          "mae": 4.845538120524911,
+          "median": 0.31364277962247655,
+          "p90": 6.377202356091681,
+          "within_tol_counting_abstentions": 0.8787878787878788
         },
         "spo2": {
-          "n": 355,
-          "n_scored": 355,
+          "n": 378,
+          "n_scored": 378,
           "abstain_rate": 0.0,
-          "mae": 0.5269645836416078,
-          "median": 0.1784446224714884,
-          "p90": 1.1815650000795366,
-          "within_tol_counting_abstentions": 0.9436619718309859
+          "mae": 0.6904649027276435,
+          "median": 0.1953527883800419,
+          "p90": 1.8323147778852427,
+          "within_tol_counting_abstentions": 0.9047619047619048
+        }
+      },
+      "vitals_denoised_confident": {
+        "n": 292,
+        "selected_fraction": 0.4866666666666667,
+        "hr": {
+          "n": 292,
+          "n_scored": 292,
+          "abstain_rate": 0.0,
+          "mae": 1.622105905068392,
+          "median": 0.2227428494296788,
+          "p90": 1.4588314090925656,
+          "within_tol_counting_abstentions": 0.976027397260274
+        },
+        "spo2": {
+          "n": 292,
+          "n_scored": 292,
+          "abstain_rate": 0.0,
+          "mae": 0.26730862563603613,
+          "median": 0.14569598672311201,
+          "p90": 0.519304152689611,
+          "within_tol_counting_abstentions": 0.9794520547945206
+        }
+      },
+      "step": 7000
+    },
+    {
+      "wave": 0.07480833074077964,
+      "deriv": 0.07588195335119963,
+      "mask": 0.1230153520591557,
+      "ratio": 0.01707328832708299,
+      "mask_auc": 0.9910336452422945,
+      "vitals_raw": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 600,
+          "n_scored": 594,
+          "abstain_rate": 0.010000000000000009,
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6783333333333333
+        },
+        "spo2": {
+          "n": 600,
+          "n_scored": 414,
+          "abstain_rate": 0.31000000000000005,
+          "mae": 3.8726466993715065,
+          "median": 0.84456880420516,
+          "p90": 13.212937081923958,
+          "within_tol_counting_abstentions": 0.415
+        }
+      },
+      "vitals_denoised": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 600,
+          "n_scored": 599,
+          "abstain_rate": 0.0016666666666667052,
+          "mae": 4.683017612346861,
+          "median": 0.34831089559712325,
+          "p90": 7.189457490394637,
+          "within_tol_counting_abstentions": 0.875
+        },
+        "spo2": {
+          "n": 600,
+          "n_scored": 493,
+          "abstain_rate": 0.17833333333333334,
+          "mae": 0.6741403955655366,
+          "median": 0.30154692151765516,
+          "p90": 1.422617001985916,
+          "within_tol_counting_abstentions": 0.765
+        }
+      },
+      "vitals_raw_common": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 593,
+          "n_scored": 593,
+          "abstain_rate": 0.0,
+          "mae": 13.901019806643706,
+          "median": 1.184856403252958,
+          "p90": 51.83633142473697,
+          "within_tol_counting_abstentions": 0.6863406408094435
+        },
+        "spo2": {
+          "n": 372,
+          "n_scored": 372,
+          "abstain_rate": 0.0,
+          "mae": 3.2684156595692246,
+          "median": 0.4574093397779464,
+          "p90": 12.076182862497719,
+          "within_tol_counting_abstentions": 0.6559139784946236
+        }
+      },
+      "vitals_denoised_common": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 593,
+          "n_scored": 593,
+          "abstain_rate": 0.0,
+          "mae": 4.702399237974547,
+          "median": 0.3364657256090595,
+          "p90": 7.174953774985438,
+          "within_tol_counting_abstentions": 0.8768971332209107
+        },
+        "spo2": {
+          "n": 372,
+          "n_scored": 372,
+          "abstain_rate": 0.0,
+          "mae": 0.609613870885074,
+          "median": 0.28842278291282497,
+          "p90": 1.2448478790352533,
+          "within_tol_counting_abstentions": 0.9354838709677419
+        }
+      },
+      "vitals_denoised_confident": {
+        "n": 296,
+        "selected_fraction": 0.49333333333333335,
+        "hr": {
+          "n": 296,
+          "n_scored": 296,
+          "abstain_rate": 0.0,
+          "mae": 1.3764741655974397,
+          "median": 0.21902096768206292,
+          "p90": 1.3661012415280744,
+          "within_tol_counting_abstentions": 0.9797297297297297
+        },
+        "spo2": {
+          "n": 296,
+          "n_scored": 296,
+          "abstain_rate": 0.0,
+          "mae": 0.31599197808359475,
+          "median": 0.24069462229322625,
+          "p90": 0.5362471176246473,
+          "within_tol_counting_abstentions": 0.9831081081081081
+        }
+      },
+      "step": 8000
+    },
+    {
+      "wave": 0.07169208163395524,
+      "deriv": 0.07338254014030099,
+      "mask": 0.11722979787737131,
+      "ratio": 0.012538408685941249,
+      "mask_auc": 0.991749956055997,
+      "vitals_raw": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 600,
+          "n_scored": 594,
+          "abstain_rate": 0.010000000000000009,
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6783333333333333
+        },
+        "spo2": {
+          "n": 600,
+          "n_scored": 414,
+          "abstain_rate": 0.31000000000000005,
+          "mae": 3.8726466993715065,
+          "median": 0.84456880420516,
+          "p90": 13.212937081923958,
+          "within_tol_counting_abstentions": 0.415
+        }
+      },
+      "vitals_denoised": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 600,
+          "n_scored": 600,
+          "abstain_rate": 0.0,
+          "mae": 4.667916750750172,
+          "median": 0.31684106276761526,
+          "p90": 6.651195992740867,
+          "within_tol_counting_abstentions": 0.8833333333333333
+        },
+        "spo2": {
+          "n": 600,
+          "n_scored": 504,
+          "abstain_rate": 0.16000000000000003,
+          "mae": 0.6877967012559618,
+          "median": 0.20307483926340097,
+          "p90": 1.6104101153331098,
+          "within_tol_counting_abstentions": 0.7633333333333333
+        }
+      },
+      "vitals_raw_common": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 594,
+          "n_scored": 594,
+          "abstain_rate": 0.0,
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6851851851851852
+        },
+        "spo2": {
+          "n": 376,
+          "n_scored": 376,
+          "abstain_rate": 0.0,
+          "mae": 3.3438795666527295,
+          "median": 0.4787061552280605,
+          "p90": 12.128233451241982,
+          "within_tol_counting_abstentions": 0.648936170212766
+        }
+      },
+      "vitals_denoised_common": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 594,
+          "n_scored": 594,
+          "abstain_rate": 0.0,
+          "mae": 4.702873836474216,
+          "median": 0.307513861833165,
+          "p90": 6.659983151970324,
+          "within_tol_counting_abstentions": 0.8821548821548821
+        },
+        "spo2": {
+          "n": 376,
+          "n_scored": 376,
+          "abstain_rate": 0.0,
+          "mae": 0.5792949182246357,
+          "median": 0.17762752024591322,
+          "p90": 1.3257812541455465,
+          "within_tol_counting_abstentions": 0.925531914893617
+        }
+      },
+      "vitals_denoised_confident": {
+        "n": 303,
+        "selected_fraction": 0.505,
+        "hr": {
+          "n": 303,
+          "n_scored": 303,
+          "abstain_rate": 0.0,
+          "mae": 1.625910472872506,
+          "median": 0.22413742144220805,
+          "p90": 1.4524635125766205,
+          "within_tol_counting_abstentions": 0.9735973597359736
+        },
+        "spo2": {
+          "n": 303,
+          "n_scored": 303,
+          "abstain_rate": 0.0,
+          "mae": 0.3280630979453142,
+          "median": 0.13549472054242528,
+          "p90": 0.7431775117849703,
+          "within_tol_counting_abstentions": 0.9702970297029703
+        }
+      },
+      "step": 9000
+    },
+    {
+      "wave": 0.070874884724617,
+      "deriv": 0.07243355643004179,
+      "mask": 0.112400664947927,
+      "ratio": 0.012256169866304845,
+      "mask_auc": 0.9924751099087497,
+      "vitals_raw": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 600,
+          "n_scored": 594,
+          "abstain_rate": 0.010000000000000009,
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6783333333333333
+        },
+        "spo2": {
+          "n": 600,
+          "n_scored": 414,
+          "abstain_rate": 0.31000000000000005,
+          "mae": 3.8726466993715065,
+          "median": 0.84456880420516,
+          "p90": 13.212937081923958,
+          "within_tol_counting_abstentions": 0.415
+        }
+      },
+      "vitals_denoised": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 600,
+          "n_scored": 600,
+          "abstain_rate": 0.0,
+          "mae": 4.733654576167936,
+          "median": 0.3172434580157102,
+          "p90": 7.528125470694184,
+          "within_tol_counting_abstentions": 0.8816666666666667
+        },
+        "spo2": {
+          "n": 600,
+          "n_scored": 501,
+          "abstain_rate": 0.16500000000000004,
+          "mae": 0.665799175852519,
+          "median": 0.21406369048567342,
+          "p90": 1.9173585716118282,
+          "within_tol_counting_abstentions": 0.7583333333333333
+        }
+      },
+      "vitals_raw_common": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 594,
+          "n_scored": 594,
+          "abstain_rate": 0.0,
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6851851851851852
+        },
+        "spo2": {
+          "n": 379,
+          "n_scored": 379,
+          "abstain_rate": 0.0,
+          "mae": 3.340989748397013,
+          "median": 0.4916869470766443,
+          "p90": 11.763823725005915,
+          "within_tol_counting_abstentions": 0.6437994722955145
+        }
+      },
+      "vitals_denoised_common": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 594,
+          "n_scored": 594,
+          "abstain_rate": 0.0,
+          "mae": 4.7634564382836535,
+          "median": 0.3089842475592661,
+          "p90": 7.62019102162442,
+          "within_tol_counting_abstentions": 0.8804713804713805
+        },
+        "spo2": {
+          "n": 379,
+          "n_scored": 379,
+          "abstain_rate": 0.0,
+          "mae": 0.6058606184253698,
+          "median": 0.19033277488937017,
+          "p90": 1.497697964401214,
+          "within_tol_counting_abstentions": 0.9129287598944591
+        }
+      },
+      "vitals_denoised_confident": {
+        "n": 301,
+        "selected_fraction": 0.5016666666666667,
+        "hr": {
+          "n": 301,
+          "n_scored": 301,
+          "abstain_rate": 0.0,
+          "mae": 1.6298724661919908,
+          "median": 0.22206963553740877,
+          "p90": 1.5313205814104975,
+          "within_tol_counting_abstentions": 0.973421926910299
+        },
+        "spo2": {
+          "n": 301,
+          "n_scored": 301,
+          "abstain_rate": 0.0,
+          "mae": 0.3307347664012804,
+          "median": 0.14129817325742522,
+          "p90": 0.7011933914806718,
+          "within_tol_counting_abstentions": 0.9667774086378738
+        }
+      },
+      "step": 10000
+    },
+    {
+      "wave": 0.0706088780425489,
+      "deriv": 0.07161229569464922,
+      "mask": 0.11250678915530443,
+      "ratio": 0.016522201942279935,
+      "mask_auc": 0.9924724048377309,
+      "vitals_raw": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 600,
+          "n_scored": 594,
+          "abstain_rate": 0.010000000000000009,
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6783333333333333
+        },
+        "spo2": {
+          "n": 600,
+          "n_scored": 414,
+          "abstain_rate": 0.31000000000000005,
+          "mae": 3.8726466993715065,
+          "median": 0.84456880420516,
+          "p90": 13.212937081923958,
+          "within_tol_counting_abstentions": 0.415
+        }
+      },
+      "vitals_denoised": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 600,
+          "n_scored": 600,
+          "abstain_rate": 0.0,
+          "mae": 5.011406838541241,
+          "median": 0.3232174432693853,
+          "p90": 7.520019308100418,
+          "within_tol_counting_abstentions": 0.885
+        },
+        "spo2": {
+          "n": 600,
+          "n_scored": 492,
+          "abstain_rate": 0.18000000000000005,
+          "mae": 0.7198375997393908,
+          "median": 0.35376794055941474,
+          "p90": 1.5843887215481287,
+          "within_tol_counting_abstentions": 0.7533333333333333
+        }
+      },
+      "vitals_raw_common": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 594,
+          "n_scored": 594,
+          "abstain_rate": 0.0,
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6851851851851852
+        },
+        "spo2": {
+          "n": 378,
+          "n_scored": 378,
+          "abstain_rate": 0.0,
+          "mae": 3.3331914638361773,
+          "median": 0.48580223344015394,
+          "p90": 12.125262309315229,
+          "within_tol_counting_abstentions": 0.6481481481481481
+        }
+      },
+      "vitals_denoised_common": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 594,
+          "n_scored": 594,
+          "abstain_rate": 0.0,
+          "mae": 5.044997545563726,
+          "median": 0.32106595232909285,
+          "p90": 8.011949777727242,
+          "within_tol_counting_abstentions": 0.8855218855218855
+        },
+        "spo2": {
+          "n": 378,
+          "n_scored": 378,
+          "abstain_rate": 0.0,
+          "mae": 0.7070405823072788,
+          "median": 0.3591406215552553,
+          "p90": 1.5612367846182185,
+          "within_tol_counting_abstentions": 0.9206349206349206
         }
       },
       "vitals_denoised_confident": {
@@ -1050,403 +1404,49 @@
           "n": 293,
           "n_scored": 293,
           "abstain_rate": 0.0,
-          "mae": 1.4877416711820817,
-          "median": 0.2226408707152956,
-          "p90": 1.0118665350311917,
-          "within_tol_counting_abstentions": 0.9658703071672355
+          "mae": 1.6814680600750094,
+          "median": 0.22805150452620637,
+          "p90": 1.7217194322188647,
+          "within_tol_counting_abstentions": 0.9726962457337884
         },
         "spo2": {
           "n": 293,
           "n_scored": 293,
           "abstain_rate": 0.0,
-          "mae": 0.22344873545425198,
-          "median": 0.12955071170289045,
-          "p90": 0.4902818549833569,
-          "within_tol_counting_abstentions": 0.9931740614334471
-        }
-      },
-      "step": 8000
-    },
-    {
-      "wave": 0.08233678946271539,
-      "deriv": 0.07586494088172913,
-      "mask": 0.10260876687243581,
-      "ratio": 0.01891541003715247,
-      "mask_auc": 0.9938913732134359,
-      "vitals_raw": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 600,
-          "n_scored": 595,
-          "abstain_rate": 0.008333333333333304,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7116666666666667
-        },
-        "spo2": {
-          "n": 600,
-          "n_scored": 390,
-          "abstain_rate": 0.35,
-          "mae": 3.905932858043147,
-          "median": 1.0697640035014757,
-          "p90": 13.68145553207672,
-          "within_tol_counting_abstentions": 0.37333333333333335
-        }
-      },
-      "vitals_denoised": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 600,
-          "n_scored": 600,
-          "abstain_rate": 0.0,
-          "mae": 4.150475517203256,
-          "median": 0.3244923493162446,
-          "p90": 7.792768627988627,
-          "within_tol_counting_abstentions": 0.8766666666666667
-        },
-        "spo2": {
-          "n": 600,
-          "n_scored": 482,
-          "abstain_rate": 0.19666666666666666,
-          "mae": 0.6803545791140795,
-          "median": 0.44856676257926864,
-          "p90": 1.3295886563429893,
-          "within_tol_counting_abstentions": 0.7566666666666667
-        }
-      },
-      "vitals_raw_common": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 595,
-          "n_scored": 595,
-          "abstain_rate": 0.0,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7176470588235294
-        },
-        "spo2": {
-          "n": 351,
-          "n_scored": 351,
-          "abstain_rate": 0.0,
-          "mae": 3.2777094550152186,
-          "median": 0.7090848036003621,
-          "p90": 10.634933080069061,
-          "within_tol_counting_abstentions": 0.6182336182336182
-        }
-      },
-      "vitals_denoised_common": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 595,
-          "n_scored": 595,
-          "abstain_rate": 0.0,
-          "mae": 4.115139751376967,
-          "median": 0.3200554512316387,
-          "p90": 7.449319643653988,
-          "within_tol_counting_abstentions": 0.8773109243697479
-        },
-        "spo2": {
-          "n": 351,
-          "n_scored": 351,
-          "abstain_rate": 0.0,
-          "mae": 0.6405263631799468,
-          "median": 0.43988599554737107,
-          "p90": 1.1986811043997534,
-          "within_tol_counting_abstentions": 0.9458689458689459
-        }
-      },
-      "vitals_denoised_confident": {
-        "n": 290,
-        "selected_fraction": 0.48333333333333334,
-        "hr": {
-          "n": 290,
-          "n_scored": 290,
-          "abstain_rate": 0.0,
-          "mae": 1.5209505256186469,
-          "median": 0.21864944716610069,
-          "p90": 1.1010168109667193,
-          "within_tol_counting_abstentions": 0.9620689655172414
-        },
-        "spo2": {
-          "n": 290,
-          "n_scored": 290,
-          "abstain_rate": 0.0,
-          "mae": 0.5009225031632095,
-          "median": 0.4227664896851735,
-          "p90": 0.8431812516979792,
-          "within_tol_counting_abstentions": 0.9793103448275862
-        }
-      },
-      "step": 9000
-    },
-    {
-      "wave": 0.07858531503006816,
-      "deriv": 0.07433437975123525,
-      "mask": 0.09837807482108474,
-      "ratio": 0.012506122118793428,
-      "mask_auc": 0.9941572731558955,
-      "vitals_raw": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 600,
-          "n_scored": 595,
-          "abstain_rate": 0.008333333333333304,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7116666666666667
-        },
-        "spo2": {
-          "n": 600,
-          "n_scored": 390,
-          "abstain_rate": 0.35,
-          "mae": 3.905932858043147,
-          "median": 1.0697640035014757,
-          "p90": 13.68145553207672,
-          "within_tol_counting_abstentions": 0.37333333333333335
-        }
-      },
-      "vitals_denoised": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 600,
-          "n_scored": 600,
-          "abstain_rate": 0.0,
-          "mae": 3.6768630806076925,
-          "median": 0.3214361461230837,
-          "p90": 6.527895505667026,
-          "within_tol_counting_abstentions": 0.8833333333333333
-        },
-        "spo2": {
-          "n": 600,
-          "n_scored": 483,
-          "abstain_rate": 0.19499999999999995,
-          "mae": 0.5134487812379384,
-          "median": 0.2074261959899104,
-          "p90": 1.2822834194823831,
-          "within_tol_counting_abstentions": 0.7666666666666667
-        }
-      },
-      "vitals_raw_common": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 595,
-          "n_scored": 595,
-          "abstain_rate": 0.0,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7176470588235294
-        },
-        "spo2": {
-          "n": 350,
-          "n_scored": 350,
-          "abstain_rate": 0.0,
-          "mae": 3.223522848992745,
-          "median": 0.7109627447068405,
-          "p90": 10.602423143690558,
-          "within_tol_counting_abstentions": 0.62
-        }
-      },
-      "vitals_denoised_common": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 595,
-          "n_scored": 595,
-          "abstain_rate": 0.0,
-          "mae": 3.6496296773126513,
-          "median": 0.31872052778489035,
-          "p90": 6.482956187434106,
-          "within_tol_counting_abstentions": 0.8840336134453781
-        },
-        "spo2": {
-          "n": 350,
-          "n_scored": 350,
-          "abstain_rate": 0.0,
-          "mae": 0.44789389720207623,
-          "median": 0.176798119747005,
-          "p90": 0.9510584271895375,
-          "within_tol_counting_abstentions": 0.96
-        }
-      },
-      "vitals_denoised_confident": {
-        "n": 295,
-        "selected_fraction": 0.49166666666666664,
-        "hr": {
-          "n": 295,
-          "n_scored": 295,
-          "abstain_rate": 0.0,
-          "mae": 1.63665213427221,
-          "median": 0.21611955778550396,
-          "p90": 1.1539481139240597,
-          "within_tol_counting_abstentions": 0.9627118644067797
-        },
-        "spo2": {
-          "n": 295,
-          "n_scored": 295,
-          "abstain_rate": 0.0,
-          "mae": 0.24057002197350194,
-          "median": 0.14992914179302375,
-          "p90": 0.5394006482511494,
-          "within_tol_counting_abstentions": 0.9932203389830508
-        }
-      },
-      "step": 10000
-    },
-    {
-      "wave": 0.07716647093184292,
-      "deriv": 0.07338709686882794,
-      "mask": 0.09827626775950193,
-      "ratio": 0.009563355066347867,
-      "mask_auc": 0.9943509919953819,
-      "vitals_raw": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 600,
-          "n_scored": 595,
-          "abstain_rate": 0.008333333333333304,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7116666666666667
-        },
-        "spo2": {
-          "n": 600,
-          "n_scored": 390,
-          "abstain_rate": 0.35,
-          "mae": 3.905932858043147,
-          "median": 1.0697640035014757,
-          "p90": 13.68145553207672,
-          "within_tol_counting_abstentions": 0.37333333333333335
-        }
-      },
-      "vitals_denoised": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 600,
-          "n_scored": 600,
-          "abstain_rate": 0.0,
-          "mae": 3.658272861361504,
-          "median": 0.2934492550863439,
-          "p90": 6.123756659233846,
-          "within_tol_counting_abstentions": 0.8816666666666667
-        },
-        "spo2": {
-          "n": 600,
-          "n_scored": 492,
-          "abstain_rate": 0.18000000000000005,
-          "mae": 0.4785820072102959,
-          "median": 0.16849891056529742,
-          "p90": 1.2478485648390534,
-          "within_tol_counting_abstentions": 0.78
-        }
-      },
-      "vitals_raw_common": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 595,
-          "n_scored": 595,
-          "abstain_rate": 0.0,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7176470588235294
-        },
-        "spo2": {
-          "n": 353,
-          "n_scored": 353,
-          "abstain_rate": 0.0,
-          "mae": 3.2702905731502296,
-          "median": 0.7270715421035447,
-          "p90": 10.627708649762727,
-          "within_tol_counting_abstentions": 0.6175637393767706
-        }
-      },
-      "vitals_denoised_common": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 595,
-          "n_scored": 595,
-          "abstain_rate": 0.0,
-          "mae": 3.6248778929312753,
-          "median": 0.292956730186134,
-          "p90": 6.059003192292021,
-          "within_tol_counting_abstentions": 0.8823529411764706
-        },
-        "spo2": {
-          "n": 353,
-          "n_scored": 353,
-          "abstain_rate": 0.0,
-          "mae": 0.40816205244099124,
-          "median": 0.1515911046179923,
-          "p90": 0.973337071553789,
-          "within_tol_counting_abstentions": 0.9631728045325779
-        }
-      },
-      "vitals_denoised_confident": {
-        "n": 307,
-        "selected_fraction": 0.5116666666666667,
-        "hr": {
-          "n": 307,
-          "n_scored": 307,
-          "abstain_rate": 0.0,
-          "mae": 1.305362541485601,
-          "median": 0.2136021881828043,
-          "p90": 1.0787072911765885,
-          "within_tol_counting_abstentions": 0.9674267100977199
-        },
-        "spo2": {
-          "n": 307,
-          "n_scored": 307,
-          "abstain_rate": 0.0,
-          "mae": 0.22031653192599857,
-          "median": 0.11872852345734941,
-          "p90": 0.5026968770393667,
-          "within_tol_counting_abstentions": 0.990228013029316
+          "mae": 0.4288704233987214,
+          "median": 0.32701767955857974,
+          "p90": 0.8238982098644958,
+          "within_tol_counting_abstentions": 0.9726962457337884
         }
       },
       "step": 11000
     },
     {
-      "wave": 0.07663129456341267,
-      "deriv": 0.07275493233464658,
-      "mask": 0.09800174832344055,
-      "ratio": 0.012371292104944587,
-      "mask_auc": 0.9942027307529397,
+      "wave": 0.06867042905651033,
+      "deriv": 0.07006140728481114,
+      "mask": 0.1094582355581224,
+      "ratio": 0.011220610293094069,
+      "mask_auc": 0.993012983445093,
       "vitals_raw": {
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
           "n": 600,
-          "n_scored": 595,
-          "abstain_rate": 0.008333333333333304,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7116666666666667
+          "n_scored": 594,
+          "abstain_rate": 0.010000000000000009,
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6783333333333333
         },
         "spo2": {
           "n": 600,
-          "n_scored": 390,
-          "abstain_rate": 0.35,
-          "mae": 3.905932858043147,
-          "median": 1.0697640035014757,
-          "p90": 13.68145553207672,
-          "within_tol_counting_abstentions": 0.37333333333333335
+          "n_scored": 414,
+          "abstain_rate": 0.31000000000000005,
+          "mae": 3.8726466993715065,
+          "median": 0.84456880420516,
+          "p90": 13.212937081923958,
+          "within_tol_counting_abstentions": 0.415
         }
       },
       "vitals_denoised": {
@@ -1456,18 +1456,18 @@
           "n": 600,
           "n_scored": 600,
           "abstain_rate": 0.0,
-          "mae": 3.7382662353170053,
-          "median": 0.3129123483321905,
-          "p90": 6.458861429422043,
+          "mae": 4.666268259814713,
+          "median": 0.31873662594496466,
+          "p90": 6.2458275665891465,
           "within_tol_counting_abstentions": 0.8816666666666667
         },
         "spo2": {
           "n": 600,
-          "n_scored": 488,
-          "abstain_rate": 0.18666666666666665,
-          "mae": 0.5623542630536569,
-          "median": 0.2792446778186175,
-          "p90": 1.2987152044316206,
+          "n_scored": 501,
+          "abstain_rate": 0.16500000000000004,
+          "mae": 0.6375273385757283,
+          "median": 0.22594227085021146,
+          "p90": 1.6137081564064033,
           "within_tol_counting_abstentions": 0.77
         }
       },
@@ -1475,96 +1475,96 @@
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
-          "n": 595,
-          "n_scored": 595,
+          "n": 594,
+          "n_scored": 594,
           "abstain_rate": 0.0,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7176470588235294
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6851851851851852
         },
         "spo2": {
-          "n": 352,
-          "n_scored": 352,
+          "n": 379,
+          "n_scored": 379,
           "abstain_rate": 0.0,
-          "mae": 3.2313234286120203,
-          "median": 0.7109627447068405,
-          "p90": 10.519070977641618,
-          "within_tol_counting_abstentions": 0.6193181818181818
+          "mae": 3.358553766522214,
+          "median": 0.4882061070312034,
+          "p90": 12.123776738351854,
+          "within_tol_counting_abstentions": 0.6464379947229552
         }
       },
       "vitals_denoised_common": {
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
-          "n": 595,
-          "n_scored": 595,
+          "n": 594,
+          "n_scored": 594,
           "abstain_rate": 0.0,
-          "mae": 3.745065621654525,
-          "median": 0.31061700496397293,
-          "p90": 6.447696099221609,
-          "within_tol_counting_abstentions": 0.8823529411764706
+          "mae": 4.676228894891404,
+          "median": 0.31811554190423763,
+          "p90": 6.143436482361066,
+          "within_tol_counting_abstentions": 0.8821548821548821
         },
         "spo2": {
-          "n": 352,
-          "n_scored": 352,
+          "n": 379,
+          "n_scored": 379,
           "abstain_rate": 0.0,
-          "mae": 0.5029134398466005,
-          "median": 0.2730237798097974,
-          "p90": 1.1526436622568428,
-          "within_tol_counting_abstentions": 0.9573863636363636
+          "mae": 0.5641796083092189,
+          "median": 0.22367773809244795,
+          "p90": 1.381400646125499,
+          "within_tol_counting_abstentions": 0.9313984168865436
         }
       },
       "vitals_denoised_confident": {
-        "n": 302,
-        "selected_fraction": 0.5033333333333333,
+        "n": 305,
+        "selected_fraction": 0.5083333333333333,
         "hr": {
-          "n": 302,
-          "n_scored": 302,
+          "n": 305,
+          "n_scored": 305,
           "abstain_rate": 0.0,
-          "mae": 1.3414781681341175,
-          "median": 0.2177987808349151,
-          "p90": 1.1431499091783484,
-          "within_tol_counting_abstentions": 0.9635761589403974
+          "mae": 1.623879943050605,
+          "median": 0.22429782717483704,
+          "p90": 1.502070544477364,
+          "within_tol_counting_abstentions": 0.9737704918032787
         },
         "spo2": {
-          "n": 302,
-          "n_scored": 302,
+          "n": 305,
+          "n_scored": 305,
           "abstain_rate": 0.0,
-          "mae": 0.3322050819009666,
-          "median": 0.22085760984998615,
-          "p90": 0.6692362605741902,
-          "within_tol_counting_abstentions": 0.9867549668874173
+          "mae": 0.3054736048093506,
+          "median": 0.15184037850593768,
+          "p90": 0.6425994445740605,
+          "within_tol_counting_abstentions": 0.9770491803278688
         }
       },
       "step": 12000
     },
     {
-      "wave": 0.07667092466726899,
-      "deriv": 0.07246546633541584,
-      "mask": 0.09622944705188274,
-      "ratio": 0.00972696504322812,
-      "mask_auc": 0.9944129146391709,
+      "wave": 0.06801530998200178,
+      "deriv": 0.06972908019088209,
+      "mask": 0.10610317578539252,
+      "ratio": 0.011246045818552375,
+      "mask_auc": 0.9932425010568703,
       "vitals_raw": {
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
           "n": 600,
-          "n_scored": 595,
-          "abstain_rate": 0.008333333333333304,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7116666666666667
+          "n_scored": 594,
+          "abstain_rate": 0.010000000000000009,
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6783333333333333
         },
         "spo2": {
           "n": 600,
-          "n_scored": 390,
-          "abstain_rate": 0.35,
-          "mae": 3.905932858043147,
-          "median": 1.0697640035014757,
-          "p90": 13.68145553207672,
-          "within_tol_counting_abstentions": 0.37333333333333335
+          "n_scored": 414,
+          "abstain_rate": 0.31000000000000005,
+          "mae": 3.8726466993715065,
+          "median": 0.84456880420516,
+          "p90": 13.212937081923958,
+          "within_tol_counting_abstentions": 0.415
         }
       },
       "vitals_denoised": {
@@ -1574,299 +1574,63 @@
           "n": 600,
           "n_scored": 600,
           "abstain_rate": 0.0,
-          "mae": 3.7370505357931543,
-          "median": 0.3006893272256761,
-          "p90": 6.347598734467997,
-          "within_tol_counting_abstentions": 0.8816666666666667
-        },
-        "spo2": {
-          "n": 600,
-          "n_scored": 483,
-          "abstain_rate": 0.19499999999999995,
-          "mae": 0.45328773389810245,
-          "median": 0.17889925166339538,
-          "p90": 1.1823353481468648,
-          "within_tol_counting_abstentions": 0.775
-        }
-      },
-      "vitals_raw_common": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 595,
-          "n_scored": 595,
-          "abstain_rate": 0.0,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7176470588235294
-        },
-        "spo2": {
-          "n": 350,
-          "n_scored": 350,
-          "abstain_rate": 0.0,
-          "mae": 3.2667668234377465,
-          "median": 0.7109627447068405,
-          "p90": 10.688646456093835,
-          "within_tol_counting_abstentions": 0.6171428571428571
-        }
-      },
-      "vitals_denoised_common": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 595,
-          "n_scored": 595,
-          "abstain_rate": 0.0,
-          "mae": 3.7610494899883955,
-          "median": 0.29906468989779,
-          "p90": 6.447552053628012,
-          "within_tol_counting_abstentions": 0.880672268907563
-        },
-        "spo2": {
-          "n": 350,
-          "n_scored": 350,
-          "abstain_rate": 0.0,
-          "mae": 0.41107477205505477,
-          "median": 0.1725229163710651,
-          "p90": 0.9075556051251897,
-          "within_tol_counting_abstentions": 0.9657142857142857
-        }
-      },
-      "vitals_denoised_confident": {
-        "n": 295,
-        "selected_fraction": 0.49166666666666664,
-        "hr": {
-          "n": 295,
-          "n_scored": 295,
-          "abstain_rate": 0.0,
-          "mae": 1.3652053388712988,
-          "median": 0.22019664068933764,
-          "p90": 1.079960411195703,
-          "within_tol_counting_abstentions": 0.9627118644067797
-        },
-        "spo2": {
-          "n": 295,
-          "n_scored": 295,
-          "abstain_rate": 0.0,
-          "mae": 0.2096387082538527,
-          "median": 0.12877694318163435,
-          "p90": 0.4669407032139645,
-          "within_tol_counting_abstentions": 0.9932203389830508
-        }
-      },
-      "step": 13000
-    },
-    {
-      "wave": 0.07539838273078203,
-      "deriv": 0.07175291352905333,
-      "mask": 0.0938816829584539,
-      "ratio": 0.00945833488367498,
-      "mask_auc": 0.994678057228781,
-      "vitals_raw": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 600,
-          "n_scored": 595,
-          "abstain_rate": 0.008333333333333304,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7116666666666667
-        },
-        "spo2": {
-          "n": 600,
-          "n_scored": 390,
-          "abstain_rate": 0.35,
-          "mae": 3.905932858043147,
-          "median": 1.0697640035014757,
-          "p90": 13.68145553207672,
-          "within_tol_counting_abstentions": 0.37333333333333335
-        }
-      },
-      "vitals_denoised": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 600,
-          "n_scored": 600,
-          "abstain_rate": 0.0,
-          "mae": 3.7218974998639993,
-          "median": 0.3003961168985896,
-          "p90": 6.532632743466017,
+          "mae": 4.11393901306549,
+          "median": 0.3105857779327792,
+          "p90": 6.001818857977304,
           "within_tol_counting_abstentions": 0.8916666666666667
         },
         "spo2": {
           "n": 600,
-          "n_scored": 479,
-          "abstain_rate": 0.20166666666666666,
-          "mae": 0.4391743367045711,
-          "median": 0.16206183313309452,
-          "p90": 1.1256866829683245,
-          "within_tol_counting_abstentions": 0.765
+          "n_scored": 497,
+          "abstain_rate": 0.17166666666666663,
+          "mae": 0.6105827879966774,
+          "median": 0.2279278256511219,
+          "p90": 1.451518216205045,
+          "within_tol_counting_abstentions": 0.7766666666666666
         }
       },
       "vitals_raw_common": {
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
-          "n": 595,
-          "n_scored": 595,
+          "n": 594,
+          "n_scored": 594,
           "abstain_rate": 0.0,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7176470588235294
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6851851851851852
         },
         "spo2": {
-          "n": 348,
-          "n_scored": 348,
+          "n": 377,
+          "n_scored": 377,
           "abstain_rate": 0.0,
-          "mae": 3.190336918913011,
-          "median": 0.6953332575530737,
-          "p90": 10.040631272266813,
-          "within_tol_counting_abstentions": 0.6206896551724138
+          "mae": 3.3050072255022096,
+          "median": 0.4833983598491045,
+          "p90": 11.686257476842986,
+          "within_tol_counting_abstentions": 0.649867374005305
         }
       },
       "vitals_denoised_common": {
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
-          "n": 595,
-          "n_scored": 595,
+          "n": 594,
+          "n_scored": 594,
           "abstain_rate": 0.0,
-          "mae": 3.729009134042189,
-          "median": 0.30012262532252976,
-          "p90": 6.520840991931527,
-          "within_tol_counting_abstentions": 0.892436974789916
+          "mae": 4.139966226770538,
+          "median": 0.30910265660885017,
+          "p90": 6.245752683804936,
+          "within_tol_counting_abstentions": 0.8905723905723906
         },
         "spo2": {
-          "n": 348,
-          "n_scored": 348,
+          "n": 377,
+          "n_scored": 377,
           "abstain_rate": 0.0,
-          "mae": 0.39417650761120787,
-          "median": 0.15491775252857565,
-          "p90": 0.8957408010054866,
-          "within_tol_counting_abstentions": 0.9655172413793104
-        }
-      },
-      "vitals_denoised_confident": {
-        "n": 294,
-        "selected_fraction": 0.49,
-        "hr": {
-          "n": 294,
-          "n_scored": 294,
-          "abstain_rate": 0.0,
-          "mae": 1.4815291393749406,
-          "median": 0.22019200296082886,
-          "p90": 1.1118018308238384,
-          "within_tol_counting_abstentions": 0.9625850340136054
-        },
-        "spo2": {
-          "n": 294,
-          "n_scored": 294,
-          "abstain_rate": 0.0,
-          "mae": 0.19924271660745466,
-          "median": 0.11607504079293562,
-          "p90": 0.4171568119905899,
-          "within_tol_counting_abstentions": 0.9931972789115646
-        }
-      },
-      "step": 14000
-    },
-    {
-      "wave": 0.07531362539157271,
-      "deriv": 0.07177084987051785,
-      "mask": 0.09351109899580479,
-      "ratio": 0.009551066847052425,
-      "mask_auc": 0.9946768340804473,
-      "vitals_raw": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 600,
-          "n_scored": 595,
-          "abstain_rate": 0.008333333333333304,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7116666666666667
-        },
-        "spo2": {
-          "n": 600,
-          "n_scored": 390,
-          "abstain_rate": 0.35,
-          "mae": 3.905932858043147,
-          "median": 1.0697640035014757,
-          "p90": 13.68145553207672,
-          "within_tol_counting_abstentions": 0.37333333333333335
-        }
-      },
-      "vitals_denoised": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 600,
-          "n_scored": 600,
-          "abstain_rate": 0.0,
-          "mae": 3.765691510506255,
-          "median": 0.31109119427068066,
-          "p90": 5.866833006316937,
-          "within_tol_counting_abstentions": 0.895
-        },
-        "spo2": {
-          "n": 600,
-          "n_scored": 481,
-          "abstain_rate": 0.19833333333333336,
-          "mae": 0.4406587330117934,
-          "median": 0.15360940866221995,
-          "p90": 1.1641366250932776,
-          "within_tol_counting_abstentions": 0.7683333333333333
-        }
-      },
-      "vitals_raw_common": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 595,
-          "n_scored": 595,
-          "abstain_rate": 0.0,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7176470588235294
-        },
-        "spo2": {
-          "n": 348,
-          "n_scored": 348,
-          "abstain_rate": 0.0,
-          "mae": 3.190336918913011,
-          "median": 0.6953332575530737,
-          "p90": 10.040631272266813,
-          "within_tol_counting_abstentions": 0.6206896551724138
-        }
-      },
-      "vitals_denoised_common": {
-        "n": 600,
-        "selected_fraction": 1.0,
-        "hr": {
-          "n": 595,
-          "n_scored": 595,
-          "abstain_rate": 0.0,
-          "mae": 3.770618543332745,
-          "median": 0.3072030924566178,
-          "p90": 5.724927770066122,
-          "within_tol_counting_abstentions": 0.8957983193277311
-        },
-        "spo2": {
-          "n": 348,
-          "n_scored": 348,
-          "abstain_rate": 0.0,
-          "mae": 0.3886324288884698,
-          "median": 0.13759097739911397,
-          "p90": 0.8272246239577515,
-          "within_tol_counting_abstentions": 0.9655172413793104
+          "mae": 0.552432166641628,
+          "median": 0.21064301462931212,
+          "p90": 1.3558562480523653,
+          "within_tol_counting_abstentions": 0.9442970822281167
         }
       },
       "vitals_denoised_confident": {
@@ -1876,49 +1640,285 @@
           "n": 298,
           "n_scored": 298,
           "abstain_rate": 0.0,
-          "mae": 1.4785850208582314,
-          "median": 0.2229950455161145,
-          "p90": 1.1486461991408539,
-          "within_tol_counting_abstentions": 0.9630872483221476
+          "mae": 1.632546150645046,
+          "median": 0.22679442841489106,
+          "p90": 1.3619853125184989,
+          "within_tol_counting_abstentions": 0.9731543624161074
         },
         "spo2": {
           "n": 298,
           "n_scored": 298,
           "abstain_rate": 0.0,
-          "mae": 0.18886431884808366,
-          "median": 0.10040669574922134,
-          "p90": 0.41498105399939683,
+          "mae": 0.2682622822709052,
+          "median": 0.1842569640645806,
+          "p90": 0.5154860976714603,
           "within_tol_counting_abstentions": 0.9932885906040269
         }
       },
-      "step": 15000
+      "step": 13000
     },
     {
-      "wave": 0.0755238609854132,
-      "deriv": 0.07181281526573002,
-      "mask": 0.09361980110406876,
-      "ratio": 0.00961493793874979,
-      "mask_auc": 0.994672930207249,
+      "wave": 0.06781311961822212,
+      "deriv": 0.06949378456920385,
+      "mask": 0.10596129763871431,
+      "ratio": 0.010571856983006,
+      "mask_auc": 0.9932645082042172,
       "vitals_raw": {
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
           "n": 600,
-          "n_scored": 595,
-          "abstain_rate": 0.008333333333333304,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7116666666666667
+          "n_scored": 594,
+          "abstain_rate": 0.010000000000000009,
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6783333333333333
         },
         "spo2": {
           "n": 600,
-          "n_scored": 390,
-          "abstain_rate": 0.35,
-          "mae": 3.905932858043147,
-          "median": 1.0697640035014757,
-          "p90": 13.68145553207672,
-          "within_tol_counting_abstentions": 0.37333333333333335
+          "n_scored": 414,
+          "abstain_rate": 0.31000000000000005,
+          "mae": 3.8726466993715065,
+          "median": 0.84456880420516,
+          "p90": 13.212937081923958,
+          "within_tol_counting_abstentions": 0.415
+        }
+      },
+      "vitals_denoised": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 600,
+          "n_scored": 599,
+          "abstain_rate": 0.0016666666666667052,
+          "mae": 4.553626416485879,
+          "median": 0.31940913298092255,
+          "p90": 6.869844235508442,
+          "within_tol_counting_abstentions": 0.885
+        },
+        "spo2": {
+          "n": 600,
+          "n_scored": 490,
+          "abstain_rate": 0.18333333333333335,
+          "mae": 0.5646017287187447,
+          "median": 0.16957964355314914,
+          "p90": 1.4576877066551375,
+          "within_tol_counting_abstentions": 0.7633333333333333
+        }
+      },
+      "vitals_raw_common": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 593,
+          "n_scored": 593,
+          "abstain_rate": 0.0,
+          "mae": 13.733794536004003,
+          "median": 1.184856403252958,
+          "p90": 51.534752822907166,
+          "within_tol_counting_abstentions": 0.6863406408094435
+        },
+        "spo2": {
+          "n": 370,
+          "n_scored": 370,
+          "abstain_rate": 0.0,
+          "mae": 3.2333799512073416,
+          "median": 0.45485589693745254,
+          "p90": 11.719200991078534,
+          "within_tol_counting_abstentions": 0.6567567567567567
+        }
+      },
+      "vitals_denoised_common": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 593,
+          "n_scored": 593,
+          "abstain_rate": 0.0,
+          "mae": 4.58922344569978,
+          "median": 0.3170616253628822,
+          "p90": 6.915931774923598,
+          "within_tol_counting_abstentions": 0.8853288364249579
+        },
+        "spo2": {
+          "n": 370,
+          "n_scored": 370,
+          "abstain_rate": 0.0,
+          "mae": 0.47603059125974667,
+          "median": 0.15038149920350463,
+          "p90": 1.2271366692751702,
+          "within_tol_counting_abstentions": 0.9459459459459459
+        }
+      },
+      "vitals_denoised_confident": {
+        "n": 296,
+        "selected_fraction": 0.49333333333333335,
+        "hr": {
+          "n": 296,
+          "n_scored": 296,
+          "abstain_rate": 0.0,
+          "mae": 1.6278979905051691,
+          "median": 0.22643286321331146,
+          "p90": 1.3554059034039803,
+          "within_tol_counting_abstentions": 0.972972972972973
+        },
+        "spo2": {
+          "n": 296,
+          "n_scored": 296,
+          "abstain_rate": 0.0,
+          "mae": 0.22456655254825522,
+          "median": 0.12008984456945626,
+          "p90": 0.4505574605352436,
+          "within_tol_counting_abstentions": 0.9898648648648649
+        }
+      },
+      "step": 14000
+    },
+    {
+      "wave": 0.06737714051268995,
+      "deriv": 0.06910574249923229,
+      "mask": 0.10496088908985257,
+      "ratio": 0.010527470440138131,
+      "mask_auc": 0.9934217715453111,
+      "vitals_raw": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 600,
+          "n_scored": 594,
+          "abstain_rate": 0.010000000000000009,
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6783333333333333
+        },
+        "spo2": {
+          "n": 600,
+          "n_scored": 414,
+          "abstain_rate": 0.31000000000000005,
+          "mae": 3.8726466993715065,
+          "median": 0.84456880420516,
+          "p90": 13.212937081923958,
+          "within_tol_counting_abstentions": 0.415
+        }
+      },
+      "vitals_denoised": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 600,
+          "n_scored": 599,
+          "abstain_rate": 0.0016666666666667052,
+          "mae": 4.002694802672111,
+          "median": 0.3133478517496542,
+          "p90": 6.0110869507489415,
+          "within_tol_counting_abstentions": 0.8883333333333333
+        },
+        "spo2": {
+          "n": 600,
+          "n_scored": 495,
+          "abstain_rate": 0.17500000000000004,
+          "mae": 0.5866296135587697,
+          "median": 0.17106829267798673,
+          "p90": 1.4800308895297778,
+          "within_tol_counting_abstentions": 0.765
+        }
+      },
+      "vitals_raw_common": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 593,
+          "n_scored": 593,
+          "abstain_rate": 0.0,
+          "mae": 13.733794536004003,
+          "median": 1.184856403252958,
+          "p90": 51.534752822907166,
+          "within_tol_counting_abstentions": 0.6863406408094435
+        },
+        "spo2": {
+          "n": 374,
+          "n_scored": 374,
+          "abstain_rate": 0.0,
+          "mae": 3.258587667647347,
+          "median": 0.4668905401187473,
+          "p90": 11.669721466413383,
+          "within_tol_counting_abstentions": 0.6524064171122995
+        }
+      },
+      "vitals_denoised_common": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 593,
+          "n_scored": 593,
+          "abstain_rate": 0.0,
+          "mae": 4.033973215970707,
+          "median": 0.31295607425079197,
+          "p90": 6.128407459737772,
+          "within_tol_counting_abstentions": 0.8887015177065767
+        },
+        "spo2": {
+          "n": 374,
+          "n_scored": 374,
+          "abstain_rate": 0.0,
+          "mae": 0.4929934173279419,
+          "median": 0.1516497673935291,
+          "p90": 1.2243799648583242,
+          "within_tol_counting_abstentions": 0.9385026737967914
+        }
+      },
+      "vitals_denoised_confident": {
+        "n": 300,
+        "selected_fraction": 0.5,
+        "hr": {
+          "n": 300,
+          "n_scored": 300,
+          "abstain_rate": 0.0,
+          "mae": 1.6229145518596078,
+          "median": 0.22365581527631662,
+          "p90": 1.373018873496892,
+          "within_tol_counting_abstentions": 0.9733333333333334
+        },
+        "spo2": {
+          "n": 300,
+          "n_scored": 300,
+          "abstain_rate": 0.0,
+          "mae": 0.23598138716488365,
+          "median": 0.1144114783153114,
+          "p90": 0.5156904068843674,
+          "within_tol_counting_abstentions": 0.99
+        }
+      },
+      "step": 15000
+    },
+    {
+      "wave": 0.06718220375478268,
+      "deriv": 0.0690868787933141,
+      "mask": 0.10437288461253047,
+      "ratio": 0.010486100072739646,
+      "mask_auc": 0.9934309087551628,
+      "vitals_raw": {
+        "n": 600,
+        "selected_fraction": 1.0,
+        "hr": {
+          "n": 600,
+          "n_scored": 594,
+          "abstain_rate": 0.010000000000000009,
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6783333333333333
+        },
+        "spo2": {
+          "n": 600,
+          "n_scored": 414,
+          "abstain_rate": 0.31000000000000005,
+          "mae": 3.8726466993715065,
+          "median": 0.84456880420516,
+          "p90": 13.212937081923958,
+          "within_tol_counting_abstentions": 0.415
         }
       },
       "vitals_denoised": {
@@ -1928,91 +1928,91 @@
           "n": 600,
           "n_scored": 600,
           "abstain_rate": 0.0,
-          "mae": 3.951181519724552,
-          "median": 0.3177552667821999,
-          "p90": 6.529731293161299,
-          "within_tol_counting_abstentions": 0.8816666666666667
+          "mae": 4.500463198097263,
+          "median": 0.30793861070782924,
+          "p90": 6.522826250526017,
+          "within_tol_counting_abstentions": 0.8833333333333333
         },
         "spo2": {
           "n": 600,
-          "n_scored": 484,
-          "abstain_rate": 0.19333333333333336,
-          "mae": 0.45227544115345436,
-          "median": 0.15927409594242192,
-          "p90": 1.161571982597789,
-          "within_tol_counting_abstentions": 0.7666666666666667
+          "n_scored": 491,
+          "abstain_rate": 0.18166666666666664,
+          "mae": 0.545939851653117,
+          "median": 0.17925066012587365,
+          "p90": 1.3772978061978307,
+          "within_tol_counting_abstentions": 0.7683333333333333
         }
       },
       "vitals_raw_common": {
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
-          "n": 595,
-          "n_scored": 595,
+          "n": 594,
+          "n_scored": 594,
           "abstain_rate": 0.0,
-          "mae": 10.573761389530786,
-          "median": 0.9004508137828822,
-          "p90": 40.627800481398744,
-          "within_tol_counting_abstentions": 0.7176470588235294
+          "mae": 13.894736541180697,
+          "median": 1.2108459520682793,
+          "p90": 51.81228106262385,
+          "within_tol_counting_abstentions": 0.6851851851851852
         },
         "spo2": {
-          "n": 349,
-          "n_scored": 349,
+          "n": 372,
+          "n_scored": 372,
           "abstain_rate": 0.0,
-          "mae": 3.229553577826061,
-          "median": 0.7090848036003621,
-          "p90": 10.606035358843723,
-          "within_tol_counting_abstentions": 0.6189111747851003
+          "mae": 3.2386935879023357,
+          "median": 0.4574093397779464,
+          "p90": 11.672959326905213,
+          "within_tol_counting_abstentions": 0.6559139784946236
         }
       },
       "vitals_denoised_common": {
         "n": 600,
         "selected_fraction": 1.0,
         "hr": {
-          "n": 595,
-          "n_scored": 595,
+          "n": 594,
+          "n_scored": 594,
           "abstain_rate": 0.0,
-          "mae": 3.9572873221164184,
-          "median": 0.3157230863988332,
-          "p90": 6.42360221953804,
-          "within_tol_counting_abstentions": 0.8823529411764706
+          "mae": 4.537267583437632,
+          "median": 0.3072156310803784,
+          "p90": 6.534832065816851,
+          "within_tol_counting_abstentions": 0.8821548821548821
         },
         "spo2": {
-          "n": 349,
-          "n_scored": 349,
+          "n": 372,
+          "n_scored": 372,
           "abstain_rate": 0.0,
-          "mae": 0.3885795969677703,
-          "median": 0.14638027550012112,
-          "p90": 0.8138552720373519,
-          "within_tol_counting_abstentions": 0.9598853868194842
+          "mae": 0.47074635226582917,
+          "median": 0.1495377491752805,
+          "p90": 1.2147669141888984,
+          "within_tol_counting_abstentions": 0.946236559139785
         }
       },
       "vitals_denoised_confident": {
-        "n": 299,
-        "selected_fraction": 0.49833333333333335,
+        "n": 298,
+        "selected_fraction": 0.49666666666666665,
         "hr": {
-          "n": 299,
-          "n_scored": 299,
+          "n": 298,
+          "n_scored": 298,
           "abstain_rate": 0.0,
-          "mae": 1.5421674587442904,
-          "median": 0.22648357187060952,
-          "p90": 1.1403722563538956,
-          "within_tol_counting_abstentions": 0.9632107023411371
+          "mae": 1.619686943474276,
+          "median": 0.22632410262202995,
+          "p90": 1.3563563102820604,
+          "within_tol_counting_abstentions": 0.9731543624161074
         },
         "spo2": {
-          "n": 299,
-          "n_scored": 299,
+          "n": 298,
+          "n_scored": 298,
           "abstain_rate": 0.0,
-          "mae": 0.1931617395817631,
-          "median": 0.10202512705079414,
-          "p90": 0.4187109393667695,
-          "within_tol_counting_abstentions": 0.9899665551839465
+          "mae": 0.2110719596694616,
+          "median": 0.10991432175587335,
+          "p90": 0.44427323132686086,
+          "within_tol_counting_abstentions": 0.9932885906040269
         }
       },
       "step": 16000
     }
   ],
-  "onnx_max_abs_err": 4.291534423828125e-06,
+  "onnx_max_abs_err": 7.62939453125e-06,
   "train_windows": 200000,
-  "minutes": 38.04020372231801
+  "minutes": 41.175747108459475
 }

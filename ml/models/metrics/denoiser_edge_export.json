@@ -6,7 +6,7 @@
   "weights_bytes": 94216,
   "fractional_bits": {
     "input": 11,
-    "output": 10,
+    "output": 9,
     "tensors": [
       11,
       9,
@@ -23,7 +23,7 @@
       11,
       11,
       11,
-      12,
+      11,
       11,
       11,
       11,
@@ -32,21 +32,21 @@
       11,
       9,
       9,
-      9,
-      9,
-      9,
       10,
+      9,
+      9,
+      11,
       10,
-      10
+      9
     ]
   },
-  "bn_fold_max_abs_error": 7.563604362825771e-06,
+  "bn_fold_max_abs_error": 1.2594986358749338e-05,
   "int_vs_float": {
-    "wave_rms_error": 0.006435228295340325,
-    "wave_rms": 0.5670637893184561,
-    "wave_snr_db": 38.90135914354519,
-    "logit_rms_error": 0.053628890255729866,
-    "mask_decision_agreement": 0.9985847473144531,
+    "wave_rms_error": 0.004891735409855361,
+    "wave_rms": 0.5737409153103298,
+    "wave_snr_db": 41.38505727145854,
+    "logit_rms_error": 0.08447400984193686,
+    "mask_decision_agreement": 0.9981460571289062,
     "output_saturation_fraction": 0.0
   }
 }

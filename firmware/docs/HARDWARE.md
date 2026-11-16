@@ -108,8 +108,8 @@ These are observations from the schematic. None of them was measured — I do no
     stiffer divider on a wake-capable pin (IO0–IO5), e.g. 10 kΩ / 22 kΩ (3.4 V; still 2.9 V with
     the pull-down), allows a wake-up on USB.
 
-13. **RAM head-room for HTTPS.** The firmware keeps about 135 kB of the ESP32-C3's RAM for
-    itself (signal pipeline 109 kB, windows and record store 17 kB, task and USB buffers 8 kB).
+13. **RAM head-room for HTTPS.** The firmware keeps about 142 kB of the ESP32-C3's RAM for
+    itself (signal pipeline 117 kB, windows and record store 17 kB, task and USB buffers 8 kB).
     Wi-Fi needs roughly 50–60 kB of heap and a TLS handshake another 45–50 kB, which should fit
     but was not measured. *Check:* after the first successful upload type `status` and read
     `heap: ... lowest ... largest block`: the lowest value should stay above ≈15 kB. If uploads
