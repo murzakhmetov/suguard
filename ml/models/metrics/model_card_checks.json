@@ -163,23 +163,23 @@
         "windows": 150,
         "clean_beat_has_none": 150,
         "reported_although_none_with_noise_test": 0.0,
-        "reported_although_none_without_noise_test": 0.44666666666666666,
+        "reported_although_none_without_noise_test": 0.4066666666666667,
         "missed_with_noise_test": null,
         "missed_without_noise_test": null
       },
       "pi_0.3pct": {
         "windows": 150,
         "clean_beat_has_none": 150,
-        "reported_although_none_with_noise_test": 0.02,
-        "reported_although_none_without_noise_test": 0.76,
+        "reported_although_none_with_noise_test": 0.02666666666666667,
+        "reported_although_none_without_noise_test": 0.7266666666666667,
         "missed_with_noise_test": null,
         "missed_without_noise_test": null
       },
       "pi_0.1pct": {
         "windows": 150,
         "clean_beat_has_none": 150,
-        "reported_although_none_with_noise_test": 0.10666666666666667,
-        "reported_although_none_without_noise_test": 0.9466666666666667,
+        "reported_although_none_with_noise_test": 0.11333333333333333,
+        "reported_although_none_without_noise_test": 0.94,
         "missed_with_noise_test": null,
         "missed_without_noise_test": null
       }
@@ -486,6 +486,74 @@
             "mae": 0.20679996360058464
           }
         }
+      }
+    }
+  },
+  "calibration_level_prior": {
+    "design": "no population model, fingersticks of exactly the given level two a day; estimate one hour after the 3rd, 10th and 40th",
+    "results": {
+      "shipped_prior_sd_100": {
+        "readings_of_60": {
+          "after_3": 61.3,
+          "after_10": 60.1,
+          "after_40": 60.0
+        },
+        "readings_of_200": {
+          "after_3": 197.0,
+          "after_10": 199.8,
+          "after_40": 200.0
+        },
+        "readings_of_400": {
+          "after_3": 388.0,
+          "after_10": 398.8,
+          "after_40": 400.0
+        },
+        "readings_of_600": {
+          "after_3": 572.4,
+          "after_10": 595.4,
+          "after_40": 599.9
+        }
+      },
+      "narrow_prior_sd_30": {
+        "readings_of_60": {
+          "after_3": 71.0,
+          "after_10": 60.9,
+          "after_40": 60.0
+        },
+        "readings_of_200": {
+          "after_3": 175.1,
+          "after_10": 195.8,
+          "after_40": 200.0
+        },
+        "readings_of_400": {
+          "after_3": 306.6,
+          "after_10": 344.7,
+          "after_40": 399.4
+        },
+        "readings_of_600": {
+          "after_3": 405.9,
+          "after_10": 487.2,
+          "after_40": 593.4
+        }
+      }
+    }
+  },
+  "hr_estimator": {
+    "design": "2000 simulated windows without motion (simulator mix of shapes, rates and perfusion), beats on the measured IR, absolute error against the simulator's rate; 'where_beats_found' = windows where both estimates are within 10 bpm (no missed or extra beats)",
+    "windows_with_a_rate": 2000,
+    "windows_where_beats_found": 1963,
+    "results": {
+      "mean_of_valid_intervals": {
+        "mean_abs_error_bpm": 1.1644942318283724,
+        "p95_abs_error_bpm": 0.948855045466649,
+        "median_abs_error_bpm": 0.1914931713987471,
+        "mean_abs_error_bpm_where_beats_found": 0.28046011799221127
+      },
+      "median_of_valid_intervals": {
+        "mean_abs_error_bpm": 1.4126875653190976,
+        "p95_abs_error_bpm": 1.5777270903977414,
+        "median_abs_error_bpm": 0.37622789085226316,
+        "mean_abs_error_bpm_where_beats_found": 0.5114863387942333
       }
     }
   }

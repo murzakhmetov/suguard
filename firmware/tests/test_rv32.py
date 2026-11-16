@@ -100,10 +100,22 @@ def test_rv32_matches_host_and_python(build_dir):
     nn = [r["instr"] for r in rv_rows[1:] if r["nn"] == 1]
     classical = [r["instr"] for r in rv_rows[1:] if r["nn"] == 0]
     size = subprocess.run(["riscv64-unknown-elf-size", str(elf)], capture_output=True, text=True).stdout.splitlines()[-1].split()
+    # The signal core alone (network weights included): its object files, without the benchmark
+    # harness, picolibc and the test windows that the program above also contains.
+    objs = []
+    for src in sorted(CORE.glob("*.cpp")):
+        obj = build_dir / f"{src.stem}.rv32.o"
+        cc = subprocess.run([RV_GXX, *[f for f in RV_FLAGS if not f.startswith(("-Wl,", "--oslib", "--crt0"))],
+                             "-I", str(CORE), "-c", str(src), "-o", str(obj)], capture_output=True, text=True)
+        assert cc.returncode == 0, cc.stderr[-2000:]
+        objs.append(str(obj))
+    rows = subprocess.run(["riscv64-unknown-elf-size", *objs], capture_output=True, text=True).stdout.splitlines()[1:]
+    core_bytes = sum(int(r.split()[0]) + int(r.split()[1]) for r in rows)
     bench = {"instructions_per_window": {"with_nn": {"median": int(np.median(nn)), "max": int(max(nn))},
                                          "classical": {"median": int(np.median(classical)), "max": int(max(classical))}},
              "static_ram_bytes": rv_rows[0]["static_bytes"],
-             "code_and_constants_bytes": int(size[0]) + int(size[1]),
+             "signal_core_code_and_constants_bytes": core_bytes,
+             "benchmark_program_code_and_constants_bytes": int(size[0]) + int(size[1]),
              "note": "QEMU instruction counts for -march=rv32imc -O2 with picolibc soft-float; "
                      "not a measurement on the ESP32-C3"}
     print(json.dumps(bench))

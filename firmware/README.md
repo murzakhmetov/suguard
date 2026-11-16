@@ -196,7 +196,7 @@ packages from GitHub, about 370 MB); it needs `arm-none-eabi-g++`.
 | What | How | Result |
 |---|---|---|
 | Sources against the real Arduino API | `tools/typecheck_arduino.sh`: the sketch and every source file through a GCC front end with the headers, include paths and defines of Arduino core 2.0.17 (ESP-IDF 4.4, as C++17) and 3.3.12 (ESP-IDF 5.5, as C++20) | no error, no warning; **not a build** (generic 32-bit compiler, nothing generated or linked) |
-| Signal core = Python reference | C++ built for the host, compared on simulated windows: 300 classical, 200 denoised, 37 degenerate inputs | every decision identical; double-precision values within 5·10⁻¹⁵ (relative), FFT-dependent ones within 6·10⁻⁷ |
+| Signal core = Python reference | C++ built for the host, compared on simulated windows: 300 classical, 200 denoised, 43 degenerate or constructed inputs | every decision identical; the tests allow 10⁻⁹ (relative) for double-precision values and 10⁻⁴ (absolute) for FFT-dependent ones; the largest differences measured are 1.7·10⁻¹⁴ and 5.4·10⁻⁷ |
 | Integer network = Python reference | the C++ engine against the NumPy integer reference, random models and the shipped one | bit-exact |
 | Whole pipeline per window | `sg_process_window` against the Python pipeline, 316 windows × 2 modes, incl. inputs where the network must be overruled | same decisions and reasons; heart rate and SpO2 within 10⁻⁶ |
 | Device layer | driver, sampler, record store, upload scheduler and battery guard against a register-level MAX30102 simulator, with ASan/UBSan | 24 scenarios pass |

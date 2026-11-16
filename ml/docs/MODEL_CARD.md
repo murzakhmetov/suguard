@@ -132,8 +132,13 @@ Numbers in this section without another source come from `scripts/check_model_ca
   peak positions. The rate is the mean of the beat intervals that lie within 30 % of their median:
   the band keeps missed and extra beats out, and the mean cancels the jitter of the peak times
   (a peak found late lengthens one interval and shortens the next), which the median used before
-  did not (simulated clean windows: mean error 0.55 → 0.32 bpm). There is no fall-back to a
-  spectral estimate or to a previous value.
+  did not (2,000 simulated windows without motion: mean error 0.51 → 0.28 bpm on the 1,963 in which
+  the beats were found, 95th percentile 1.58 → 0.95 bpm over all; `hr_estimator`). There is no
+  fall-back to a spectral estimate or to a previous value. The spectral rate that the beat rate
+  must agree with (within about 12 bpm) is the cardiac-band peak with the most power in itself and
+  its 2nd and 3rd harmonic, among the peaks with at least a quarter of the strongest one's power:
+  a real pulse's 2nd harmonic can be stronger than its fundamental, and with a lower share arm
+  swing at half the heart rate won the sum.
 * **HRV** (Python and API only, from ≥ 60 s of signal; the firmware works on 10.24-s windows and
   has none) — premature beats and their compensatory pauses are removed with the decision rule of
   Lipponen & Tarvainen before SDNN/RMSSD are computed; the output states how many intervals were
@@ -158,8 +163,8 @@ Numbers in this section without another source come from `scripts/check_model_ca
   red/IR ratios. The dicrotic notch is reported only when it stands out from the noise of the
   averaged beat by three standard errors. Clean simulated windows whose noise-free beat has no
   notch, at a perfusion of 1 / 0.3 / 0.1 %: beats without a reflected wave get a notch reported in
-  0 / 2 / 11 % of the windows with this rule and in 45 / 76 / 95 % without it; the simulator's
-  whole shape family in 3 / 3 / 17 % and 66 / 77 / 91 %. The price: a notch the noise-free beat
+  0 / 3 / 11 % of the windows with this rule and in 41 / 73 / 94 % without it; the simulator's
+  whole shape family in 3 / 4 / 17 % and 66 / 77 / 91 %. The price: a notch the noise-free beat
   does have is missed in 6 / 14 / 13 % of those windows (30–35 each).
 
 ## 4. Diabetes risk — `models/risk_model.json` (v1.1.0)
@@ -206,7 +211,9 @@ population model's output, or a constant while there is no model), with slow dri
   limited to a year.
 * The level prior is broad (SD 100 mg/dL around 105): someone with diabetes may run at twice that.
   With the narrow prior used before (30 mg/dL) the filter took the first, large deviations for
-  noise and then converged slowly (40 readings of 600 mg/dL ended at 581).
+  noise and then converged slowly: readings of exactly 600 mg/dL, two a day, gave 406 / 487 / 593
+  after 3 / 10 / 40 of them, against 572 / 595 / 600 with the broad prior
+  (`calibration_level_prior`).
 * The spread around the level that the state does not explain starts at 30 mg/dL, counts as three
   fingersticks at first and then becomes a slow running average of the excess of the prediction
   errors over the filter's own uncertainty and the meter's error.

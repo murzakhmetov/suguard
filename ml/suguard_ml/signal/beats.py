@@ -25,8 +25,9 @@ class Beats:
         (within 30 % of the median) keeps missed and extra beats out; among
         the rest, a peak found a little late lengthens one interval and
         shortens the next, so the mean cancels that jitter where the median
-        does not (simulated clean windows: mean error 0.55 -> 0.32 bpm,
-        95th percentile 1.44 -> 0.82 bpm)."""
+        does not (1,963 simulated windows without motion in which the beats
+        were found: mean error 0.51 -> 0.28 bpm, 95th percentile of all
+        2,000: 1.58 -> 0.95 bpm; scripts/check_model_card.py, hr_estimator)."""
         good = self.ibi_s[self.valid_ibi]
         if good.size < 2:
             return None

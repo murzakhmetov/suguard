@@ -106,7 +106,9 @@ RESID_VAR_RANGE = (4.0, 60.0**2)
 RESID_PRIOR_SD = 30.0
 # Before the first fingerstick nothing is known about the person's level: someone with diabetes may
 # run at twice the prior mean. A narrow prior (it was 30 mg/dL) made the filter explain the first,
-# large innovations as noise and then converge slowly (40 readings of 600 mg/dL gave 581).
+# large innovations as noise and then converge slowly (readings of 600 mg/dL, two a day: 406 / 487 /
+# 593 after 3 / 10 / 40, against 572 / 595 / 600 with this prior; check_model_card.py,
+# calibration_level_prior).
 LEVEL_PRIOR_SD = 100.0
 RESID_PRIOR_WEIGHT = 3                 # the start value counts as this many fingersticks
 RESID_MIN_WEIGHT = 0.1                 # later on: a slow running average

@@ -16,8 +16,11 @@ the measured pulse is strong enough, the denoiser flags at most
 ``MAX_ARTIFACT_FRACTION`` of the window as motion, its output is supported
 by the measurement (a denoiser can draw a pulse that is not there, so its
 output cannot vouch for itself), the red/IR ratio is physiological, and
-every quality component passes. Otherwise they are None with reasons,
-never a guess.
+every quality component passes. Where the denoiser flags (almost) nothing
+(``CLEAN_MAX_MOTION``), SpO2 and the spectral cross-check of the heart rate
+use the measured signals. Otherwise the values are None with reasons, never
+a guess. That a shown value is right is still not guaranteed: steady
+rhythmic motion can pass for a pulse (scripts/eval_denoiser.py, hard_cases).
 """
 
 from __future__ import annotations
@@ -135,7 +138,10 @@ def vitals_from_signals(ir_bv: np.ndarray, red_bv: np.ndarray, sensor: SensorSta
     ``MAX_ARTIFACT_FRACTION`` of it is flagged as motion, the denoised IR
     pulse is supported by the measurement, and the red/IR ratio is one that
     arterial blood can produce. SpO2 additionally needs both wavelengths to
-    agree and the denoised red pulse to be supported by the measurement.
+    agree and the denoised red pulse to be supported by the measurement. In
+    a window with at most ``CLEAN_MAX_MOTION`` flagged, SpO2 is computed from
+    the measured red/IR and the beat rate must agree with the measured IR's
+    spectrum.
     """
     denoised = p_art is not None
     if not denoised:

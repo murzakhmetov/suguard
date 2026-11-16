@@ -513,3 +513,64 @@ def test_bigideas_loader_on_fake_layout(tmp_path):
     assert {"subject_id", "glucose_mgdl", "hr_bpm", "minutes_since_meal", "male"} <= set(df.columns)
     assert df["hr_bpm"].notna().all()
     assert (df["subject_id"] == "001").all()
+
+
+class _AlteringDenoiser:
+    """Stand-in for a network that passes a clean window through, altered: without the pulse's
+    fundamental (``drop_hz``) and/or with the red channel scaled by ``red_gain``."""
+
+    def __init__(self, drop_hz=None, red_gain=1.0):
+        self.drop_hz, self.red_gain = drop_hz, red_gain
+
+    def denoise_bv(self, ir_bv, red_bv, fs):
+        from suguard_ml.models.denoiser import Denoised
+
+        def without(x):
+            if self.drop_hz is None:
+                return x
+            t = np.arange(x.size) / fs
+            basis = np.stack([np.sin(2 * np.pi * self.drop_hz * t), np.cos(2 * np.pi * self.drop_hz * t)], 1)
+            return x - basis @ np.linalg.lstsq(basis, x, rcond=None)[0]
+        return Denoised(ir_bv=without(ir_bv), red_bv=self.red_gain * without(red_bv),
+                        artifact_prob=np.zeros_like(ir_bv), fs=fs)
+
+
+def _double_humped(hr_bpm=36.0, n=512):
+    """A slow pulse whose 2nd harmonic is 1.6x its fundamental: raw red/IR counts."""
+    t = np.arange(n) / FS
+    th = 2 * np.pi * hr_bpm / 60.0 * t
+    x = np.sin(th) + 1.6 * np.sin(2 * th + 1.0)
+    x = x / np.ptp(x)
+    rng = np.random.default_rng(0)
+    return (np.round(70_000 * (1 - 0.6 * 0.01 * x) + rng.normal(0, 3, n)),
+            np.round(100_000 * (1 - 0.01 * x) + rng.normal(0, 3, n)))
+
+
+def test_clean_window_rate_is_checked_against_the_measured_spectrum(monkeypatch):
+    """A network that suppresses the fundamental of a slow double-humped pulse doubles the beat
+    count and makes its own spectrum agree; the measured spectrum keeps the fundamental. (Below
+    about 38 bpm the band-pass filters weaken the fundamental so much that the measured spectrum
+    picks the 2nd harmonic of such a pulse too.)"""
+    import suguard_ml.pipeline as P
+
+    red, ir = _double_humped(40.0)
+    pipe = P.SuGuardPipeline(denoiser=_AlteringDenoiser(drop_hz=40.0 / 60.0))
+    res = pipe.analyze(red, ir, fs=FS)
+    assert not res["reliable"] and res["heart_rate"]["bpm"] is None and "motion" in res["reason"]
+    monkeypatch.setattr(P, "CLEAN_MAX_MOTION", -1.0)          # the denoised spectrum as the reference
+    res = pipe.analyze(red, ir, fs=FS)
+    assert res["reliable"] and abs(res["heart_rate"]["bpm"] - 80.0) < 3.0      # the failure it prevents
+
+
+def test_clean_window_spo2_comes_from_the_measured_signals(monkeypatch):
+    """A network that attenuates red reads SpO2 high; in a clean window the measured red/IR count."""
+    import suguard_ml.pipeline as P
+
+    w = simulate_window(41, kinds=[], hr_bpm=150.0, spo2=85.0, pi_ir=0.01, shape="wave")
+    classical = P.SuGuardPipeline(denoiser=None).analyze(w.red_raw, w.ir_raw, fs=FS)["spo2"]["percent"]
+    pipe = P.SuGuardPipeline(denoiser=_AlteringDenoiser(red_gain=0.9))
+    shown = pipe.analyze(w.red_raw, w.ir_raw, fs=FS)["spo2"]["percent"]
+    assert classical is not None and shown is not None and abs(shown - classical) < 0.2
+    monkeypatch.setattr(P, "CLEAN_MAX_MOTION", -1.0)
+    biased = pipe.analyze(w.red_raw, w.ir_raw, fs=FS)["spo2"]["percent"]
+    assert biased is not None and biased > classical + 2.0                      # the failure it prevents
