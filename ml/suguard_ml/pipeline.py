@@ -22,14 +22,18 @@ signals to agree on it (``SPO2_AGREEMENT``). Where the denoiser flags (almost) n
 red/IR checks (the arterial-ratio rule, which withholds the heart rate too,
 the red/IR correlation and the ratio stability) use them, and so does the
 spectral cross-check of the heart rate, with the few flagged samples taken
-from the denoiser's output for the checks. Otherwise the values are None
-with reasons, never a guess. That a shown value is right is still not guaranteed: steady
-rhythmic motion can pass for a pulse (scripts/eval_denoiser.py, hard_cases).
+from the denoiser's output for the checks. At a small measured pulse
+(``LOW_PERFUSION_PI``), where the denoiser takes sensor noise for motion, a
+window it rejects for motion alone gets the decision of the classical checks
+on the measured signals if the denoiser's beats give the same rate. Otherwise
+the values are None with reasons, never a guess. That a shown value is right is
+still not guaranteed: steady rhythmic motion can pass for a pulse
+(scripts/eval_denoiser.py, hard_cases).
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import numpy as np
@@ -93,6 +97,15 @@ CLEAN_MAX_MOTION = 0.2
 # 65 / 58 and 59 / 58, a cadence locked to the pulse 17 / 14 and 15 / 12, 150-210 bpm at low SpO2
 # 0 / 0 and 7 / 1; SpO2 values on the 600 gated windows 318 -> 316 and 296 -> 293.
 SPO2_AGREEMENT = 2.0
+# At a measured perfusion (pi_in, %) below this, the networks cannot tell sensor noise from small
+# motion: they flag much of a motion-free window although their output keeps the measured pulse
+# (simulated windows without motion: at 0.1-0.2 % about a fifth were flagged as more than half
+# motion, above 0.5 % none). There a window the network rejects for motion alone (with the support
+# check that fails when it flags everything) gets the decision of the classical checks on the
+# measured signals, if the network's own beats give the same rate (FALLBACK_HR_AGREEMENT); SpO2,
+# from the measured signals, also needs the network's value to agree (SPO2_AGREEMENT).
+LOW_PERFUSION_PI = 0.2
+FALLBACK_HR_AGREEMENT = 5.0
 # Shorter windows go through the classical path (the denoiser saw 10.24 s).
 MIN_DENOISER_S = 6.0
 MAX_NONFINITE_FRACTION = 0.02
@@ -142,6 +155,7 @@ class SignalVitals:
     beats: Beats
     sp: SpO2Estimate
     quality: Quality
+    classical_fallback: bool = False   # LOW_PERFUSION_PI: the classical checks decided
 
 
 def vitals_from_signals(ir_bv: np.ndarray, red_bv: np.ndarray, sensor: SensorState,
@@ -166,7 +180,10 @@ def vitals_from_signals(ir_bv: np.ndarray, red_bv: np.ndarray, sensor: SensorSta
     arterial-ratio rule and the red/IR correlation come from the measured
     red/IR, and the beat rate must agree with the spectrum, and the red/IR
     ratio be stable in, the measured signals with the flagged samples taken
-    from the denoiser's output.
+    from the denoiser's output. Below ``LOW_PERFUSION_PI`` a window rejected
+    for motion alone (and the support check that fails with it) is decided
+    by the classical checks if the denoiser's beats agree on the rate
+    (``classical_fallback``); its SpO2 must agree with the denoiser's.
     """
     denoised = p_art is not None
     if not denoised:
@@ -217,9 +234,19 @@ def vitals_from_signals(ir_bv: np.ndarray, red_bv: np.ndarray, sensor: SensorSta
     spo2_reason = None
     if reliable and not spo2_ok:
         spo2_reason = sp.reason or ("red_denoiser_mismatch" if not red_supported else "red_ir_inconsistent")
-    return SignalVitals(reliable=reliable, reasons=sorted(reasons), hr_bpm=beats.hr_bpm, spo2_ok=spo2_ok,
-                        spo2=sp.spo2 if spo2_ok else None, spo2_reason=spo2_reason, pi_in=pi_in,
-                        support_ir=support_ir, support_red=support_red, beats=beats, sp=sp, quality=q)
+    out = SignalVitals(reliable=reliable, reasons=sorted(reasons), hr_bpm=beats.hr_bpm, spo2_ok=spo2_ok,
+                       spo2=sp.spo2 if spo2_ok else None, spo2_reason=spo2_reason, pi_in=pi_in,
+                       support_ir=support_ir, support_red=support_red, beats=beats, sp=sp, quality=q)
+    if (denoised and not reliable and pi_in < LOW_PERFUSION_PI and "motion" in reasons
+            and reasons <= {"motion", "denoiser_mismatch"} and beats.hr_bpm is not None):
+        cl = vitals_from_signals(ir_bv, red_bv, sensor, spo2_coeffs=spo2_coeffs)
+        if cl.reliable and abs(cl.hr_bpm - beats.hr_bpm) <= FALLBACK_HR_AGREEMENT:
+            nn_sp = estimate_spo2(c_red, c_ir, weights=1 - p_art, **coeffs)
+            agree = cl.spo2_ok and nn_sp.spo2 is not None and abs(cl.spo2 - nn_sp.spo2) <= SPO2_AGREEMENT
+            return replace(cl, spo2_ok=agree, spo2=cl.spo2 if agree else None,
+                           spo2_reason=cl.spo2_reason if not cl.spo2_ok else (None if agree else "red_denoiser_mismatch"),
+                           support_ir=support_ir, support_red=support_red, classical_fallback=True)
+    return out
 
 
 def _clean_input(red_raw, ir_raw) -> tuple[np.ndarray, np.ndarray, int]:
@@ -272,8 +299,12 @@ class SuGuardPipeline:
                                 c_red if p_art is not None else None, p_art, spo2_coeffs=self.spo2_coeffs)
         beats, sp, q = v.beats, v.sp, v.quality
         reliable = v.reliable
+        p_feat = p_art
+        if v.classical_fallback:  # LOW_PERFUSION_PI: the values come from the measured signals
+            c_ir, c_red, p_feat, method = ir_bv, red_bv, None, "classical"
         out = {
             "method": method,
+            "low_perfusion_fallback": v.classical_fallback,
             "duration_s": round(duration, 2),
             "interpolated_samples": n_bad,
             "sensor": {"finger_detected": sensor.finger_detected,
@@ -292,7 +323,7 @@ class SuGuardPipeline:
         }
         if v.spo2_ok:
             # Features include red/IR ratios, so they need the SpO2-grade gate.
-            feats = extract_features(c_ir, c_red, FS, artifact_prob=p_art, ir_dc=float(np.median(ir_dc)),
+            feats = extract_features(c_ir, c_red, FS, artifact_prob=p_feat, ir_dc=float(np.median(ir_dc)),
                                      red_dc=float(np.median(red_dc)), temperature_c=temperature_c)
             out["features"] = {k: (None if (isinstance(x, float) and not np.isfinite(x)) else x)
                                for k, x in feats.items()}

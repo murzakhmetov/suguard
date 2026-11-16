@@ -584,3 +584,40 @@ def test_clean_window_spo2_comes_from_the_measured_signals(monkeypatch):
     biased = slight.analyze(w.red_raw, w.ir_raw, fs=FS)["spo2"]["percent"]
     assert biased is not None and biased > classical + 1.0
     assert strong.analyze(w.red_raw, w.ir_raw, fs=FS)["spo2"]["percent"] is None
+
+class _FlaggingDenoiser:
+    """Stand-in for a network that keeps the measured signals (red scaled by ``red_gain``, or the IR
+    replaced by ``ir``) but flags the whole window as motion, as the networks do with sensor noise
+    at low perfusion."""
+
+    def __init__(self, red_gain=1.0, ir=None):
+        self.red_gain, self.ir = red_gain, ir
+
+    def denoise_bv(self, ir_bv, red_bv, fs):
+        from suguard_ml.models.denoiser import Denoised
+        return Denoised(ir_bv=ir_bv if self.ir is None else self.ir, red_bv=self.red_gain * red_bv,
+                        artifact_prob=np.full_like(ir_bv, 0.9), fs=fs)
+
+
+def test_low_perfusion_window_flagged_as_motion_gets_the_classical_decision(monkeypatch):
+    """At a small pulse a window the network rejects for motion alone gets the decision of the
+    classical checks (LOW_PERFUSION_PI) if the network's beats give the same rate; SpO2 only where
+    the network's value agrees. Above the threshold the network's motion flags stand."""
+    import suguard_ml.pipeline as P
+
+    w = simulate_window(7_200_152, kinds=[], pi_ir=0.0015, hr_bpm=72.0, spo2=85.0)
+    classical = P.SuGuardPipeline(denoiser=None).analyze(w.red_raw, w.ir_raw, fs=FS)
+    assert classical["reliable"] and classical["spo2"]["percent"] is not None
+    assert classical["quality"]["perfusion_index"] < P.LOW_PERFUSION_PI
+    res = P.SuGuardPipeline(denoiser=_FlaggingDenoiser()).analyze(w.red_raw, w.ir_raw, fs=FS)
+    assert res["reliable"] and res["low_perfusion_fallback"] and res["method"] == "classical"
+    for key in ("heart_rate", "spo2", "features"):
+        assert res[key] == classical[key], key
+    res = P.SuGuardPipeline(denoiser=_FlaggingDenoiser(red_gain=1.15)).analyze(w.red_raw, w.ir_raw, fs=FS)
+    assert res["reliable"] and res["spo2"]["percent"] is None and res["spo2"]["reason"] == "red_denoiser_mismatch"
+    doubled = 0.002 * np.sin(2 * np.pi * 2.4 * np.arange(w.ir_raw.size) / FS)     # the network's beats at 144 bpm
+    res = P.SuGuardPipeline(denoiser=_FlaggingDenoiser(ir=doubled)).analyze(w.red_raw, w.ir_raw, fs=FS)
+    assert not res["reliable"] and not res["low_perfusion_fallback"]
+    monkeypatch.setattr(P, "LOW_PERFUSION_PI", 0.1)                                 # the pulse is above it now
+    res = P.SuGuardPipeline(denoiser=_FlaggingDenoiser()).analyze(w.red_raw, w.ir_raw, fs=FS)
+    assert not res["reliable"] and not res["low_perfusion_fallback"] and "motion" in res["reason"]

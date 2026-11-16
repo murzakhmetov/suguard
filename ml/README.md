@@ -182,6 +182,14 @@ blood could produce, unless stated):
   check was adopted after an A/B on the red team's sets (numbers at `SPO2_AGREEMENT` in
   `suguard_ml/pipeline.py`); it costs 0.6 % (server) and 1 % (bracelet) of the SpO2 values on the
   600 gated windows.
+* **A red/IR phase check does not separate these.** Arterial blood pulses in phase at both
+  wavelengths, and a venous wave that lags opens the red-vs-IR loop (the idea behind venous-pulsation
+  detectors in pulse-oximeter patents). Measured on a separate draw of the venous set with a one-off
+  script: the wrong values come from venous waves that lag only a little, with red lagging IR by a
+  median of 7° in them against 5–6° in the correct ones, and the simulator itself lets red lag IR by
+  up to 8 ms, as at the wrist, where the infrared pulse arrives first. A threshold of 10° withheld 2
+  of the 27–30 wrong values together with 4–9 correct ones; it was not adopted. An in-phase venous
+  component is, with two wavelengths, indistinguishable from arterial blood of a lower saturation.
 * Not in the set: ambient-light flicker. The MAX30102 subtracts ambient light in every sample; the
   red team's flicker attack assumed flicker that survives this cancellation.
 
@@ -303,7 +311,7 @@ flowchart LR
 cd ml
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
-python -m pytest -q                      # 73 tests
+python -m pytest -q                      # 74 tests
 uvicorn api.app:app --port 8000
 ```
 

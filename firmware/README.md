@@ -101,7 +101,7 @@ One line per window on USB:
 
 ```json
 {"t":"vitals","seq":12,"reliable":true,"hr":71.6,"spo2":97.1,"sqi":0.98,"pi":1.020,"motion":0.00,
- "reasons":"","spo2_why":"","nn":true,"dc":[88211,126034],"led":[35,38],"temp":31.50,"fs":50.012,
+ "reasons":"","spo2_why":"","nn":true,"fallback":false,"dc":[88211,126034],"led":[35,38],"temp":31.50,"fs":50.012,
  "proc_ms":1400,"bat":87,"usb":false}
 ```
 
@@ -113,7 +113,8 @@ control lowers the current). `spo2_why` is filled only for an accepted window wi
 value: `no_common_pulse`, `spo2_low_red_ir_agreement`, `red_ir_inconsistent` (the two
 wavelengths do not agree well enough) or `red_denoiser_mismatch` (the cleaned-up red pulse is not
 supported by the measurement, or the SpO2 from the measured red/IR and from the network's output
-differ by more than 2 points). `hr` is corrected for the sensor's clock error (`fs` is the measured
+differ by more than 2 points). `fallback` is true when the classical checks decided a weak-pulse window
+the network had flagged as motion (above). `hr` is corrected for the sensor's clock error (`fs` is the measured
 sample rate). The rules behind each reason are listed in
 [../ml/docs/MODEL_CARD.md](../ml/docs/MODEL_CARD.md#2-the-decision-to-report-a-value).
 
@@ -190,6 +191,11 @@ Behaviour worth knowing:
   keep its own output as the reference). Wherever the network is used, SpO2 is shown only if the
   measured red/IR (weighted by its mask) and its output give values within 2 points of each other.
   See `ml/README.md`, "Known hard cases", for what this catches and what it costs.
+* **A weak pulse is not mistaken for motion.** Below a measured perfusion of 0.2 % the network takes
+  sensor noise for motion and flags much of a still window. A window it rejects for motion alone
+  then gets the decision of the classical checks on the measured signals, if the network's own beats
+  give the same rate (SpO2 also has to agree with the network's within 2 points); the line then
+  says `"fallback":true`. See `ml/README.md`, "Windows without motion, by pulse size".
 
 ## Verification
 
@@ -202,9 +208,9 @@ packages from GitHub, about 370 MB); it needs `arm-none-eabi-g++`.
 | What | How | Result |
 |---|---|---|
 | Sources against the real Arduino API | `tools/typecheck_arduino.sh`: the sketch and every source file through a GCC front end with the headers, include paths and defines of Arduino core 2.0.17 (ESP-IDF 4.4, as C++17) and 3.3.12 (ESP-IDF 5.5, as C++20) | no error, no warning; **not a build** (generic 32-bit compiler, nothing generated or linked) |
-| Signal core = Python reference | C++ built for the host, compared on simulated windows: 300 classical, 200 denoised, 55 degenerate or constructed inputs (some with the measured signals given directly) | every decision identical; the tests allow 10⁻⁹ (relative) for double-precision values and 10⁻⁴ (absolute) for FFT-dependent ones; the largest differences measured are 1.7·10⁻¹⁴ and 5.4·10⁻⁷ |
+| Signal core = Python reference | C++ built for the host, compared on simulated windows: 300 classical, 200 denoised, 59 degenerate or constructed inputs (some with the measured signals given directly) | every decision identical; the tests allow 10⁻⁹ (relative) for double-precision values and 10⁻⁴ (absolute) for FFT-dependent ones; the largest differences measured are 1.7·10⁻¹⁴ and 5.4·10⁻⁷ |
 | Integer network = Python reference | the C++ engine against the NumPy integer reference, random models and the shipped one | bit-exact |
-| Whole pipeline per window | `sg_process_window` against the Python pipeline, 316 windows × 2 modes, incl. inputs where the network must be overruled | same decisions and reasons; heart rate and SpO2 within 10⁻⁶ |
+| Whole pipeline per window | `sg_process_window` against the Python pipeline, 318 windows × 2 modes, incl. inputs where the network must be overruled and weak pulses it flags as motion | same decisions and reasons; heart rate and SpO2 within 10⁻⁶ |
 | Device layer | driver, sampler, record store, upload scheduler and battery guard against a register-level MAX30102 simulator, with ASan/UBSan | 24 scenarios pass |
 | The sketch itself | `suguard.ino` compiled against a mock of the Arduino API and run on simulated PPG for up to an hour of simulated time: vital signs against the Python pipeline, upload sessions, failing and refusing servers, an hour offline, slow processing and slow requests, button presses, sensor resets, empty battery, clock wrap-around, the USB recording path through the PC tool | 31 tests pass |
 | RISC-V target | core cross-compiled for RV32IMC (the ESP32-C3's instruction set, soft-float) and run under QEMU | same results as on the PC (differences ≤ 2·10⁻¹⁶) |
@@ -222,11 +228,11 @@ signal quality on a real wrist.
 
 | | Value | Source |
 |---|---|---|
-| Instructions per window, with the network | 146 million (median), 176 million (max: a window the network calls clean also gets the spectrum of the measured signal); the second SpO2 estimate of the agreement check costs about 13 million | counted exactly under QEMU for RV32IMC (`docs/rv32_benchmark.json`) |
+| Instructions per window, with the network | 147 million (median), 216 million (max: a weak pulse the network flags as motion also goes through the classical checks; a window the network calls clean also gets the spectrum of the measured signal); the second SpO2 estimate of the agreement check costs about 13 million | counted exactly under QEMU for RV32IMC (`docs/rv32_benchmark.json`) |
 | ... classical processing only | 77 million | same |
-| Time per 10.24-s window | about 1.4–2.8 s at 160 MHz (2.7–5.5 s at 80 MHz) | estimate: 1.5–2.5 cycles per instruction; **not measured on the chip** — read `proc_ms` |
+| Time per 10.24-s window | about 1.4–3.4 s at 160 MHz (2.8–6.8 s at 80 MHz) | estimate: 1.5–2.5 cycles per instruction; **not measured on the chip** — read `proc_ms` |
 | Static RAM of the signal pipeline | 117 kB | size of the pipeline's memory block |
-| Code and constants of the signal core | 126 kB (94 kB of it network weights, in flash), plus the C library's maths and soft-float routines it calls | `size` of the core's RV32 object files; the whole benchmark program (with its harness, picolibc and 24.6 kB of test windows) is 184 kB |
+| Code and constants of the signal core | 127 kB (94 kB of it network weights, in flash), plus the C library's maths and soft-float routines it calls | `size` of the core's RV32 object files; the whole benchmark program (with its harness, picolibc and 28.7 kB of test windows) is 189 kB |
 
 ## Regenerating generated files
 

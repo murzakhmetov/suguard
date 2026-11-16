@@ -154,6 +154,40 @@ def eval_pipeline(den: Denoiser, n: int = 600, seed0: int = 4_000_000) -> dict:
     return out
 
 
+def eval_rest_by_perfusion(den: Denoiser, n: int = 1000, seed0: int = 6_100_000) -> dict:
+    """Windows without motion, by the simulated pulse amplitude (perfusion): how many get a heart
+    rate / an SpO2 value, the errors, and (networks) how many the classical checks decided
+    (pipeline.LOW_PERFUSION_PI), also without that rule. At a small pulse the networks take sensor
+    noise for motion."""
+    import suguard_ml.pipeline as pipeline
+
+    wins = [simulate_window(seed0 + i, kinds=[]) for i in range(n)]
+    bins = ((0.0008, 0.0015), (0.0015, 0.003), (0.003, 0.01), (0.01, 0.05))
+    out = {}
+    rule = pipeline.LOW_PERFUSION_PI
+    for name, pipe, low_pi in (("classical", SuGuardPipeline(denoiser=None), rule),
+                               ("denoiser", SuGuardPipeline(denoiser=den), rule),
+                               ("denoiser_without_low_perfusion_fallback", SuGuardPipeline(denoiser=den), 0.0)):
+        pipeline.LOW_PERFUSION_PI = low_pi
+        try:
+            res = [pipe.analyze(w.red_raw, w.ir_raw, fs=FS) for w in wins]
+        finally:
+            pipeline.LOW_PERFUSION_PI = rule
+        out[name] = {}
+        for lo, hi in bins:
+            idx = [i for i, w in enumerate(wins) if lo <= w.pi_ir < hi]
+            hr = [(res[i]["heart_rate"]["bpm"], wins[i].hr_bpm) for i in idx if res[i]["reliable"]]
+            sp = [(res[i]["spo2"]["percent"], wins[i].spo2) for i in idx if res[i]["spo2"]["percent"] is not None]
+            out[name][f"{100 * lo:g}-{100 * hi:g}%"] = {
+                "windows": len(idx), "hr_coverage": len(hr) / max(len(idx), 1),
+                "hr_errors_over_10bpm": int(sum(abs(a - b) > 10.0 for a, b in hr)),
+                "spo2_coverage": len(sp) / max(len(idx), 1),
+                "spo2_errors_over_4pts": int(sum(abs(a - b) > 4.0 for a, b in sp)),
+                "classical_fallback": int(sum(bool(res[i].get("low_perfusion_fallback")) for i in idx))}
+        print(name, json.dumps(out[name]), flush=True)
+    return out
+
+
 def eval_must_not_report(den: Denoiser, n: int = 300, n_motion: int = 1500, seed0: int = 4_500_000) -> dict:
     """Inputs for which any reported value is wrong: how often does the gated
     pipeline report one? (Heart rate from the IR channel is legitimate when
@@ -490,6 +524,7 @@ def main():
     s = report["synthetic_test"]
     print("synthetic all:", json.dumps(s["all"], indent=1)[:900])
     report["pipeline_with_gates"] = eval_pipeline(den)
+    report["rest_by_perfusion"] = eval_rest_by_perfusion(den)
     report["must_not_report"] = eval_must_not_report(den)
     report["shape_robustness"] = eval_shapes(den)
     report["real_ppg_simulated_motion"] = eval_real(den)

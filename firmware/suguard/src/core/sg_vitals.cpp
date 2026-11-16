@@ -711,4 +711,30 @@ void sg_vitals_from_signals(const double* ir_bv, const double* red_bv, const dou
       out->spo2_withheld = red_supported ? SG_SPO2_RED_IR_INCONSISTENT : SG_SPO2_RED_DENOISER_MISMATCH;
     }
   }
+
+  // pipeline.LOW_PERFUSION_PI: at a small measured pulse the network cannot tell sensor noise from
+  // motion. A window it rejects for motion alone (with the support check that fails when it flags
+  // everything) gets the classical decision on the measured signals if the network's beats give the
+  // same rate; SpO2, from the measured signals, also needs the network's value to agree.
+  const uint16_t motion_alone = SG_R_MOTION | SG_R_DENOISER_MISMATCH;
+  if (denoised && !out->reliable && out->pi_in < SG_LOW_PERFUSION_PI && (out->reasons & SG_R_MOTION) &&
+      !(out->reasons & ~motion_alone) && out->has_hr) {
+    SgVitals cl;
+    sg_vitals_from_signals(ir_bv, red_bv, NULL, NULL, NULL, n, sensor, &cl, w);   // reuses w: out holds values only
+    if (cl.reliable && fabs(cl.hr_bpm - out->hr_bpm) <= SG_FALLBACK_HR_AGREEMENT) {
+      const Spo2 nn = estimate_spo2(c_red, c_ir, p_art, n, w);
+      const bool agree = cl.has_spo2 && nn.has_spo2 && fabs(cl.spo2 - nn.spo2) <= SG_SPO2_AGREEMENT;
+      if (cl.has_spo2 && !agree) {
+        cl.has_spo2 = false;
+        cl.spo2 = 0.0;
+        cl.spo2_withheld = SG_SPO2_RED_DENOISER_MISMATCH;
+      }
+      cl.support_ir_corr = out->support_ir_corr;
+      cl.support_ir_gain = out->support_ir_gain;
+      cl.support_red_corr = out->support_red_corr;
+      cl.support_red_gain = out->support_red_gain;
+      cl.classical_fallback = true;
+      *out = cl;
+    }
+  }
 }

@@ -57,6 +57,7 @@
   X(support_ir_gain, v.support_ir_gain)                       \
   X(support_red_corr, v.support_red_corr)                     \
   X(support_red_gain, v.support_red_gain)                     \
+  X(classical_fallback, v.classical_fallback)                 \
   X(q_perfusion_index, v.quality.perfusion_index)             \
   X(q_template_corr, v.quality.template_corr)                 \
   X(q_spectral_purity, v.quality.spectral_purity)             \

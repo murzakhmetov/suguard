@@ -54,7 +54,8 @@ SPO2_REASONS = {None: 0, "no_common_pulse": 1, "spo2_low_red_ir_agreement": 2, "
 
 # Outputs of core_cli by the precision they must reach.
 EXACT = ["n", "finger_detected", "sensor_reasons", "reliable", "reasons", "has_hr", "n_beats", "n_valid_ibi",
-         "has_spo2", "has_r", "spo2_reason", "spo2_withheld", "q_usable", "q_usable_spo2", "q_reasons"]
+         "has_spo2", "has_r", "spo2_reason", "spo2_withheld", "q_usable", "q_usable_spo2", "q_reasons",
+         "classical_fallback"]
 # Double-precision arithmetic in the same order as numpy/scipy: 1e-9 relative.
 TIGHT = ["saturated_fraction", "ir_dc", "red_dc", "pi_in", "hr_bpm", "spo2", "r_ratio", "q_perfusion_index",
          "q_template_corr", "q_red_ir_corr", "q_beat_amp_cv", "q_valid_ibi_fraction", "q_r_spread",
@@ -135,7 +136,7 @@ def reference(case: Case) -> dict:
         has_spo2=v.spo2_ok, spo2=num(v.spo2), has_r=v.sp.r_ratio is not None,
         r_ratio=num(v.sp.r_ratio), spo2_reason=SPO2_REASONS[v.sp.reason], spo2_withheld=SPO2_REASONS[v.spo2_reason],
         support_ir_corr=support[0], support_ir_gain=support[1], support_red_corr=support[2],
-        support_red_gain=support[3], denoised=case.denoised is not None,
+        support_red_gain=support[3], denoised=case.denoised is not None, classical_fallback=v.classical_fallback,
         q_perfusion_index=q.perfusion_index, q_template_corr=q.template_corr, q_spectral_purity=q.spectral_purity,
         q_red_ir_corr=q.red_ir_corr, q_beat_amp_cv=q.beat_amp_cv, q_valid_ibi_fraction=q.valid_ibi_fraction,
         q_hr_agreement_bpm=q.hr_agreement_bpm, q_r_spread=q.r_spread, q_motion_fraction=q.motion_fraction,
@@ -291,6 +292,16 @@ def edge_cases() -> list[Case]:
     for name, gain, p_art in (("15pct_clean", 1.15, np.zeros(n)), ("15pct_flagged", 1.15, np.where(t < 0.3 * t[-1], 1.0, 0.0)),
                               ("2pct_clean", 1.02, np.zeros(n))):
         cases.append(Case(f"denoised_red_amplified_{name}", low.red_raw, low.ir_raw, denoised=(l_ir, gain * l_red, p_art)))
+    # pipeline.LOW_PERFUSION_PI: a small pulse (0.15 %) the network flags everywhere gets the classical
+    # decision when the network's beats give the same rate (SpO2 withheld when its red is 15 % larger),
+    # not when they run at twice the rate or when its red has no pulse (a reason besides motion).
+    weak = simulate_window(7_200_152, kinds=[], pi_ir=0.0015, hr_bpm=72.0, spo2=85.0)
+    w_ir, w_red, _ = as_denoised(weak, np.zeros(n))
+    flag = np.full(n, 0.9)
+    for name, signals in (("same_signals", (w_ir, w_red, flag)), ("red_15pct_larger", (w_ir, 1.15 * w_red, flag)),
+                          ("denoised_doubled", (0.002 * tone(2.4), 0.0012 * tone(2.4), flag)),
+                          ("denoised_red_zero", (w_ir, np.zeros(n), flag))):
+        cases.append(Case(f"low_perfusion_flagged_{name}", weak.red_raw, weak.ir_raw, denoised=signals))
     # An exact 20 % (80 of 400 samples) is clean, 81 is not.
     win400 = simulate_window(7_200_400, n=400, kinds=[], pi_ir=0.02, hr_bpm=72.0)
     doubled400 = np.sin(2 * np.pi * 2.4 * np.arange(400) / FS)
@@ -489,6 +500,13 @@ def test_edge_cases(cli, build_dir):
         seen |= int(r["reasons"])
     assert seen == (1 << len(REASON_BITS)) - 1
     assert {r["spo2_reason"] for r in results} == {0, 1, 2, 3}
+    low = {c.name.removeprefix("low_perfusion_flagged_"): r for c, r in zip(cases, results)
+           if c.name.startswith("low_perfusion_flagged_")}
+    assert [low[k]["classical_fallback"] for k in ("same_signals", "red_15pct_larger", "denoised_doubled",
+                                                   "denoised_red_zero")] == [1, 1, 0, 0]
+    assert low["same_signals"]["has_spo2"] and not low["red_15pct_larger"]["has_spo2"]
+    assert low["red_15pct_larger"]["spo2_withheld"] == SPO2_REASONS["red_denoiser_mismatch"]
+    assert not (low["denoised_doubled"]["reliable"] or low["denoised_red_zero"]["reliable"])
 
 
 def test_window_length_out_of_range(cli, build_dir):

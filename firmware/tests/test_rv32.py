@@ -33,9 +33,12 @@ RV_FLAGS = ["-march=rv32imc_zicsr", "-mabi=ilp32", "-O2", "-Wall", "-Wextra", "-
             "--crt0=hosted", "-Wl,--defsym=__flash=0x80000000", "-Wl,--defsym=__flash_size=0x00800000",
             "-Wl,--defsym=__ram=0x80800000", "-Wl,--defsym=__ram_size=0x00800000"]
 
-# (seed, kwargs): clean, light motion, heavy motion, weak pulse, not worn is added separately
+# (seed, kwargs): clean, weak pulse, light motion, heavy motion, a weak pulse (0.09 %) the network
+# flags as motion, which the classical checks then decide (pipeline.LOW_PERFUSION_PI: the costliest
+# path); not worn is added separately
 CASES = [(11, dict(kinds=[])), (12, dict(kinds=[], pi_ir=0.002)), (13, dict(kinds=["burst"], artifact_level=1.5)),
-         (14, dict(kinds=["periodic"], artifact_level=4.0)), (15, dict(kinds=["periodic", "step"], artifact_level=10.0))]
+         (14, dict(kinds=["periodic"], artifact_level=4.0)), (15, dict(kinds=["periodic", "step"], artifact_level=10.0)),
+         (6_100_002, dict(kinds=[]))]
 
 
 def windows():
@@ -79,7 +82,7 @@ def test_rv32_matches_host_and_python(build_dir):
 
     # RV32 soft-float == host: same decisions, same numbers.
     for h, r in zip(host_rows[1:], rv_rows[1:]):
-        for key in ("i", "nn", "reliable", "has_hr", "has_spo2", "reasons", "n_beats"):
+        for key in ("i", "nn", "reliable", "has_hr", "has_spo2", "reasons", "n_beats", "fallback"):
             assert h[key] == r[key], (key, h, r)
         for key, tol in (("hr", 1e-6), ("spo2", 1e-6), ("sqi", 1e-4), ("pi_in", 1e-9), ("motion", 1e-6)):
             assert r[key] == pytest.approx(h[key], abs=tol), (key, h, r)
@@ -91,10 +94,13 @@ def test_rv32_matches_host_and_python(build_dir):
         red, ir = ws[h["i"]]
         ref = pipes[h["nn"]].analyze(red, ir, fs=50.0)
         assert bool(h["reliable"]) == ref["reliable"]
+        assert bool(h["fallback"]) == ref["low_perfusion_fallback"]
         if ref["heart_rate"]["bpm"] is not None:
             assert h["hr"] == pytest.approx(ref["heart_rate"]["bpm"], abs=0.051)
         if ref["spo2"]["percent"] is not None:
             assert h["spo2"] == pytest.approx(ref["spo2"]["percent"], abs=0.051)
+
+    assert any(h["fallback"] for h in host_rows[1:])          # the classical decision path is measured too
 
     # Timing basis: executed instructions per window on RV32IMC.
     nn = [r["instr"] for r in rv_rows[1:] if r["nn"] == 1]

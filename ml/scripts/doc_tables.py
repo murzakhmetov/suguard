@@ -46,6 +46,7 @@ MNR_LABEL = {"noise_only": "Noise, no pulse", "ir_without_pulse": "No pulse in t
              "periodic_motion_no_pulse": "The same pulse, periodic motion as large as a pulse ⁴"}
 SCENARIO_LABEL = {"clean": "At rest", "walking": "Walking: periodic motion, a quarter of it near the pulse rate",
                   "gestures": "Gestures, pressure changes", "mixed": "Mixed"}
+REST_LABEL = {"0.08-0.15%": "0.08–0.15 %", "0.15-0.3%": "0.15–0.3 %", "0.3-1%": "0.3–1 %", "1-5%": "1–5 %"}
 HARD_LABEL = {"steady_periodic_motion_no_pulse": "Steady periodic motion, no pulse",
               "pulse_with_steady_motion_at_another_rate": "Pulse + steady motion 1.5–4× as large at another rate",
               "pulse_with_motion_at_half_the_rate": "Pulse + motion at half its rate (arm swing)",
@@ -118,6 +119,26 @@ class Tables:
         maes = [c["hr_mae"] for c in cells if c["hr_mae"] is not None]
         out.append(f"\n(largest number of heart-rate errors above 10 bpm in a cell: {worst}; "
                    f"mean errors {min(maes):.2f}–{max(maes):.2f} bpm)")
+        return "\n".join(out)
+
+    def rest(self):
+        if "rest_by_perfusion" not in self.srv or "rest_by_perfusion" not in self.edge:
+            return None
+        off = "denoiser_without_low_perfusion_fallback"
+        cols = [("Classical", self.srv, "classical"), ("Bracelet, rule off", self.edge, off),
+                ("Bracelet", self.edge, "denoiser"), ("Server, rule off", self.srv, off), ("Server", self.srv, "denoiser")]
+        bins = self.srv["rest_by_perfusion"]["classical"]
+        out = self._head("Pulse size (windows): heart rate / SpO2 given", cols)
+        for b, v in bins.items():
+            out.append(f"| {REST_LABEL.get(b, b)} ({v['windows']}) | " + " | ".join(
+                f"{pct(src['rest_by_perfusion'][k][b]['hr_coverage'])} / {pct(src['rest_by_perfusion'][k][b]['spo2_coverage'])}"
+                for _, src, k in cols) + " |")
+        total = lambda src, k, key: sum(x[key] for x in src["rest_by_perfusion"][k].values())  # noqa: E731
+        out.append("\n(errors: heart rate above 10 bpm " + ", ".join(
+            f"{name} {total(src, k, 'hr_errors_over_10bpm')}" for name, src, k in cols)
+            + "; SpO2 above 4 points " + ", ".join(f"{name} {total(src, k, 'spo2_errors_over_4pts')}" for name, src, k in cols)
+            + f"; windows decided by the classical checks: bracelet {total(self.edge, 'denoiser', 'classical_fallback')}, "
+              f"server {total(self.srv, 'denoiser', 'classical_fallback')})")
         return "\n".join(out)
 
     def must_not_report(self):
@@ -202,6 +223,7 @@ def main():
     t = Tables(Path(a.metrics), a.previous or None)
     sections = [("README: whole pipeline with every reliability check", t.pipeline),
                 ("README: share of windows that get a heart rate, by motion", t.motion),
+                ("README: windows without motion, by pulse size", t.rest),
                 ("README: pulse shapes generated outside the training simulator", t.shapes),
                 ("README: inputs that must not produce a value", t.must_not_report),
                 ("README: real PPG recordings through the complete pipeline", t.real_pipeline),
