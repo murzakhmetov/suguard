@@ -103,3 +103,13 @@ def test_training_resumes_exactly(tmp_path):
     a, b = (torch.load(tmp_path / d / "denoiser_edge_state.pt", weights_only=False) for d in ("a", "b"))
     assert a["step"] == b["step"] == 8
     assert a["model"].keys() == b["model"].keys() and all(torch.equal(a["model"][k], b["model"][k]) for k in a["model"])
+
+
+def test_doc_tables_print_from_the_shipped_metrics():
+    """The tables of README.md / docs/MODEL_CARD.md can be regenerated from models/metrics."""
+    out = subprocess.run([sys.executable, str(ML / "scripts" / "doc_tables.py")], check=True, capture_output=True,
+                         text=True, cwd=ML).stdout
+    for title in ("whole pipeline with every reliability check", "inputs that must not produce a value",
+                  "results without gates"):
+        assert f"<!-- README: {title} -->" in out or f"<!-- MODEL_CARD section 1: {title} -->" in out, title
+    assert "| Windows that get a heart rate |" in out
