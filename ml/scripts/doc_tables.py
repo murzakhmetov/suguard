@@ -138,7 +138,8 @@ class Tables:
         return "\n".join(out)
 
     def real_no_checks(self):
-        out = ["| Scenario (windows) | No network | Bracelet | Server |", "|---|---|---|---|"]
+        out = ["| Real PPG + simulated motion, no checks: heart-rate error (SpO2 error on the windows where that "
+               "network and no network both give one) | No network | Bracelet | Server |", "|---|---|---|---|"]
         for s, v in self.srv["real_ppg_simulated_motion"]["scenarios"].items():
             e = self.edge["real_ppg_simulated_motion"]["scenarios"][s]
             out.append(f"| {SCENARIO_LABEL.get(s, s)} ({v['windows']}) | {v['raw']['hr']['mae']:.2f} bpm "

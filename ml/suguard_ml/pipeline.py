@@ -65,13 +65,21 @@ MIN_SUPPORT_SAMPLES = 10
 # measured signals are the reference: SpO2 comes from the measured red/IR
 # (weighted by the mask) and the spectral rate the beats must agree with from
 # the measured IR. A network can otherwise make a clean measurement look
-# different from what it is: it attenuated red at fast rates (SpO2 read high:
-# 150-210 bpm at 82-90 %, errors above 4 points in 6 -> 1 of 150 windows on the
-# server network, 19 -> 5 on the bracelet one) and suppressed the fundamental
-# of slow, double-humped pulses, so the denoised spectrum agreed with a doubled
-# beat count. No cost on the standard evaluation sets. Measured SpO2 in every
-# window was worse under motion (server: mean error 0.18 -> 0.23 points on the
-# 600 gated windows), so the network's red/IR are kept there.
+# different from what it is: it attenuated red at fast rates (SpO2 read high,
+# hiding a desaturation) and suppressed the fundamental of slow, double-humped
+# pulses, so the denoised spectrum agreed with a doubled beat count. With the
+# v5 networks, scripts/eval_denoiser.py hard_cases, 150 windows each, rule on /
+# off: SpO2 off by more than 4 points at 150-210 bpm and 82-90 % bracelet 7 /
+# 14, server 0 / 0; wrong heart rates at 35-45 bpm 1 / 3 and 1 / 1. It covers
+# only windows flagged up to this share: slow pulses the network flags more
+# heavily keep the denoised reference. No change in reported values or errors
+# above 4 points on the standard sets. The price: a non-arterial component
+# locked to the heartbeat (venous pulsation, a cadence locked to the pulse)
+# that the network partly removes stays in the measured red/IR and pulls SpO2
+# down (red team, previous server network: 69 vs 50 of ~195 windows off by
+# more than 4 points with strong venous pulsation). Measured SpO2 in every
+# window was worse under motion (server, 600 gated windows: mean error 0.20 ->
+# 0.28 points), so the network's red/IR are kept there.
 CLEAN_MAX_MOTION = 0.2
 # Shorter windows go through the classical path (the denoiser saw 10.24 s).
 MIN_DENOISER_S = 6.0

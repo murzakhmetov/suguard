@@ -30,55 +30,58 @@ The simulated test data comes from a simulator of the MAX30102 whose pulse shape
 families, from a sharp fingertip-like pulse to an almost sinusoidal wrist pulse and to pulses whose
 2nd harmonic is stronger than the fundamental (a deep notch and a large diastolic wave), because
 real recordings span that whole range ([model card](docs/MODEL_CARD.md#1-motion-artefact-denoiser)).
+The networks shipped now (v5) were trained over the pipeline's whole heart-rate band (35–210 bpm)
+and with rhythmic motion from steady to wandering in amplitude; where a table shows "v4", that is
+the version shipped before, scored with the same code and data (`models/metrics/previous/`).
 
 **Whole pipeline with every reliability check**, 600 simulated windows (motion of every strength,
 perfusion 0.08–5 %; `models/metrics/denoiser_eval.json` and `denoiser_edge_eval.json` →
 `pipeline_with_gates`):
 
-| | Classical | Bracelet | Server |
+|  | Classical | Bracelet | Server |
 |---|---|---|---|
-| Windows that get a heart rate | 37 % | 53 % | 54 % |
-| … of the windows without motion | 93 % | 93 % | 94 % |
-| Heart rate: mean / 95th-percentile error | 2.87 / 3.1 bpm | 0.35 / 1.3 bpm | 0.35 / 1.4 bpm |
+| Windows that get a heart rate | 36 % | 51 % | 54 % |
+| … of the windows without motion | 94 % | 94 % | 94 % |
+| Heart rate: mean / 95th-percentile error | 2.06 / 2.1 bpm | 0.39 / 1.4 bpm | 0.33 / 1.1 bpm |
 | Heart-rate errors above 10 bpm | 7 | 0 | 0 |
-| Windows that get an SpO2 value | 32 % | 51 % | 54 % |
-| SpO2: mean / 95th-percentile error | 0.88 / 3.8 points | 0.23 / 0.8 points | 0.17 / 0.7 points |
-| SpO2 errors above 4 points | 8 | 0 | 0 |
+| Windows that get an SpO2 value | 32 % | 49 % | 53 % |
+| SpO2: mean / 95th-percentile error | 0.89 / 4.7 points | 0.19 / 0.5 points | 0.20 / 0.6 points |
+| SpO2 errors above 4 points | 10 | 0 | 0 |
 
 Share of windows that get a heart rate, by how much of the window is really in motion:
 
 | Motion in the window (windows) | Classical | Bracelet | Server |
 |---|---|---|---|
-| 0–5 % (138) | 93 % | 93 % | 94 % |
-| 5–30 % (89) | 43 % | 92 % | 97 % |
-| 30–70 % (138) | 23 % | 67 % | 75 % |
-| more than 70 % (235) | 9 % | 5 % | 3 % |
+| 0–5 % (139) | 94 % | 94 % | 94 % |
+| 5–30 % (90) | 44 % | 96 % | 96 % |
+| 30–70 % (131) | 18 % | 62 % | 74 % |
+| more than 70 % (240) | 10 % | 2 % | 3 % |
 
 The last row is intended: when most of a window is motion, the pulse cannot be recovered and no
-value is given. The classical path still answers there in 9 % of the windows, and that is where
-its large errors come from.
+value is given. The classical path still answers there in 10 % of the windows, and that is where
+its large errors come from (6 of its 7 heart-rate errors above 10 bpm, all 10 SpO2 errors above 4
+points).
 
 **Pulse shapes generated outside the training simulator** (`shape_robustness`), clean windows,
 share that gets a heart rate. The harmonic and sinusoidal ones lie within the range of the
-simulator's two harmonic families; the others are built differently from anything it makes. "v2" are
-the networks shipped before this version, evaluated with the same code and data
-(`models/metrics/previous/`):
+simulator's two harmonic families; the others are built differently from anything it makes:
 
-| Pulse shape (150 clean windows each) | Classical | Bracelet v2 | Bracelet | Server v2 | Server |
+| Pulse shape (150 clean windows each) | Classical | Bracelet v4 | Bracelet | Server v4 | Server |
 |---|---|---|---|---|---|
 | Sharp systolic peak and reflected wave | 99 % | 99 % | 99 % | 99 % | 99 % |
-| Deep notch, large diastolic wave (like the real recording data3) | 83 % | 91 % | 84 % | 83 % | 84 % |
-| Rounded peak and reflected wave | 100 % | 59 % | 100 % | 27 % | 100 % |
-| Steep rise, slow fall | 100 % | 73 % | 100 % | 57 % | 100 % |
-| Slower rise, smoothed | 100 % | 5 % | 100 % | 1 % | 100 % |
-| Three harmonics | 100 % | 30 % | 100 % | 14 % | 100 % |
-| Two harmonics | 99 % | 20 % | 99 % | 5 % | 99 % |
-| Sine | 99 % | 1 % | 99 % | 0 % | 99 % |
+| Deep notch, large diastolic wave (like the real recording data3) | 86 % | 87 % | 89 % | 88 % | 86 % |
+| Rounded peak and reflected wave | 100 % | 100 % | 100 % | 100 % | 100 % |
+| Steep rise, slow fall | 100 % | 100 % | 100 % | 100 % | 100 % |
+| Slower rise, smoothed | 100 % | 100 % | 100 % | 100 % | 100 % |
+| Three harmonics | 100 % | 100 % | 100 % | 100 % | 100 % |
+| Two harmonics | 99 % | 99 % | 99 % | 99 % | 99 % |
+| Sine | 99 % | 99 % | 99 % | 99 % | 99 % |
 
-The v2 networks had been trained on sharp pulses only and took smooth ones for motion. No cell
-has a heart-rate error above 10 bpm (mean errors 0.18–0.61 bpm). The deep-notch shape is hard
-for the beat detector itself: at slow rates the diastolic wave is sometimes counted as a beat, and
-the checks then reject the window (on all three paths).
+No cell has a heart-rate error above 10 bpm (mean errors 0.18–0.30 bpm). The networks before v4
+(v2) had been trained on sharp pulses only and took smooth ones for motion: they reported 0–1 % of
+the sine windows (`previous/denoiser_v2_eval.json`, `denoiser_edge_v2_eval.json`). The deep-notch
+shape is hard for the beat detector itself: the diastolic wave is sometimes counted as a beat, and
+the checks then reject the window (at 35–45 bpm see the known hard cases below).
 
 **Inputs that must not produce a value** (`must_not_report`) — number of windows in which a heart
 rate / an SpO2 value was reported anyway:
@@ -87,19 +90,22 @@ rate / an SpO2 value was reported anyway:
 |---|---|---|---|
 | Noise, no pulse (300) | 0 / 0 | 0 / 0 | 0 / 0 |
 | No pulse in the infrared channel (300) | 0 / 0 | 0 / 0 | 0 / 0 |
-| Pulse in infrared only, none in red ¹ (300) | 283 / 0 | 1 / 0 | 0 / 0 |
-| Red pulse at a fifth of its size, in noise ¹ (300) | 178 / 0 | 49 / 0 | 5 / 1 |
-| The two LED channels swapped ² (300) | 10 / 10 | 15 / 15 | 16 / 16 |
-| Pulse below the sensor noise (0.01 %), the usual motion mix ³ (1500) | 20 / 15 | 1 / 1 | 0 / 0 |
-| Pulse below the sensor noise, periodic motion as large as a pulse ⁴ (300) | 72 / 53 | 0 / 0 | 0 / 0 |
+| Pulse in infrared only, none in red ¹ (300) | 283 / 0 | 0 / 0 | 0 / 0 |
+| Red pulse at a fifth of its size, in noise ¹ (300) | 178 / 0 | 44 / 1 | 46 / 0 |
+| The two LED channels swapped ² (300) | 10 / 10 | 6 / 5 | 9 / 9 |
+| A pulse of 0.01 % (below the 0.03 % threshold), the usual motion mix ³ (1500) | 26 / 23 | 5 / 5 | 8 / 8 |
+| The same pulse, periodic motion as large as a pulse ⁴ (300) | 102 / 82 | 2 / 2 | 2 / 2 |
 
-¹ A heart rate is legitimate here (the infrared pulse is real); an SpO2 value is not. The one
-server value is at the edge of the plausibility check (red/IR ratio 0.300).
+¹ A heart rate is legitimate here (the infrared pulse is real); an SpO2 value is not. The bracelet
+network gave one (99.8 %).
 ² A wiring/configuration fault, caught at bring-up (`led red` on the console); the firmware also
 prints a hint when the red pulse is persistently larger than the infrared one.
-³ A fifth of these windows have no motion; most of the motion is small.
-⁴ Periodic motion of 0.1–6 % of the light level at 0.7–3.2 Hz and no pulse: the classical path
-takes a quarter of it for a pulse; the networks take none.
+³ A fifth of these windows have no motion; most of the motion is small. The pulse is below the
+sensor noise in about a third of the windows.
+⁴ Periodic motion of 0.1–6 % of the light level at 0.6–3.5 Hz whose amplitude wanders by up to
+30 %, mostly over part of the window: the classical path takes a third of it for a pulse, the
+networks almost none. Motion of steady amplitude over the whole window is another matter (known
+hard cases below).
 
 **Real PPG recordings** (heartpy, 835 s: real pulse shapes and rhythm) with a simulated second
 wavelength and simulated motion (`real_ppg_simulated_motion` → `pipeline`), through the complete
@@ -107,30 +113,81 @@ pipeline — share of windows that get a heart rate, mean error, errors above 10
 
 | Scenario (windows) | Classical | Bracelet | Server |
 |---|---|---|---|
-| At rest (52) | 100 %, 0.1 bpm | 100 %, 0.1 bpm | 100 %, 0.0 bpm |
-| Walking: periodic motion, a quarter of it near the pulse rate (312) | 18 %, 21.8 bpm, 28 > 10 | 20 %, 1.1 bpm | 21 %, 0.4 bpm |
-| Gestures, pressure changes (312) | 5 %, 1.1 bpm | 40 %, 0.6 bpm | 48 %, 0.3 bpm |
-| Mixed (312) | 24 %, 3.6 bpm, 4 > 10 | 40 %, 0.4 bpm | 40 %, 0.3 bpm |
+| At rest (52) | 100 %, 0.1 bpm | 98 %, 0.1 bpm | 100 %, 0.1 bpm |
+| Walking: periodic motion, a quarter of it near the pulse rate (312) | 18 %, 19.3 bpm, 28 > 10 | 14 %, 1.2 bpm, 1 > 10 | 23 %, 0.5 bpm |
+| Gestures, pressure changes (312) | 4 %, 0.9 bpm | 38 %, 0.5 bpm | 46 %, 0.4 bpm |
+| Mixed (312) | 25 %, 2.3 bpm, 2 > 10 | 36 %, 0.4 bpm | 39 %, 0.3 bpm |
 
-At rest all three report every window. During motion the networks report about as many windows
-as the classical path when walking and far more during gestures and mixed motion, and none of their
-values is off by more than 10 bpm; half of the classical path's walking values are off by more
-than that (it follows the arm swing). The v2 networks reported
-62–75 % of the resting windows: these recordings have a stronger 2nd harmonic than any shape the
-v2 training simulator made.
+At rest all three report (almost) every window. During motion the networks report about as many
+windows as the classical path when walking and far more during gestures and mixed motion; one of
+their values is off by more than 10 bpm (bracelet, walking), against half of the classical path's
+walking values (it follows the arm swing). The v4 networks had 7 (bracelet) and 5 (server) such
+errors on the same windows, the v2 networks reported only 62–75 % of the resting windows (these
+recordings have a stronger 2nd harmonic than any shape the v2 training simulator made).
+
+**Known hard cases** (`hard_cases`). An independent red team searched for inputs that make the
+gated pipeline show a wrong value; the evaluation now measures each failure mode it found, so the
+limits stay visible (150 windows each; motion common to both LEDs with a red/IR gain that arterial
+blood could produce, unless stated):
+
+| Input (windows): heart rate reported / wrong, SpO2 reported / wrong | Classical | Bracelet v4 | Bracelet | Server v4 | Server |
+|---|---|---|---|---|---|
+| Steady periodic motion, no pulse (150) | 148 / 148, 148 / 148 | 146 / 146, 146 / 146 | 85 / 85, 85 / 85 | 144 / 144, 144 / 144 | 109 / 109, 109 / 109 |
+| Pulse + steady motion 1.5–4× as large at another rate (150) | 88 / 88, 88 / 41 | 44 / 44, 44 / 18 | 18 / 18, 18 / 4 | 41 / 41, 41 / 16 | 13 / 12, 13 / 4 |
+| Pulse + motion at half its rate (arm swing) (150) | 41 / 37, 41 / 6 | 36 / 26, 36 / 4 | 29 / 21, 29 / 4 | 40 / 22, 40 / 1 | 39 / 25, 39 / 3 |
+| Motion locked to the pulse rate, venous red/IR ratio (150) | 109 / 0, 99 / 92 | 31 / 0, 31 / 29 | 16 / 0, 16 / 14 | 22 / 0, 22 / 20 | 13 / 0, 13 / 10 |
+| Fast breathing (27–45 /min) swinging the baseline (150) | 20 / 11, 20 / 9 | 4 / 0, 4 / 0 | 2 / 0, 2 / 0 | 3 / 0, 3 / 0 | 5 / 0, 5 / 0 |
+| Bigeminy with weak premature beats (150) | 12 / 5, 12 / 0 | 12 / 3, 12 / 0 | 12 / 3, 12 / 0 | 13 / 5, 13 / 0 | 12 / 5, 12 / 0 |
+| 35–45 bpm, double-humped pulse, no motion (150) | 28 / 1, 28 / 0 | 33 / 6, 33 / 0 | 30 / 1, 30 / 0 | 35 / 5, 35 / 0 | 30 / 1, 30 / 0 |
+| 150–210 bpm at SpO2 82–90 %, no motion (150) | 123 / 0, 122 / 0 | 119 / 0, 119 / 5 | 119 / 0, 119 / 7 | 121 / 0, 121 / 4 | 121 / 0, 121 / 0 |
+
+* **Steady rhythmic motion without an accelerometer.** Motion of constant amplitude whose red/IR
+  proportion lies in the arterial range is, for the sensor, a smooth pulse. Without any pulse
+  underneath it was reported — always wrongly — in 85 (bracelet) and 109 (server) of 150 windows
+  (v4: 146 and 144), and next to a real pulse it often wins: a wrong heart rate in 18 and 12 windows
+  (v4: 44 and 41). Training on steady motion (v5) reduced this; it cannot remove it. The remedy is an
+  accelerometer ([HARDWARE.md](../firmware/docs/HARDWARE.md), note 10). With the simulator's own
+  motion gains, which are mostly not arterial-like, the networks report almost none of it (inputs
+  that must not produce a value, last row).
+* **Motion at half the pulse rate** (arm swing while walking) with an arterial-like red/IR ratio
+  looks like a slower, double-humped pulse: when the network keeps the swing, beats and spectrum
+  agree on half the rate (21 and 25 wrong heart rates here; the classical path 37).
+* **Motion locked to the pulse rate** (a running cadence) shifts SpO2: here, with a venous-like
+  red/IR ratio, the value shown was off by more than 4 points in 14 of 16 (bracelet) and 10 of 13 (server) values shown — too low, a false
+  desaturation. The heart rate stays right.
+* **Fast breathing** (27–45 breaths a minute) swinging the baseline is counted as the pulse by the
+  classical path (11 of its 20 values are the breathing rate); the networks rarely report these windows.
+* **Bigeminy with weak premature beats** is reported at half the beat rate when the premature beats
+  are too weak to be detected (the rate of the pulses that reach the wrist, which is what a pulse
+  oximeter shows too).
+* **Slow, double-humped pulses**: below about 38 bpm the band-pass filters weaken the fundamental so
+  much that a pulse whose 2nd harmonic is stronger than the fundamental can be counted at twice
+  its rate on every path (1 window per network here; v4: 6 and 5).
+* **Fast rates at low SpO2**: the networks attenuate red at 150–210 bpm, so their SpO2 reads high,
+  which hides a desaturation. In windows the network calls clean, SpO2 now comes from the measured
+  signals; values off by more than 4 points: server 0 of 121 (v4: 4), bracelet 7 of 119 (v4: 5).
+* **The price of measured SpO2 in clean windows**: a non-arterial component locked to the heartbeat
+  (venous pulsation under a tight strap, a cadence locked to the pulse), which the network partly
+  removes but rarely flags, stays in the measured red/IR and pulls SpO2 down. The red team measured
+  it with the previous server network (v4): with venous pulsation at 0.3–0.6 times the arterial
+  pulse, 69 of about 195 values were off by more than 4 points with the rule and 50 without; with a
+  cadence locked to the pulse 23 and 16 of 131. With the v5 bracelet network: 59 and 50, 16 and 13.
+  The rule trades a hidden desaturation for a false one; not in `hard_cases` yet.
+* Not in the set: ambient-light flicker. The MAX30102 subtracts ambient light in every sample; the
+  red team's flicker attack assumed flicker that survives this cancellation.
 
 **What these numbers do not show**
 
 * All motion is simulated. The decisive test is the bracelet on a wrist next to a reference
   (chest strap or finger oximeter); the Colab notebook adds real motion from PPG-DaLiA (one green
   channel, so it only tests part of the method).
-* The classical path cannot tell rhythmic motion from a pulse (the rows above); it is there for
-  diagnostics.
+* The classical path cannot tell rhythmic motion from a pulse (the rows above and below); it is
+  there for diagnostics.
 * SpO2 uses Maxim's generic curve and is **not calibrated** for this enclosure; the estimator's
   own bias in simulation is in the [model card](docs/MODEL_CARD.md#3-heart-rate-hrv-spo2-pulse-shape-features).
 * With the two LED channels swapped, windows still pass when the true saturation is below about
-  90 % (3–5 % of that test set), and the SpO2 shown is then mostly too low (by a median of 6
-  points). Check the LED order once at bring-up.
+  85 % (2–3 % of that test set), and the SpO2 shown is then too low (by a median of 6 points).
+  Check the LED order once at bring-up.
 
 ### Diabetes risk — `models/risk_model.json`
 
@@ -218,6 +275,10 @@ flowchart LR
   (correlation ≥ 0.7, amplitude ratio 0.7–1.4); the strength of the pulse is judged on the
   measured signal, not on the output; where the two wavelengths agree (correlation ≥ 0.9), a
   red/IR ratio that arterial blood cannot produce rejects the window.
+* Where the network flags at most 20 % of the window as motion, the measured signals are the
+  reference: SpO2 comes from the measured red/IR, and the beat rate must agree with the measured
+  IR's spectrum. A network can make a clean measurement look different from what it is: it
+  attenuated red at fast rates and suppressed the fundamental of slow, double-humped pulses.
 * Separate gates: heart rate needs a trustworthy rhythm; SpO2 and the glucose features also need
   both wavelengths to agree.
 * `suguard_ml.pipeline.vitals_from_signals` is the single definition of "reliable". The firmware's
@@ -296,7 +357,7 @@ python scripts/risk_extra_inputs.py --out models/metrics           # further inp
 python scripts/benchmark_calibration.py --out models/metrics       # real CGM baselines
 python scripts/make_denoiser_dataset.py --out data/denoiser        # 200,000 windows, ~20 min on 4 CPUs
 
-# server model (16,000 steps: ~90 min on 4 CPU cores, minutes on a GPU)
+# server model (16,000 steps: ~90 min on 4 CPU cores, 110 min when it shares them with the bracelet training; minutes on a GPU)
 python scripts/train_denoiser.py --data data/denoiser --out models
 python scripts/eval_denoiser.py --data data/denoiser --out models/metrics
 

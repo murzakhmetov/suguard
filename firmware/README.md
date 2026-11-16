@@ -181,9 +181,11 @@ Behaviour worth knowing:
   On the samples it calls clean, its output must match the measured signal (correlation ≥ 0.7,
   size within 0.7–1.4) or the window (IR) / the SpO2 value (red) is withheld. Where it flags at
   most 20 % of the window as motion, the measured signals are the reference: SpO2 comes from the
-  measured red/IR, and the rate of the detected beats must agree with the spectrum of the measured
-  IR (a network can suppress the fundamental of a slow, double-humped pulse, or attenuate red at
-  fast rates).
+  measured red/IR, the rate of the detected beats must agree with the spectrum of the measured IR,
+  and the red/IR ratio must be stable in the measured signals (a network can attenuate red at fast
+  rates, or suppress the fundamental of a slow, double-humped pulse; windows it flags more heavily
+  keep its own output as the reference). See `ml/README.md`, "Known hard cases", for what this
+  catches and what it costs.
 
 ## Verification
 
