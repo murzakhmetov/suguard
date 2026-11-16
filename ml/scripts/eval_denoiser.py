@@ -18,6 +18,11 @@
    morphology and heart-rate variability) passed through the simulated
    MAX30102 optics and motion, without checks and through the full pipeline.
    The reference heart rate comes from the clean real signal.
+6. ``hard_cases``: inputs the checks are known not to handle (found by an
+   independent red team), measured so that these limits stay visible: steady
+   periodic motion with an arterial red/IR ratio, with or without a pulse,
+   motion at half the pulse rate, motion locked to the pulse rate, fast
+   breathing, bigeminy, slow double-humped pulses, fast rates at low SpO2.
 Real *motion* on real MAX30102 data is not covered here (no such public
 data); scripts/eval_dalia.py in the Colab notebook covers real wrist motion
 on PPG-DaLiA.
@@ -34,7 +39,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from suguard_ml.config import FS, WINDOW  # noqa: E402
+from suguard_ml.config import ADC_MAX, FS, WINDOW  # noqa: E402
 from suguard_ml.data.realppg import load_recordings  # noqa: E402
 from suguard_ml.eval.vitals_eval import both_finite, summarize_errors, vitals_from_bv  # noqa: E402
 from suguard_ml.pipeline import SuGuardPipeline  # noqa: E402
@@ -42,7 +47,7 @@ from suguard_ml.synth.ppg import simulate_window  # noqa: E402
 from suguard_ml.models.denoiser import Denoiser  # noqa: E402
 from suguard_ml.signal.beats import beat_template, detect_beats, pulse_polarity  # noqa: E402
 from suguard_ml.signal.filters import bandpass, lowpass, preprocess  # noqa: E402
-from suguard_ml.synth.ppg import corrupt_pulse  # noqa: E402
+from suguard_ml.synth.ppg import corrupt_pulse, r_from_spo2  # noqa: E402
 
 SEVERITY = [("clean", 0.0, 0.01), ("light", 0.01, 0.3), ("moderate", 0.3, 0.7), ("heavy", 0.7, 1.01)]
 
@@ -167,8 +172,9 @@ def eval_must_not_report(den: Denoiser, n: int = 300, n_motion: int = 1500, seed
     sets["no_pulse_with_motion"] = [(w.red_raw, w.ir_raw) for w in
                                     (simulate_window(seed0 + 10_000 + i, pi_ir=1e-4) for i in range(n_motion))]
     # The same without a visible pulse, but with periodic motion as large as a pulse (0.1-6 % of the
-    # light level, 0.7-3.2 Hz): rhythmic motion is the one thing that looks like a pulse to a sensor
-    # without an accelerometer. Whatever is reported here is the motion rate.
+    # light level; 0.7-3.2 Hz, or within 15 % of the simulated heart rate in a quarter of the windows,
+    # 0.6-3.5 Hz in all): rhythmic motion is the one thing that looks like a pulse to a sensor without
+    # an accelerometer. Whatever is reported here is the motion rate.
     sets["periodic_motion_no_pulse"] = [
         (w.red_raw, w.ir_raw) for w in
         (simulate_window(seed0 + 20_000 + i, pi_ir=1e-4, kinds=["periodic"],
@@ -214,9 +220,11 @@ def _shape_generators() -> dict:
     def deep_notch(th):
         # The median beat of the longest public recording (heartpy data3): a sharp systolic peak,
         # a notch below the diastolic foot and a diastolic wave of ~40 % (2nd harmonic > 1st).
+        # The slow diastolic decay ramps in during the upstroke, so the shape is continuous at the foot.
         u = (th / (2 * np.pi)) % 1.0
+        ramp = 0.5 * (1.0 - np.cos(np.pi * np.minimum(u / 0.15, 1.0)))
         return (np.exp(-0.5 * ((u - 0.2) / 0.055) ** 2) + 0.42 * np.exp(-0.5 * ((u - 0.55) / 0.09) ** 2)
-                - 0.12 * np.exp(-0.5 * ((u - 0.37) / 0.035) ** 2) + 0.15 * (1.0 - u))
+                - 0.12 * np.exp(-0.5 * ((u - 0.37) / 0.035) ** 2) + 0.15 * (1.0 - u) * ramp)
 
     return {
         "sharp_with_reflected_wave": gaussian_pulse(0.07),
@@ -326,6 +334,123 @@ def eval_real(den: Denoiser, n_corrupt: int = 6, seed: int = 0) -> dict:
     return out
 
 
+def _steady_periodic(rng, f_hz: float, n: int = WINDOW) -> np.ndarray:
+    """Periodic modulation of constant amplitude (unit 3rd-97th percentile range): a fundamental,
+    up to two harmonics and a 3 % frequency wobble, like a steady gait or arm swing."""
+    t = np.arange(n) / FS
+    wobble = 1.0 + 0.03 * np.sin(2 * np.pi * rng.uniform(0.05, 0.3) * t + rng.uniform(0, 2 * np.pi))
+    ph = 2 * np.pi * np.cumsum(f_hz * wobble) / FS
+    x = sum(a * np.sin(h * ph + rng.uniform(0, 2 * np.pi))
+            for h, a in ((1, 1.0), (2, rng.uniform(0, 0.5)), (3, rng.uniform(0, 0.2))))
+    return x / (np.percentile(x, 97) - np.percentile(x, 3))
+
+
+def _modulated(w, m_ir: np.ndarray, m_red: np.ndarray):
+    """Both channels' detected light multiplied by (1 + m), as motion does."""
+    return (np.clip(np.round(w.red_raw * (1.0 + m_red)), 0, ADC_MAX),
+            np.clip(np.round(w.ir_raw * (1.0 + m_ir)), 0, ADC_MAX))
+
+
+def _bigeminy_pulse(rng, hr_bpm: float, coupling: float, weak: float) -> np.ndarray:
+    """Normal and premature beats alternating (premature after ``coupling`` x the normal interval,
+    then the compensatory pause), the premature ones at ``weak`` x the normal amplitude."""
+    rr = 60.0 / hr_bpm
+    t = np.arange(WINDOW) / FS
+    x = np.zeros(WINDOW)
+    on, k = -2.0 + rng.uniform(0, rr), 0
+    while on < t[-1] + 1.0:
+        a = 1.0 if k % 2 == 0 else weak
+        tau = t - on
+        x += a * (np.exp(-0.5 * ((tau - 0.12) / 0.045) ** 2) + 0.4 * np.exp(-0.5 * ((tau - 0.33) / 0.08) ** 2))
+        on += coupling * rr if k % 2 == 0 else (2.0 - coupling) * rr
+        k += 1
+    return x
+
+
+def eval_hard_cases(den: Denoiser, n: int = 150, seed: int = 4_800_000) -> dict:
+    """Inputs the checks are known not to handle, with the count of values that are reported and
+    wrong (heart rate off by more than 10 bpm, SpO2 by more than 4 points; any value where there
+    is no pulse). Motion is common to both LEDs with a red/IR ratio that arterial blood could give
+    (R of 85-99.9 % SpO2) unless stated: without an accelerometer such motion looks like a pulse."""
+    rng = np.random.default_rng(seed)
+    loguni = lambda lo, hi: float(np.exp(rng.uniform(np.log(lo), np.log(hi))))  # noqa: E731
+    arterial = lambda: r_from_spo2(float(rng.uniform(85, 99.9)))               # noqa: E731
+    sets = {k: [] for k in ("steady_periodic_motion_no_pulse", "pulse_with_steady_motion_at_another_rate",
+                            "pulse_with_motion_at_half_the_rate", "motion_locked_to_the_pulse_rate_venous_ratio",
+                            "fast_breathing", "bigeminy_weak_premature_beats", "slow_35_45bpm_double_humped",
+                            "fast_150_210bpm_spo2_82_90")}
+    for i in range(n):
+        s = seed + 16 * i
+        # No visible pulse (0.01 %), steady motion of 0.1-6 % of the light level at 0.7-3.2 Hz over the whole window.
+        w = simulate_window(s, pi_ir=1e-4, kinds=[])
+        m = loguni(0.001, 0.06) * _steady_periodic(rng, float(rng.uniform(0.7, 3.2)))
+        sets["steady_periodic_motion_no_pulse"].append((*_modulated(w, m, arterial() * m), None, None))
+        # A pulse and steady motion 1.5-4x as large, at least 15 bpm away from the pulse rate.
+        pi = loguni(0.003, 0.03)
+        w = simulate_window(s + 1, kinds=[], hr_bpm=float(rng.uniform(55, 110)), pi_ir=pi,
+                            spo2=float(rng.uniform(90, 99.5)))
+        fm = float(rng.uniform(0.7, 3.3))
+        while abs(fm * 60 - w.hr_bpm) < 15:
+            fm = float(rng.uniform(0.7, 3.3))
+        m = pi * rng.uniform(1.5, 4.0) * _steady_periodic(rng, fm)
+        sets["pulse_with_steady_motion_at_another_rate"].append((*_modulated(w, m, arterial() * m), w.hr_bpm, w.spo2))
+        # Arm swing while walking: motion at half the pulse rate, 0.5-2x the pulse.
+        pi = loguni(0.003, 0.03)
+        w = simulate_window(s + 2, kinds=[], hr_bpm=float(rng.uniform(75, 120)), pi_ir=pi,
+                            spo2=float(rng.uniform(90, 99.5)))
+        m = pi * rng.uniform(0.5, 2.0) * _steady_periodic(rng, w.hr_bpm / 120.0)
+        sets["pulse_with_motion_at_half_the_rate"].append((*_modulated(w, m, arterial() * m), w.hr_bpm, w.spo2))
+        # Running cadence locked to the pulse (+-2 %), 0.5-3x the pulse, red/IR ratio of 70-86 % SpO2.
+        pi = loguni(0.003, 0.03)
+        w = simulate_window(s + 3, kinds=[], hr_bpm=float(rng.uniform(60, 110)), pi_ir=pi,
+                            spo2=float(rng.uniform(94, 99.5)))
+        m = pi * rng.uniform(0.5, 3.0) * _steady_periodic(rng, w.hr_bpm / 60.0 * rng.uniform(0.98, 1.02))
+        sets["motion_locked_to_the_pulse_rate_venous_ratio"].append(
+            (*_modulated(w, m, r_from_spo2(float(rng.uniform(70, 86))) * m), w.hr_bpm, w.spo2))
+        # Breathing at 27-45 per minute (0.45-0.75 Hz) swinging the baseline 1-4x the pulse, venous red/IR ratio.
+        pi = loguni(0.003, 0.03)
+        w = simulate_window(s + 4, kinds=[], hr_bpm=float(rng.uniform(60, 120)), pi_ir=pi,
+                            spo2=float(rng.uniform(90, 99.5)))
+        t = np.arange(WINDOW) / FS
+        m = pi * rng.uniform(1.0, 4.0) * 0.5 * np.sin(2 * np.pi * rng.uniform(0.45, 0.75) * t + rng.uniform(0, 6.3))
+        sets["fast_breathing"].append((*_modulated(w, m, rng.uniform(0.8, 1.3) * m), w.hr_bpm, w.spo2))
+        # Bigeminy: premature beats at 0.55-0.8 of the normal interval and 0.3-0.9 of its amplitude.
+        hr = float(rng.uniform(55, 95))
+        x = _bigeminy_pulse(rng, hr, float(rng.uniform(0.55, 0.8)), float(rng.uniform(0.3, 0.9)))
+        sp = float(rng.uniform(90, 99.5))
+        w = corrupt_pulse(x, rng, spo2=sp, pi_ir=loguni(0.003, 0.03), hr_bpm=hr, kinds=[])
+        sets["bigeminy_weak_premature_beats"].append((w.red_raw, w.ir_raw, hr, sp))
+        # Slow rates with the double-humped pulses of the rich-harmonics family, no motion.
+        w = simulate_window(s + 6, kinds=[], hr_bpm=float(rng.uniform(35, 45)), shape="rich_harmonics")
+        sets["slow_35_45bpm_double_humped"].append((w.red_raw, w.ir_raw, w.hr_bpm, w.spo2))
+        # Fast rates at low saturation and low perfusion, no motion.
+        w = simulate_window(s + 7, kinds=[], hr_bpm=float(rng.uniform(150, 210)), spo2=float(rng.uniform(82, 90)),
+                            pi_ir=loguni(0.001, 0.003), shape="rich_harmonics")
+        sets["fast_150_210bpm_spo2_82_90"].append((w.red_raw, w.ir_raw, w.hr_bpm, w.spo2))
+    out = {}
+    for name, pipe in (("classical", SuGuardPipeline(denoiser=None)), ("denoiser", SuGuardPipeline(denoiser=den))):
+        out[name] = {}
+        for key, wins in sets.items():
+            hr_rep = hr_bad = sp_rep = sp_bad = 0
+            sp_err = []
+            for red, ir, hr_t, sp_t in wins:
+                r = pipe.analyze(red, ir, fs=FS)
+                hr, sp = r["heart_rate"]["bpm"], r["spo2"]["percent"]
+                if hr is not None:
+                    hr_rep += 1
+                    hr_bad += hr_t is None or abs(hr - hr_t) > 10.0
+                if sp is not None:
+                    sp_rep += 1
+                    sp_bad += sp_t is None or abs(sp - sp_t) > 4.0
+                    if sp_t is not None:
+                        sp_err.append(sp - sp_t)
+            out[name][key] = {"windows": len(wins), "heart_rate_reported": hr_rep, "heart_rate_wrong": int(hr_bad),
+                              "spo2_reported": sp_rep, "spo2_wrong": int(sp_bad),
+                              "spo2_mean_signed_error": float(np.mean(sp_err)) if sp_err else None}
+        print("hard cases", name, json.dumps(out[name]), flush=True)
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default="data/denoiser")
@@ -347,6 +472,7 @@ def main():
     report["must_not_report"] = eval_must_not_report(den)
     report["shape_robustness"] = eval_shapes(den)
     report["real_ppg_simulated_motion"] = eval_real(den)
+    report["hard_cases"] = eval_hard_cases(den)
     Path(a.out).mkdir(parents=True, exist_ok=True)
     (Path(a.out) / f"{a.name}.json").write_text(json.dumps(report, indent=2))
     print("wrote", Path(a.out) / f"{a.name}.json")

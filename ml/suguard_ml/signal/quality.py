@@ -111,7 +111,8 @@ USABLE_SQI = 0.5
 
 def assess_quality(ir_bv: np.ndarray, red_bv: np.ndarray, beats: Beats, fs: float = FS,
                    artifact_prob: np.ndarray | None = None, sensor: SensorState | None = None,
-                   red_ir_corr: float | None = None, usable_threshold: float = USABLE_SQI) -> Quality:
+                   red_ir_corr: float | None = None, usable_threshold: float = USABLE_SQI,
+                   spectral_reference: np.ndarray | None = None) -> Quality:
     """Quality of a (raw or denoised) window from complementary indices.
 
     * perfusion index, two-sided: < ~0.03 % no measurable pulse; > ~10 %
@@ -126,7 +127,10 @@ def assess_quality(ir_bv: np.ndarray, red_bv: np.ndarray, beats: Beats, fs: floa
     Skewness (Elgendi 2016) is reported, not scored. A metric that cannot be
     computed (too few beats, no spectral peak, window shorter than 3 s for
     the ratio stability) fails its component. With ``sensor`` given, a window
-    that fails the sensor checks is never usable.
+    that fails the sensor checks is never usable. With ``spectral_reference``
+    (the measured signal of a window the denoiser calls clean), the heart
+    rate from the beats has to agree with that signal's spectral rate instead
+    of the denoised one's.
     """
     ir = np.asarray(ir_bv, dtype=np.float64)
     red = np.asarray(red_bv, dtype=np.float64)
@@ -134,6 +138,8 @@ def assess_quality(ir_bv: np.ndarray, red_bv: np.ndarray, beats: Beats, fs: floa
     skew = float(stats.skew(ir)) if ir.size > 3 and np.std(ir) > 0 else 0.0
     _, tcorr = beat_template(ir, beats)
     hr_spec, purity = spectral_hr(ir, fs)
+    if spectral_reference is not None:
+        hr_spec, _ = spectral_hr(spectral_reference, fs)
     if red_ir_corr is None:
         a, b = ir - ir.mean(), red - red.mean()
         den = np.sqrt(np.sum(a * a) * np.sum(b * b))

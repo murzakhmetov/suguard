@@ -63,3 +63,16 @@ def test_eval_dalia_counts_and_labels():
     hr, act = E.labels_at(d, np.array([4.0, 5.2, 12.0, 21.9, 30.0]))
     assert hr[:4].tolist() == [0.0, 1.0, 4.0, 9.0] and np.isnan(hr[4])
     assert act.tolist() == [1.0, 1.0, 7.0, 7.0, 7.0]
+
+
+def test_check_model_card_runs(tmp_path):
+    """The script behind the model card's own numbers runs end to end (small samples)."""
+    import json
+    subprocess.run([sys.executable, str(ML / "scripts" / "check_model_card.py"), "--quick", "--out", str(tmp_path),
+                    "--only", "hrv", "notch", "calibration", "hr"], check=True, capture_output=True, cwd=ML)
+    rep = json.loads((tmp_path / "model_card_checks.json").read_text())
+    assert set(rep) == {"hrv_premature_beats", "dicrotic_notch", "calibration_filter", "calibration_level_prior",
+                        "hr_estimator"}
+    prior = rep["calibration_level_prior"]["results"]
+    assert abs(prior["shipped_prior_sd_100"]["readings_of_600"]["after_40"] - 600) < 1.0
+    assert rep["hr_estimator"]["windows_where_beats_found"] >= 80

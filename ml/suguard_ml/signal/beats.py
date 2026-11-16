@@ -161,9 +161,14 @@ def pulse_polarity(x: np.ndarray, fs: float = FS, ref_bpm: np.ndarray | None = N
 # of its 2nd and 3rd harmonic. A real pulse often has a 2nd harmonic stronger
 # than its fundamental (a pronounced dicrotic notch or reflected wave); the
 # strongest peak alone then reads double the rate. Only peaks with at least
-# HARMONIC_MIN_SHARE of the strongest peak's power compete, so that a noise
-# peak at half the rate cannot win with the pulse's own harmonics.
-HARMONIC_MIN_SHARE = 0.1
+# HARMONIC_MIN_SHARE of the strongest peak's power compete: a component at
+# half the rate (arm swing while walking) would otherwise win with the
+# pulse's own fundamental as its "2nd harmonic" (a sinusoidal pulse with arm
+# swing at half its rate, 0.35 of its size: 6 of 40 windows got a heart rate
+# on the classical path with 0.1, 40 of 40 with 0.25, all correct). 0.25 still
+# admits a fundamental whose 2nd harmonic is twice as strong (power ratio
+# 0.25: an amplitude ratio of 2; the real recordings reach 1.6, power 0.39).
+HARMONIC_MIN_SHARE = 0.25
 HARMONIC_SPAN = 2
 
 

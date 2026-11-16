@@ -55,6 +55,18 @@ MIN_INPUT_PI = 0.03
 MIN_SUPPORT_CORR = 0.7
 SUPPORT_GAIN_RANGE = (0.7, 1.4)
 MIN_SUPPORT_SAMPLES = 10
+# Where the denoiser flags at most this share of the window as motion, the
+# measured signals are the reference: SpO2 comes from the measured red/IR
+# (weighted by the mask) and the spectral rate the beats must agree with from
+# the measured IR. A network can otherwise make a clean measurement look
+# different from what it is: it attenuated red at fast rates (SpO2 read high:
+# 150-210 bpm at 82-90 %, errors above 4 points in 6 -> 1 of 150 windows on the
+# server network, 19 -> 5 on the bracelet one) and suppressed the fundamental
+# of slow, double-humped pulses, so the denoised spectrum agreed with a doubled
+# beat count. No cost on the standard evaluation sets. Measured SpO2 in every
+# window was worse under motion (server: mean error 0.18 -> 0.23 points on the
+# 600 gated windows), so the network's red/IR are kept there.
+CLEAN_MAX_MOTION = 0.2
 # Shorter windows go through the classical path (the denoiser saw 10.24 s).
 MIN_DENOISER_S = 6.0
 MAX_NONFINITE_FRACTION = 0.02
@@ -131,8 +143,12 @@ def vitals_from_signals(ir_bv: np.ndarray, red_bv: np.ndarray, sensor: SensorSta
     pi_in = float(np.percentile(ir_bv, 97) - np.percentile(ir_bv, 3)) * 100.0
     beats = detect_beats(c_ir, FS)
     coeffs = {"coeffs": spo2_coeffs} if spo2_coeffs else {}
-    sp = estimate_spo2(c_red, c_ir, weights=1 - p_art if denoised else None, **coeffs)
-    q = assess_quality(c_ir, c_red, beats, FS, artifact_prob=p_art, sensor=sensor, red_ir_corr=sp.red_ir_corr)
+    # The network sees (almost) no motion: the measured signals are the reference (CLEAN_MAX_MOTION).
+    clean = denoised and float(np.mean(p_art > 0.5)) <= CLEAN_MAX_MOTION
+    sp_red, sp_ir = (red_bv, ir_bv) if clean else (c_red, c_ir)
+    sp = estimate_spo2(sp_red, sp_ir, weights=1 - p_art if denoised else None, **coeffs)
+    q = assess_quality(c_ir, c_red, beats, FS, artifact_prob=p_art, sensor=sensor, red_ir_corr=sp.red_ir_corr,
+                       spectral_reference=ir_bv if clean else None)
     support_ir = input_support(ir_bv, c_ir, p_art) if denoised else None
     support_red = input_support(red_bv, c_red, p_art) if denoised else None
 

@@ -147,10 +147,12 @@ class _PulseDrawingDenoiser:
         w = simulate_window(123, kinds=[], hr_bpm=72.0, spo2=97.0, pi_ir=0.01)
         self.window = w
         self.ir, self.red = preprocess(w.ir_raw, FS)[0], preprocess(w.red_raw, FS)[0]
+        self.flagged = 0.0           # share of the window it calls motion (from the start)
 
     def denoise_bv(self, ir_bv, red_bv, fs):
         from suguard_ml.models.denoiser import Denoised
-        return Denoised(ir_bv=self.ir, red_bv=self.red, artifact_prob=np.zeros_like(self.ir), fs=fs)
+        p_art = (np.arange(self.ir.size) < self.flagged * self.ir.size).astype(float)
+        return Denoised(ir_bv=self.ir, red_bv=self.red, artifact_prob=p_art, fs=fs)
 
 
 def test_denoiser_output_must_be_supported_by_the_input():
@@ -170,8 +172,15 @@ def test_denoiser_output_must_be_supported_by_the_input():
         res = pipe.analyze(red, ir, fs=FS)
         assert not res["reliable"] and "denoiser_mismatch" in res["reason"]
         assert res["heart_rate"]["bpm"] is None and res["spo2"]["percent"] is None and res["features"] is None
-    # IR pulse measured, red pulse drawn: heart rate yes, SpO2 no.
+    # IR pulse measured, red pulse drawn: heart rate yes, SpO2 no. Where the network calls the window
+    # clean, SpO2 comes from the measured red/IR, which share no pulse ...
     red = np.median(drawer.window.red_raw) + rng.normal(0, 20, 512).round()
+    res = pipe.analyze(red, drawer.window.ir_raw, fs=FS)
+    assert res["reliable"] and res["heart_rate"]["bpm"] is not None
+    assert res["spo2"]["percent"] is None and res["spo2"]["reason"] == "spo2_low_red_ir_agreement"
+    assert res["features"] is None
+    # ... and where it flags part of the window, its red output must be supported by the measurement.
+    drawer.flagged = 0.3
     res = pipe.analyze(red, drawer.window.ir_raw, fs=FS)
     assert res["reliable"] and res["heart_rate"]["bpm"] is not None
     assert res["spo2"]["percent"] is None and res["spo2"]["reason"] == "red_denoiser_mismatch" and res["features"] is None
@@ -301,6 +310,8 @@ def test_api_endpoints():
         c = client.post("/v1/glucose/calibrate", json={"reference_mgdl": v, "timestamp": ts + i * 3600,
                                                         "recent_features": feats, "calibration": cal})
         assert c.status_code == 200, c.text
+        if h["glucose_model"] is None:
+            assert c.json()["estimate_before_mgdl"] is None     # no model, no estimate
         cal = c.json()["calibration"]
     assert cal["n_points"] == 3
     g2 = client.post("/v1/glucose/estimate", json={"recent_features": feats, "timestamp": ts + 4 * 3600,
@@ -420,6 +431,13 @@ def test_glucose_endpoints_with_a_model(monkeypatch):
     g = client.post("/v1/glucose/estimate", json={"recent_features": feats, "timestamp": 1.7e9}).json()
     assert g["status"] == "not_validated" and g["mg_dl"] is None and "mmol_l" not in g and "interval_80" not in g
     assert client.get("/health").json()["experimental_glucose_output"] is False
+    # ... not through the calibration endpoint either.
+    c = None
+    for i, v in enumerate([120, 121]):
+        r = client.post("/v1/glucose/calibrate", json={"reference_mgdl": v, "timestamp": 1.7e9 + i * 3600,
+                                                      "calibration": c, "recent_features": feats})
+        assert r.status_code == 200 and r.json()["estimate_before_mgdl"] is None, r.text
+        c = r.json()["calibration"]
     # ... unless the operator has switched experimental output on (SUGUARD_EXPERIMENTAL_GLUCOSE=1).
     monkeypatch.setattr(appmod, "EXPERIMENTAL_GLUCOSE", True)
     g = client.post("/v1/glucose/estimate", json={"recent_features": feats, "timestamp": 1.7e9}).json()

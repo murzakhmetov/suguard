@@ -3,7 +3,7 @@ eval_denoiser.py, train_risk.py or benchmark_calibration.py.
 
     python scripts/check_model_card.py --out models/metrics          (about 15 min on 4 CPUs)
 
-Writes models/metrics/model_card_checks.json with four sections:
+Writes models/metrics/model_card_checks.json with six sections:
 
 ``hrv_premature_beats``  RMSSD from one minute of inter-beat intervals with
     four premature beats (each with its compensatory pause), relative to the
@@ -24,6 +24,13 @@ Writes models/metrics/model_card_checks.json with four sections:
     holds the next true values / meter readings, after 6 and 30 fingersticks
     (two a day), for a level that drifts as the filter assumes and for one
     that does not.
+``calibration_level_prior``  The same filter for a person far from the
+    prior mean (fingersticks of exactly 60-600 mg/dL, two a day): the
+    estimate after 3, 10 and 40 readings, with the shipped level prior
+    (LEVEL_PRIOR_SD) and with the narrow one used before (30 mg/dL).
+``hr_estimator``  Beat-interval heart rate on simulated windows without
+    motion: the mean of the valid intervals (Beats.hr_bpm) against their
+    median (the estimator used before), error against the simulator's rate.
 """
 
 from __future__ import annotations
@@ -38,7 +45,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from suguard_ml.config import FS  # noqa: E402
-from suguard_ml.models.glucose import GLUCOMETER_CV, PersonalCalibration  # noqa: E402
+from suguard_ml.models.glucose import GLUCOMETER_CV, LEVEL_PRIOR_SD, PersonalCalibration  # noqa: E402
 from suguard_ml.signal import beats as B  # noqa: E402
 from suguard_ml.signal import features as F  # noqa: E402
 from suguard_ml.signal.filters import preprocess  # noqa: E402
@@ -111,9 +118,8 @@ def _kind(f: dict) -> str:
 def check_notch(n: int, seed0: int = 40_000) -> dict:
     sample = ppg.sample_morphology
 
-    def no_reflected_wave(rng, hr_bpm=75.0):
-        m = sample(rng, hr_bpm)
-        m.lp_hz, m.harmonics = None, None          # the wave model itself ...
+    def no_reflected_wave(rng, hr_bpm=75.0, shape=None):
+        m = sample(rng, hr_bpm, "wave")            # the wave model itself ...
         m.a2, m.a3 = 0.0, float(rng.uniform(0.2, 0.5))    # ... without a reflected wave: no notch
         return m
 
@@ -219,15 +225,56 @@ def check_calibration(people: int, seed: int = 5) -> dict:
                       f"{GLUCOMETER_CV:.0%}, two fingersticks a day, no population model", "results": out}
 
 
+def check_level_prior() -> dict:
+    out = {}
+    for label, sd in (("shipped_prior_sd_%.0f" % LEVEL_PRIOR_SD, LEVEL_PRIOR_SD), ("narrow_prior_sd_30", 30.0)):
+        out[label] = {}
+        for level in (60.0, 200.0, 400.0, 600.0):
+            cal = PersonalCalibration(P=[[sd**2, 0.0], [0.0, 0.3**2]])
+            t, after = 1.7e9, {}
+            for i in range(1, 41):
+                t += 43200.0
+                cal.update(cal.f0, level, t)
+                if i in (3, 10, 40):
+                    after[f"after_{i}"] = round(float(cal.predict(cal.f0, t + 3600.0)[0]), 1)
+            out[label][f"readings_of_{level:.0f}"] = after
+    return {"design": "no population model, fingersticks of exactly the given level two a day; "
+                      "estimate one hour after the 3rd, 10th and 40th", "results": out}
+
+
+# --- heart-rate estimator ----------------------------------------------------------------------
+
+def check_hr_estimator(n: int, seed0: int = 9_300_000) -> dict:
+    err = {"mean_of_valid_intervals": [], "median_of_valid_intervals": []}
+    for i in range(n):
+        w = ppg.simulate_window(seed0 + i, kinds=[])
+        x, _ = preprocess(w.ir_raw, FS)
+        b = B.detect_beats(x, FS)
+        good = b.ibi_s[b.valid_ibi]
+        if good.size < 2:
+            continue
+        err["mean_of_valid_intervals"].append(abs(60.0 / np.mean(good) - w.hr_bpm))
+        err["median_of_valid_intervals"].append(abs(60.0 / np.median(good) - w.hr_bpm))
+    both = (np.array(err["mean_of_valid_intervals"]) < 10) & (np.array(err["median_of_valid_intervals"]) < 10)
+    return {"design": f"{n} simulated windows without motion (simulator mix of shapes, rates and perfusion), "
+                      "beats on the measured IR, absolute error against the simulator's rate; "
+                      "'where_beats_found' = windows where both estimates are within 10 bpm (no missed or extra beats)",
+            "windows_with_a_rate": len(err["mean_of_valid_intervals"]), "windows_where_beats_found": int(both.sum()),
+            "results": {k: {"mean_abs_error_bpm": float(np.mean(v)), "p95_abs_error_bpm": float(np.percentile(v, 95)),
+                            "median_abs_error_bpm": float(np.median(v)),
+                            "mean_abs_error_bpm_where_beats_found": float(np.mean(np.array(v)[both]))}
+                        for k, v in err.items()}}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="models/metrics")
     ap.add_argument("--models", default="models")
     ap.add_argument("--quick", action="store_true", help="small samples, for a test run")
-    ap.add_argument("--only", nargs="*", default=None, choices=["hrv", "notch", "spo2", "calibration"])
+    ap.add_argument("--only", nargs="*", default=None, choices=["hrv", "notch", "spo2", "calibration", "hr"])
     a = ap.parse_args()
     q = a.quick
-    parts = a.only or ["hrv", "notch", "spo2", "calibration"]
+    parts = a.only or ["hrv", "notch", "spo2", "calibration", "hr"]
     path = Path(a.out) / "model_card_checks.json"
     report = json.loads(path.read_text()) if path.exists() and a.only else {}
     if "hrv" in parts:
@@ -238,6 +285,9 @@ def main():
         report["spo2_bias"] = check_spo2(Path(a.models), 60 if q else 2000)
     if "calibration" in parts:
         report["calibration_filter"] = check_calibration(40 if q else 300)
+        report["calibration_level_prior"] = check_level_prior()
+    if "hr" in parts:
+        report["hr_estimator"] = check_hr_estimator(100 if q else 2000)
     Path(a.out).mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(report, indent=2))
     print("wrote", path)

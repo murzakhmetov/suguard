@@ -58,9 +58,11 @@ The last row is intended: when most of a window is motion, the pulse cannot be r
 value is given. The classical path still answers there in 9 % of the windows, and that is where
 its large errors come from.
 
-**Pulse shapes the training simulator does not make** (`shape_robustness`), clean windows, share
-that gets a heart rate. "v2" are the networks shipped before this version, evaluated with the same
-code and data (`models/metrics/previous/`):
+**Pulse shapes generated outside the training simulator** (`shape_robustness`), clean windows,
+share that gets a heart rate. The harmonic and sinusoidal ones lie within the range of the
+simulator's two harmonic families; the others are built differently from anything it makes. "v2" are
+the networks shipped before this version, evaluated with the same code and data
+(`models/metrics/previous/`):
 
 | Pulse shape (150 clean windows each) | Classical | Bracelet v2 | Bracelet | Server v2 | Server |
 |---|---|---|---|---|---|
@@ -145,8 +147,8 @@ European / other). Without ancestry the model under-estimated Asian participants
 vs 0.38 observed) and over-estimated White ones (0.37 vs 0.28); with it both are calibrated
 (0.382 vs 0.383 and 0.277 vs 0.277; `risk_cv.json` → `subgroup_calibration` and
 `subgroup_calibration_without_ancestry`). Systematic errors of 4–6 points remain for Black
-(0.40 vs 0.46), Mexican-American (0.34 vs 0.29), other Hispanic (0.37 vs 0.32) and multiracial
-participants (0.34 vs 0.30). The result is in the range reported for screening questionnaires
+(0.40 vs 0.46), Mexican-American (0.34 vs 0.29), other Hispanic (0.37 vs 0.32) and other race /
+multiracial participants (0.34 vs 0.30). The result is in the range reported for screening questionnaires
 (ADA risk test, FINDRISC) and is **not a diagnosis**. NHANES is a US sample: for Kazakhstan the
 calibration has to be confirmed on local data with HbA1c.
 
@@ -173,9 +175,10 @@ calibration has to be confirmed on local data with HbA1c.
   personal time-of-day profile), two controls ("context only" and "PPG shuffled within a person"),
   bootstrap confidence intervals over people and a locked hold-out group. A model is marked
   `validated` **only** if: the table is labelled as data from the SuGuard bracelet; ≥ 20 people;
-  at least 80 % of them could be scored; ≥ 10 % better than the best baseline with the lower
-  confidence bound above zero; PPG beats both controls; MARD ≤ 15 % and Clarke A+B ≥ 99 % after
-  calibration; and, on the locked hold-out people, the same MARD and Clarke bar, at least 80 % of
+  on new people, ≥ 10 % better (MARD) than predicting the training mean; at least 80 % of the
+  people could be scored with calibration, ≥ 10 % better than the best baseline with the lower
+  confidence bound above zero; PPG beats both controls by at least 5 %; MARD ≤ 15 % and Clarke
+  A+B ≥ 99 % after calibration; and, on the locked hold-out people, the same MARD and Clarke bar, at least 80 % of
   them scored and a gain over the best baseline (the controls and the confidence bound are not
   repeated there: the group is small). A check that cannot be run counts as failed.
 * **No glucose number without a validated model.** With no model installed (today) the API answers
@@ -184,8 +187,9 @@ calibration has to be confirmed on local data with HbA1c.
   installed but not validated answers `not_validated`, without a number; only with
   `SUGUARD_EXPERIMENTAL_GLUCOSE=1` set on the server (research with informed participants) does it
   return its estimate, as status `experimental`.
-* A positive and a negative control (`tests/test_models.py`) prove that this logic finds a real
-  signal and does not mistake time of day or noise for one.
+* Two synthetic controls (`tests/test_models.py`) check this logic on one simulated cohort of 15
+  people (run with `--min-subjects 10`): a strong PPG signal passes, time of day and noise alone do
+  not.
 
 What it takes to make glucose real: [docs/DATA_COLLECTION.md](docs/DATA_COLLECTION.md).
 
@@ -212,8 +216,8 @@ flowchart LR
 * **The network is not trusted blindly.** A network trained to output a clean pulse can draw one
   out of noise. On the samples it calls clean, its output must match the measured signal
   (correlation ≥ 0.7, amplitude ratio 0.7–1.4); the strength of the pulse is judged on the
-  measured signal, not on the output; a red/IR ratio that arterial blood cannot produce rejects
-  the window.
+  measured signal, not on the output; where the two wavelengths agree (correlation ≥ 0.9), a
+  red/IR ratio that arterial blood cannot produce rejects the window.
 * Separate gates: heart rate needs a trustworthy rhythm; SpO2 and the glucose features also need
   both wavelengths to agree.
 * `suguard_ml.pipeline.vitals_from_signals` is the single definition of "reliable". The firmware's
@@ -292,7 +296,7 @@ python scripts/risk_extra_inputs.py --out models/metrics           # further inp
 python scripts/benchmark_calibration.py --out models/metrics       # real CGM baselines
 python scripts/make_denoiser_dataset.py --out data/denoiser        # 200,000 windows, ~20 min on 4 CPUs
 
-# server model (16,000 steps: ~70 min on 4 CPU cores, minutes on a GPU)
+# server model (16,000 steps: ~90 min on 4 CPU cores, minutes on a GPU)
 python scripts/train_denoiser.py --data data/denoiser --out models
 python scripts/eval_denoiser.py --data data/denoiser --out models/metrics
 
@@ -301,7 +305,7 @@ python scripts/train_denoiser.py --data data/denoiser --arch edge --out data/edg
 python scripts/export_edge_model.py --ckpt data/edge_s/denoiser_edge.pt --data data/denoiser
 python scripts/eval_denoiser.py --data data/denoiser --edge-int models/denoiser_edge_int.npz --name denoiser_edge_eval
 
-# statements of the model card not covered above (HRV, notch, SpO2 bias, calibration filter)
+# statements of the model card not covered above (HRV, notch, SpO2 bias, calibration filter, heart-rate estimator)
 python scripts/check_model_card.py --out models/metrics
 
 # glucose, once paired data exists (docs/DATA_COLLECTION.md)

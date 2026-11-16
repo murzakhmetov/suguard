@@ -631,7 +631,19 @@ void sg_vitals_from_signals(const double* ir_bv, const double* red_bv, const dou
   SpectralHr spec = {false, 0.0, 0.0};
   if (pulse_spectrum(w->pulse, n, w)) spec = spectral_peak(w->fft);
 
-  const Spo2 sp = estimate_spo2(c_red, c_ir, p_art, n, w);
+  // pipeline.CLEAN_MAX_MOTION: where the network flags (almost) no motion, the measured signals are
+  // the reference. The spectral rate the beats must agree with comes from the measured IR (the
+  // purity stays that of the denoised signal), and SpO2 from the measured red/IR.
+  const bool clean = denoised && motion_fraction(p_art, n) <= SG_CLEAN_MAX_MOTION;
+  if (clean) {
+    sg_filtfilt(&SG_FILTER_PULSE, ir_bv, n, w->pulse, w->ext);   // the beats are already detected
+    SpectralHr ref = {false, 0.0, 0.0};
+    if (pulse_spectrum(w->pulse, n, w)) ref = spectral_peak(w->fft);
+    spec.valid = ref.valid;
+    spec.bpm = ref.bpm;
+  }
+
+  const Spo2 sp = clean ? estimate_spo2(red_bv, ir_bv, p_art, n, w) : estimate_spo2(c_red, c_ir, p_art, n, w);
   SgQuality* q = &out->quality;
   assess_quality(c_ir, c_red, p_art, n, sensor, sp.ratio.corr, &spec, q, w);
 

@@ -18,7 +18,10 @@ Model of one channel (counts):
   than its fundamental (as the tissue does at the wrist), a smooth harmonic
   series, or a harmonic series rich in overtones (a 2nd harmonic up to 1.6
   times the fundamental: a deep notch and a large diastolic wave), each with
-  one dominant peak per beat.
+  one dominant peak per beat in the noise-free shape. The rich family's
+  diastolic wave can still pass for a beat after band-pass filtering at slow
+  rates: in a review, the beat detector found double the rate in 14 of 200
+  clean windows of that family, all below 66 bpm.
   The red channel's pulsatile part is the IR one scaled by the ratio of
   ratios R that corresponds to the simulated SpO2.
 * ``m``: motion modulation of the detected light (periodic arm swing / gait,
@@ -127,8 +130,9 @@ PULSE_PAD_S = 1.0          # margin simulated around the window for the low-pass
 def _sample_harmonics(rng: np.random.Generator, bounds=SMOOTH_HARMONICS) -> tuple:
     """A pulse as fundamental + harmonics 2..5 with random amplitudes (up to
     ``bounds``) and phases: ``sign * (sin(th) + sum a_k sin(k th + p_k))``.
-    Drawn until the shape has one dominant peak per beat (the second highest
-    below 0.6 of it); oriented so that the steeper flank rises (systole)."""
+    Drawn until the unfiltered shape has one dominant peak per beat (the
+    second highest local maximum below 0.6 of it, by height above the
+    minimum); oriented so that the steeper flank rises (systole)."""
     th = np.linspace(0.0, 2 * np.pi, 240, endpoint=False)
     for _ in range(30):
         amps = np.array([rng.uniform(0, b) for b in bounds])
@@ -142,7 +146,11 @@ def _sample_harmonics(rng: np.random.Generator, bounds=SMOOTH_HARMONICS) -> tupl
         heights = np.sort(x[peaks] - x.min())[::-1]
         if heights.size == 1 or heights[1] < 0.6 * heights[0]:
             return sign, amps, phases
-    return 1.0, np.array([0.2] + [0.0] * (len(bounds) - 1)), np.array([np.pi] + [0.0] * (len(bounds) - 1))
+    # Not reached in practice (no fallback in 4,000 draws): sin(th) - 0.2 sin(2 th), oriented by the same rule.
+    amps, phases = np.array([0.2] + [0.0] * (len(bounds) - 1)), np.array([np.pi] + [0.0] * (len(bounds) - 1))
+    x = np.sin(th) + amps[0] * np.sin(2 * th + phases[0])
+    d = np.diff(np.concatenate([x, x[:1]]))
+    return (1.0 if d.max() >= -d.min() else -1.0), amps, phases
 
 
 SHAPE_FAMILIES = ("wave", "low_pass", "smooth_harmonics", "rich_harmonics")
@@ -312,7 +320,9 @@ def motion_artifact(n: int, fs: float, rng: np.random.Generator, amp: float, hr_
             wave = np.zeros(n)
             for h, ha in enumerate([1.0, rng.uniform(0, 0.6), rng.uniform(0, 0.3)], start=1):
                 wave += ha * np.sin(h * phase + rng.uniform(0, 2 * np.pi))
-            am = 1.0 + 0.3 * _smooth_noise(rng, n, fs, 0, 0.3)
+            # From the steady amplitude of an even gait to a 30 % wander: networks trained on
+            # modulated swing alone took steady swing with an arterial-like red/IR gain for a pulse.
+            am = 1.0 + rng.uniform(0.0, 0.3) * _smooth_noise(rng, n, fs, 0, 0.3)
             m += a * wave * am * _envelope(rng, n, fs, 2.0, n / fs, full_prob=0.35)
         elif kind == "burst":
             hi = rng.uniform(2.0, 8.0)

@@ -4,7 +4,10 @@
 
 (the defaults; the shipped models were trained on exactly this set)
 
-Each split uses a disjoint seed range, so no window appears twice.
+Each split uses a disjoint seed range, so no window appears twice. The heart
+rate is drawn over the whole band the pipeline accepts (35-210 bpm, see
+``training_hr``); the simulator's own default (40-185 bpm) left the networks
+without examples at the slowest and fastest rates.
 """
 
 from __future__ import annotations
@@ -18,6 +21,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from suguard_ml.config import HR_MAX_BPM, HR_MIN_BPM  # noqa: E402
 from suguard_ml.models.denoiser import model_input  # noqa: E402
 from suguard_ml.signal.filters import preprocess  # noqa: E402
 from suguard_ml.synth.ppg import simulate_window  # noqa: E402
@@ -25,8 +29,15 @@ from suguard_ml.synth.ppg import simulate_window  # noqa: E402
 SEED_OFFSET = {"train": 1_000_000, "val": 2_000_000, "test": 3_000_000}
 
 
+def training_hr(seed: int) -> float:
+    """Three quarters around a resting 75 bpm, a quarter uniform over the pipeline's band."""
+    rng = np.random.default_rng([seed, 1])
+    hr = rng.normal(75, 15) if rng.random() < 0.75 else rng.uniform(HR_MIN_BPM, HR_MAX_BPM)
+    return float(np.clip(hr, HR_MIN_BPM, HR_MAX_BPM))
+
+
 def make_one(seed: int):
-    w = simulate_window(seed)
+    w = simulate_window(seed, hr_bpm=training_hr(seed))
     x, scale, _, _ = model_input(w.red_raw, w.ir_raw, w.fs)
     ir_c, _ = preprocess(w.ir_clean_raw, w.fs)
     red_c, _ = preprocess(w.red_clean_raw, w.fs)

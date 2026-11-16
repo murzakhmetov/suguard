@@ -66,7 +66,7 @@ windows that are clean / lightly / moderately / heavily disturbed: 20 % / 19 % /
 
 ¹ On the 2,438 windows where the bracelet network and no network both give a value.
 
-| Real PPG + simulated motion, no checks: heart-rate error (SpO2 error on the windows where all paths give one) | No network | Bracelet | Server |
+| Real PPG + simulated motion, no checks: heart-rate error (SpO2 error on the windows where that network and no network both give one) | No network | Bracelet | Server |
 |---|---|---|---|
 | At rest (52) | 0.04 bpm (0.25) | 0.04 (0.36) | 0.03 (0.25) |
 | Walking: periodic motion, a quarter of it near the pulse rate (312) | 21.67 bpm (6.48) | 5.17 (0.78) | 3.62 (0.66) |
@@ -110,7 +110,8 @@ heart rate) only if all of this holds:
 | Quality components: each must reach 0.25 and their geometric mean 0.5 | perfusion (rising over 0.03–0.12 %, falling over 10–20 %); beat-template correlation; spectral purity; beat-amplitude spread; share of plausible beat intervals; agreement of the beat-based and the spectral heart rate; share of samples not flagged as motion. A component that cannot be computed fails | `weak_pulse`, `implausible_amplitude`, `motion`, `irregular_or_noisy` |
 | Motion share | ≤ 70 % of the samples flagged by the network | `motion` |
 | Input support | on the samples the network calls clean (≥ 10 of them), its IR output must correlate with the measured IR signal (≥ 0.7) and have a comparable size (0.7–1.4) | `denoiser_mismatch` |
-| Arterial ratio | the red/IR ratio R must be one that arterial blood can produce (0.30–1.1) | `red_ir_inconsistent` |
+| Measured reference | where the network flags at most 20 % of the samples, the spectral rate the beats must agree with comes from the *measured* IR, and SpO2 from the measured red/IR (weighted by the mask); elsewhere both come from the network's output | `motion` (via the heart-rate agreement) |
+| Arterial ratio | where red and IR agree (correlation ≥ 0.9 in the cardiac band), the red/IR ratio R must be one that arterial blood can produce (0.30–1.1). With a lower correlation R is not checked: the window can still get a heart rate, but no SpO2 | `red_ir_inconsistent` |
 
 **SpO2** additionally needs two more quality components — the stability of the red/IR ratio over
 the window and the red/IR correlation (`red_ir_inconsistent`) — a red/IR correlation of at least
@@ -140,7 +141,7 @@ Numbers in this section without another source come from `scripts/check_model_ca
   within 5 % of the value without them for every rhythm tested when they come at up to 80 % of the
   normal interval; late ones (88 %) in a variable rhythm (RMSSD 60 ms, or strong respiratory
   variation) are not recognised and RMSSD comes out 1.3–1.4 times too high. Single minutes
-  scatter: 5th–95th percentile 0.85–1.1 in most settings, up to 1.5 for premature beats at 80–88 %
+  scatter: 5th–95th percentile 0.85–1.1 in most settings, up to 1.65 for premature beats at 80–88 %
   in a variable rhythm. Without any editing RMSSD is 1.4–15 times too high, the more the steadier
   the rhythm.
 * **SpO2** — ratio of ratios R from a total-least-squares fit of red on IR in the cardiac band
@@ -173,7 +174,7 @@ Numbers in this section without another source come from `scripts/check_model_ca
 | HbA1c ≥ 5.7 % | AUC 0.770 [0.756–0.783], average precision 0.594, Brier 0.180 (0.224 without a model), calibration slope 1.00 |
 | HbA1c ≥ 6.5 % | AUC 0.789 [0.749–0.815], average precision 0.113 (prevalence 0.036), Brier 0.033 (0.034), slope 0.97 |
 | For comparison | age + BMI only: 0.748 / 0.749; without ancestry: 0.749 / 0.756 |
-| Calibration by subgroup (predicted / observed, HbA1c ≥ 5.7 %) | Asian 0.382 / 0.383; White 0.277 / 0.277; age 18–39 0.141 / 0.144; age 60–80 0.538 / 0.533. **A systematic error of 4–6 points remains** for Black (0.400 / 0.458), Mexican-American (0.337 / 0.292), other Hispanic (0.370 / 0.321) and multiracial participants (0.338 / 0.297). Without the ancestry terms: Asian 0.276 / 0.383, White 0.367 / 0.277 (`subgroup_calibration_without_ancestry`) |
+| Calibration by subgroup (predicted / observed, HbA1c ≥ 5.7 %) | Asian 0.382 / 0.383; White 0.277 / 0.277; age 18–39 0.141 / 0.144; age 60–80 0.538 / 0.533. **A systematic error of 4–6 points remains** for Black (0.400 / 0.458), Mexican-American (0.337 / 0.292), other Hispanic (0.370 / 0.321) and other race / multiracial participants (0.338 / 0.297). Without the ancestry terms: Asian 0.276 / 0.383, White 0.367 / 0.277 (`subgroup_calibration_without_ancestry`) |
 | Categories (out-of-fold) | low: 32 % of people, HbA1c ≥ 5.7 % in 9 %; moderate: 27 % / 30 %; elevated: 27 % / 50 %; high: 14 % / 66 % (HbA1c ≥ 6.5 % in 11 %, three times the average) |
 | Left out on purpose | Waist (correlation 0.91 with BMI, unstable sign) and smoking (gets a spurious "protective" sign in cross-sectional data): with them the AUC is 0.771 / 0.792 instead of 0.770 / 0.789, well inside the confidence intervals, and they should not explain a risk. If sent, the API returns them under `inputs_not_used` |
 | Tested and not added | Measured blood pressure, self-rated general health, sedentary time and sleep duration, each added to the shipped model on the same folds: the cross-validated AUC changes by −0.002 to +0.002, inside the noise, so they would only lengthen the questionnaire (`scripts/risk_extra_inputs.py`, `models/metrics/risk_extra_inputs.json`). The bundled NHANES item "family history" is the reason given by people who already think they are at risk (DIQ175A), not a family history, and would leak perceived risk into the screening; it was not used. A real family-history question remains worth asking |
@@ -187,9 +188,9 @@ Numbers in this section without another source come from `scripts/check_model_ca
 | Intended purpose | Estimate glucose from PPG features and context, personalised with fingersticks |
 | Model class | LightGBM: median and 10 %/90 % quantiles; input = median of the features of ≥ 3 reliable 10.24-s windows (the same aggregation in training and in the API) + context (time of day, meals) |
 | State | **Not trained**: none of the available sources has paired PPG and glucose from this sensor. The API answers `unavailable`, or `calibration_only` after ≥ 3 fingersticks (their filtered average, `mg_dl` = null). A model that is installed but not `validated` answers `not_validated` without a number, unless the server runs with `SUGUARD_EXPERIMENTAL_GLUCOSE=1` (research only; status `experimental`). The firmware has no glucose output |
-| Criteria for `validated` (`scripts/train_glucose.py`) | data from the SuGuard bracelet; ≥ 20 people, of whom ≥ 80 % can be scored in the personalised protocol; on new people better than predicting the mean; after calibration ≥ 10 % better (MARD) than the best baseline without PPG — fingerstick level, last fingerstick, personal time-of-day profile — with the lower bootstrap bound above zero; PPG beats the controls "context only" and "PPG shuffled within a person"; MARD ≤ 15 % and Clarke A+B ≥ 99 %; on a locked hold-out group (20 % of the people): the same MARD and Clarke bar, ≥ 80 % of them scored and a gain over the best baseline without PPG (the 10 % margin, the bootstrap bound and the controls are not repeated on this small group). A check that cannot be run (no PPG features, a control missing, too few people scored) fails |
+| Criteria for `validated` (`scripts/train_glucose.py`) | data from the SuGuard bracelet; ≥ 20 people, of whom ≥ 80 % can be scored in the personalised protocol; on new people ≥ 10 % better (MARD) than predicting the training mean; after calibration ≥ 10 % better (MARD) than the best baseline without PPG — fingerstick level, last fingerstick, personal time-of-day profile — with the lower bootstrap bound above zero; PPG beats the controls "context only" and "PPG shuffled within a person" by ≥ 5 %; MARD ≤ 15 % and Clarke A+B ≥ 99 %; on a locked hold-out group (20 % of the people): the same MARD and Clarke bar, ≥ 80 % of them scored and a gain over the best baseline without PPG (the 10 % margin, the bootstrap bound and the controls are not repeated on this small group). A check that cannot be run (no PPG features, a control missing, too few people scored) fails |
 | The bar (real CGM, no bracelet) | 19 people without diagnosed diabetes: a constant gives MARD 16.8–16.9 %, fingerstick calibration alone 15.3–16.4 %; 5 people with type 2 diabetes: 35 % and 21.7–22.7 % (`models/metrics/calibration_baselines_cgm.json`) |
-| Check of the logic | synthetic positive and negative controls (`tests/synthetic_paired.py`): a real signal passes every evidential criterion, time-of-day effects and noise do not; the synthetic tables are labelled as not coming from the bracelet and so are not `validated`. The label (`meta_source`) is trusted, not verified: a table must only be labelled as bracelet data if it is (one test labels the positive control that way to show that a strong signal then passes) |
+| Check of the logic | synthetic positive and negative controls (`tests/synthetic_paired.py`, one simulated cohort of 15 people, run with `--min-subjects 10`): a strong signal passes every evidential criterion, time-of-day effects and noise do not — on that one generator; the synthetic tables are labelled as not coming from the bracelet and so are not `validated`. The label (`meta_source`) is trusted, not verified: a table must only be labelled as bracelet data if it is (one test labels the positive control that way to show that a strong signal then passes) |
 | Time base | every paired table carries its own UTC offset per row (`meta_tz_offset_h`), so "days" and "time of day" are local for every participant |
 
 ## 6. Personal calibration filter

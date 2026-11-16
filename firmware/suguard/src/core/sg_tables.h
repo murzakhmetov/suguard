@@ -21,6 +21,8 @@ static_assert(SG_FFT_N == 4096,
               "SG_FFT_N in sg_core.h differs from the default nfft of beats.spectral_hr = 4096");
 static_assert(SG_MAX_ARTIFACT_FRACTION == 0x1.6666666666666p-1,
               "SG_MAX_ARTIFACT_FRACTION in sg_core.h differs from pipeline.MAX_ARTIFACT_FRACTION = 0.7");
+static_assert(SG_CLEAN_MAX_MOTION == 0x1.999999999999ap-3,
+              "SG_CLEAN_MAX_MOTION in sg_core.h differs from pipeline.CLEAN_MAX_MOTION = 0.2");
 static_assert(SG_MIN_INPUT_PI == 0x1.eb851eb851eb8p-6,
               "SG_MIN_INPUT_PI in sg_core.h differs from pipeline.MIN_INPUT_PI = 0.03");
 static_assert(SG_MIN_SUPPORT_CORR == 0x1.6666666666666p-1,
@@ -152,7 +154,7 @@ constexpr int SG_K_HR_HI = 286;  // last bin of the cardiac band, f <= HR_BAND_H
 constexpr int SG_K_TOTAL_LO = 41;  // first bin with f >= 0.5 Hz
 constexpr int SG_K_TOTAL_HI = 655;  // last bin with f <= 8 Hz
 constexpr int SG_K_NEAR = 8;  // |f[j] - f[k]| <= 0.1 Hz  <=>  |j - k| <= SG_K_NEAR
-constexpr double SG_HARMONIC_MIN_SHARE = 0x1.999999999999ap-4;  // 0.1 (beats.HARMONIC_MIN_SHARE)
+constexpr double SG_HARMONIC_MIN_SHARE = 0x1p-2;  // 0.25 (beats.HARMONIC_MIN_SHARE)
 constexpr int SG_K_HARMONIC_SPAN = 2;  // beats.HARMONIC_SPAN: bins either side of a harmonic
 
 // sin(2 pi k / SG_FFT_N) for k = 0 .. SG_FFT_N / 4, rounded to float.

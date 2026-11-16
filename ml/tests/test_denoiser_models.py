@@ -65,8 +65,9 @@ def test_clean_pulses_of_any_shape_are_reported(make, shape):
 @pytest.mark.skipif(not MODELS, reason="no trained model in models/")
 @pytest.mark.parametrize("make", MODELS)
 def test_rhythmic_motion_without_a_pulse_is_not_reported(make):
-    """Periodic motion as large as a pulse, no pulse at all: the classical path reports a
-    quarter of these windows; a network must not."""
+    """Periodic motion as large as a pulse, no pulse at all: the classical path reports about
+    a third of these windows (20 of 60); a network must not. (Motion of constant amplitude over
+    the whole window gets through every path: see must_not_report in scripts/eval_denoiser.py.)"""
     pipe = SuGuardPipeline(denoiser=make())
     rng = np.random.default_rng(3)
     wins = [simulate_window(8_100_000 + i, pi_ir=1e-4, kinds=["periodic"],

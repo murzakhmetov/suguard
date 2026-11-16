@@ -195,6 +195,16 @@ def edge_cases() -> list[Case]:
     def tone(hz):
         return np.sin(2 * np.pi * hz * t)
 
+    def with_signals_flagged(name, c_ir, c_red):
+        """As with_signals, but 30 % of the window flagged: the denoised spectrum is the reference."""
+        return Case(name, clean.red_raw, clean.ir_raw, denoised=(c_ir, c_red, np.where(t < 0.3 * t[-1], 1.0, 0.0)))
+
+    def flagged_share(k):
+        p = np.zeros(n)
+        p[:k] = 0.9
+        return p
+
+    half_rate = tone(1.8) + 0.35 * tone(0.9)          # a pulse and arm swing at half its rate
     ir_bv, red_bv, _ = as_denoised(clean, np.zeros(n))
     doublet = np.zeros(n)             # +1, -1: its spectrum rises monotonically through the cardiac band
     doublet[255:257] = 1.0, -1.0
@@ -232,6 +242,17 @@ def edge_cases() -> list[Case]:
         with_signals("red_signal_not_finite", ir_bv, np.where(np.arange(n) == 100, np.nan, red_bv)),
         with_signals("r_below_plausible_range", ir_bv, 0.1 * ir_bv),
         with_signals("r_below_curve_vertex", ir_bv, 0.3 * ir_bv),
+        # pipeline.CLEAN_MAX_MOTION: 102 of 512 samples flagged is clean, 103 is not.
+        Case("flagged_at_clean_limit", clean.red_raw, clean.ir_raw, denoised=as_denoised(clean, flagged_share(102))),
+        Case("flagged_just_above_clean_limit", clean.red_raw, clean.ir_raw,
+             denoised=as_denoised(clean, flagged_share(103))),
+        # Clean window, denoised beats at twice the measured rate: the measured spectrum disagrees.
+        with_signals("denoised_at_twice_the_measured_rate", 0.01 * tone(2.4), 0.006 * tone(2.4)),
+        with_signals_flagged("flagged_denoised_at_twice_the_rate", 0.01 * tone(2.4), 0.006 * tone(2.4)),
+        # A component at half the pulse rate must not win the harmonic sum.
+        with_signals_flagged("flagged_pulse_with_half_rate_component", 0.01 * half_rate, 0.006 * half_rate),
+        Case("classical_pulse_with_half_rate_motion", counts(70_000 * (1 - 0.003 * tone(1.8)) * (1 + 0.001 * tone(0.9))),
+             counts(100_000 * (1 - 0.005 * tone(1.8)) * (1 + 0.00175 * tone(0.9)))),
     ]
     for length in (100, 256, 400):
         for seed, kinds in ((7_300_000, []), (7_300_001, None)):
@@ -396,6 +417,9 @@ def test_denoised_path(cli, build_dir):
     results, _ = run_host(cli, build_dir, "denoised", cases)
     compare(cases, results, "denoised path")
     assert any(r["reliable"] for r in results) and any(r["has_spo2"] for r in results)
+    # Both sides of pipeline.CLEAN_MAX_MOTION (measured or denoised signals as the reference).
+    shares = [r["q_motion_fraction"] for r in results]
+    assert any(s <= 0.2 for s in shares) and any(0.2 < s <= 0.7 for s in shares)
 
 
 def test_edge_cases(cli, build_dir):
