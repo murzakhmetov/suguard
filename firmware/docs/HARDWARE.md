@@ -82,10 +82,12 @@ These are observations from the schematic. None of them was measured — I do no
    still runs from the charger output (without a battery behind it).
 
 10. **No accelerometer and no MCU-controlled LED.** Motion is detected from the PPG itself (the
-    denoiser uses the two wavelengths). Rhythmic motion at a pulse-like rate is the one thing a PPG
-    sensor alone cannot always tell from a pulse (see the model card); a 3-axis accelerometer on
-    the same I²C bus (e.g. LIS2DH12, BMA400) is the standard remedy and the most valuable addition
-    for the next revision. A status LED would help pairing and debugging: today the only feedback
+    denoiser uses the two wavelengths). Rhythmic motion whose red/IR proportion lies in the range
+    arterial blood produces is the one thing a PPG sensor alone cannot tell from a pulse: steady arm
+    swing without any pulse underneath is still reported as a pulse in a large share of such
+    windows, and next to a real pulse the swing can win (measured in `ml/README.md`, "Known hard
+    cases"). A 3-axis accelerometer on the same I²C bus (e.g. LIS2DH12, BMA400) is the standard
+    remedy and the most valuable addition for the next revision. A status LED would help pairing and debugging: today the only feedback
     for a button press is the USB console.
 
 11. **No power path: the charger never finishes while the bracelet runs.** The 3.3 V regulator

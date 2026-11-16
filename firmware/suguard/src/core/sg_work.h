@@ -26,7 +26,7 @@ struct SgWork {
   double pulse[SG_WINDOW];                     // 0.5-8 Hz band of the IR signal: beats and spectrum (then, in
                                                // a clean window, of the measured IR for its spectrum)
   // sg_vitals_from_signals, in a window the network calls clean: the measured IR and red with the
-  // flagged samples taken from the network's output (pipeline.vitals_from_signals `reference`).
+  // flagged samples taken from the network's output (pipeline.vitals_from_signals ratio_reference).
   double ref_ir[SG_WINDOW];
   double ref_red[SG_WINDOW];
   // General-purpose arrays; each function names the role it gives them.

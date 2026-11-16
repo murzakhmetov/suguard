@@ -156,16 +156,18 @@ def vitals_from_signals(ir_bv: np.ndarray, red_bv: np.ndarray, sensor: SensorSta
     coeffs = {"coeffs": spo2_coeffs} if spo2_coeffs else {}
     # The network sees (almost) no motion: the measured signals are the reference (CLEAN_MAX_MOTION).
     clean = denoised and float(np.mean(p_art > 0.5)) <= CLEAN_MAX_MOTION
-    reference = None
+    ratio_reference = None
     if clean:
-        # The measured signals, with the samples the network flags taken from its output (the same
-        # clipped weight as in the SpO2 fit): a short burst it removed cannot dominate the checks.
+        # For the stability of the red/IR ratio: the measured signals, with the samples the network
+        # flags taken from its output (the clipped weight of the SpO2 fit), so that a short burst it
+        # removed does not withhold SpO2. The rate check uses the measured IR as it is: trusting the
+        # mask there let a window through whose flagged part held the true pulse.
         w = np.clip(1.0 - p_art, 0.0, 1.0)
-        reference = (w * ir_bv + (1.0 - w) * c_ir, w * red_bv + (1.0 - w) * c_red)
+        ratio_reference = (w * ir_bv + (1.0 - w) * c_ir, w * red_bv + (1.0 - w) * c_red)
     sp_red, sp_ir = (red_bv, ir_bv) if clean else (c_red, c_ir)
     sp = estimate_spo2(sp_red, sp_ir, weights=1 - p_art if denoised else None, **coeffs)
     q = assess_quality(c_ir, c_red, beats, FS, artifact_prob=p_art, sensor=sensor, red_ir_corr=sp.red_ir_corr,
-                       reference=reference)
+                       rate_reference=ir_bv if clean else None, ratio_reference=ratio_reference)
     support_ir = input_support(ir_bv, c_ir, p_art) if denoised else None
     support_red = input_support(red_bv, c_red, p_art) if denoised else None
 
