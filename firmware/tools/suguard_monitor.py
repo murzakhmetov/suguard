@@ -61,6 +61,8 @@ def format_vitals(v: dict) -> str:
     temp = f"{v['temp']:.1f}" if v.get("temp") is not None else "--"
     state = "ok " if v.get("reliable") else "-- "
     why = v.get("reasons") or (f"no SpO2: {v['spo2_why']}" if v.get("spo2_why") else "")
+    if v.get("fallback"):
+        why = ("weak pulse, decided by the classical checks  " + why).rstrip()
     return (f"#{v.get('seq', 0):<5d} {state} HR {hr} bpm  SpO2 {spo2} %  SQI {v.get('sqi', 0):.2f}  "
             f"PI {v.get('pi', 0):.2f}%  motion {v.get('motion', 0):.2f}  DC {v.get('dc', [0, 0])[1]:.0f}  "
             f"T {temp}C  bat {v.get('bat', -1)}%  {v.get('proc_ms', 0)} ms  {why}")

@@ -518,6 +518,7 @@ static void processPendingWindow() {
   if (w.flags & SG_WF_AMBIENT_OVERFLOW) {                        // sunlight overwhelmed the sensor
     out.vitals.reliable = false;
     out.vitals.has_spo2 = false;
+    out.vitals.classical_fallback = false;
     out.vitals.reasons |= SG_R_ADC_SATURATED;
   }
   const double hr_scale = w.fs_hz > 0 ? (double)w.fs_hz / SG_FS : 1.0;   // sensor clock tolerance

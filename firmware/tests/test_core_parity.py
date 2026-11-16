@@ -293,15 +293,22 @@ def edge_cases() -> list[Case]:
                               ("2pct_clean", 1.02, np.zeros(n))):
         cases.append(Case(f"denoised_red_amplified_{name}", low.red_raw, low.ir_raw, denoised=(l_ir, gain * l_red, p_art)))
     # pipeline.LOW_PERFUSION_PI: a small pulse (0.15 %) the network flags everywhere gets the classical
-    # decision when the network's beats give the same rate (SpO2 withheld when its red is 15 % larger),
-    # not when they run at twice the rate or when its red has no pulse (a reason besides motion).
+    # decision when the network's beats give the same rate (SpO2 withheld when its red is 15 % larger or
+    # so noisy that it gives no SpO2 of its own), not when they run at twice the rate, when its red has no
+    # pulse (a reason besides motion) or when the sensor adds a note (the IR level above 90 % of full scale).
     weak = simulate_window(7_200_152, kinds=[], pi_ir=0.0015, hr_bpm=72.0, spo2=85.0)
     w_ir, w_red, _ = as_denoised(weak, np.zeros(n))
     flag = np.full(n, 0.9)
+    noisy_red = w_red + 1.3 * np.std(w_red) * np.random.default_rng(101).standard_normal(n)
     for name, signals in (("same_signals", (w_ir, w_red, flag)), ("red_15pct_larger", (w_ir, 1.15 * w_red, flag)),
+                          ("red_without_spo2", (w_ir, noisy_red, flag)),
                           ("denoised_doubled", (0.002 * tone(2.4), 0.0012 * tone(2.4), flag)),
                           ("denoised_red_zero", (w_ir, np.zeros(n), flag))):
         cases.append(Case(f"low_perfusion_flagged_{name}", weak.red_raw, weak.ir_raw, denoised=signals))
+    scale = 0.95 * ADC_MAX / np.median(weak.ir_raw)
+    hi_red, hi_ir = counts(weak.red_raw * scale), counts(weak.ir_raw * scale)
+    cases.append(Case("low_perfusion_flagged_sensor_note", hi_red, hi_ir,
+                      denoised=(preprocess(hi_ir, FS)[0], preprocess(hi_red, FS)[0], flag)))
     # An exact 20 % (80 of 400 samples) is clean, 81 is not.
     win400 = simulate_window(7_200_400, n=400, kinds=[], pi_ir=0.02, hr_bpm=72.0)
     doubled400 = np.sin(2 * np.pi * 2.4 * np.arange(400) / FS)
@@ -502,11 +509,12 @@ def test_edge_cases(cli, build_dir):
     assert {r["spo2_reason"] for r in results} == {0, 1, 2, 3}
     low = {c.name.removeprefix("low_perfusion_flagged_"): r for c, r in zip(cases, results)
            if c.name.startswith("low_perfusion_flagged_")}
-    assert [low[k]["classical_fallback"] for k in ("same_signals", "red_15pct_larger", "denoised_doubled",
-                                                   "denoised_red_zero")] == [1, 1, 0, 0]
-    assert low["same_signals"]["has_spo2"] and not low["red_15pct_larger"]["has_spo2"]
-    assert low["red_15pct_larger"]["spo2_withheld"] == SPO2_REASONS["red_denoiser_mismatch"]
-    assert not (low["denoised_doubled"]["reliable"] or low["denoised_red_zero"]["reliable"])
+    assert [low[k]["classical_fallback"] for k in ("same_signals", "red_15pct_larger", "red_without_spo2",
+                                                   "denoised_doubled", "denoised_red_zero", "sensor_note")] == [1, 1, 1, 0, 0, 0]
+    assert low["same_signals"]["has_spo2"]
+    for k in ("red_15pct_larger", "red_without_spo2"):
+        assert not low[k]["has_spo2"] and low[k]["spo2_withheld"] == SPO2_REASONS["red_denoiser_mismatch"], k
+    assert not any(low[k]["reliable"] for k in ("denoised_doubled", "denoised_red_zero", "sensor_note"))
 
 
 def test_window_length_out_of_range(cli, build_dir):

@@ -40,12 +40,12 @@ perfusion 0.08–5 %; `models/metrics/denoiser_eval.json` and `denoiser_edge_eva
 
 |  | Classical | Bracelet | Server |
 |---|---|---|---|
-| Windows that get a heart rate | 36 % | 51 % | 54 % |
+| Windows that get a heart rate | 36 % | 52 % | 54 % |
 | … of the windows without motion | 94 % | 94 % | 94 % |
-| Heart rate: mean / 95th-percentile error | 2.06 / 2.1 bpm | 0.39 / 1.4 bpm | 0.33 / 1.1 bpm |
+| Heart rate: mean / 95th-percentile error | 2.06 / 2.1 bpm | 0.39 / 1.5 bpm | 0.33 / 1.1 bpm |
 | Heart-rate errors above 10 bpm | 7 | 0 | 0 |
 | Windows that get an SpO2 value | 32 % | 49 % | 53 % |
-| SpO2: mean / 95th-percentile error | 0.89 / 4.7 points | 0.19 / 0.5 points | 0.20 / 0.6 points |
+| SpO2: mean / 95th-percentile error | 0.89 / 4.7 points | 0.21 / 0.5 points | 0.21 / 0.7 points |
 | SpO2 errors above 4 points | 10 | 0 | 0 |
 
 Share of windows that get a heart rate, by how much of the window is really in motion:
@@ -54,13 +54,38 @@ Share of windows that get a heart rate, by how much of the window is really in m
 |---|---|---|---|
 | 0–5 % (139) | 94 % | 94 % | 94 % |
 | 5–30 % (90) | 44 % | 96 % | 96 % |
-| 30–70 % (131) | 18 % | 62 % | 74 % |
-| more than 70 % (240) | 10 % | 2 % | 3 % |
+| 30–70 % (131) | 18 % | 63 % | 75 % |
+| more than 70 % (240) | 10 % | 4 % | 5 % |
 
 The last row is intended: when most of a window is motion, the pulse cannot be recovered and no
 value is given. The classical path still answers there in 10 % of the windows, and that is where
 its large errors come from (6 of its 7 heart-rate errors above 10 bpm, all 10 SpO2 errors above 4
-points).
+points). The networks answer in 4–5 % of them (2.5 and 3 % without the low-perfusion rule below:
+the motion there is too small to hide a weak pulse), none wrong.
+
+**Windows without motion, by pulse size** (`rest_by_perfusion`: 1,000 simulated windows without
+motion, binned by the simulated perfusion; share that gets a heart rate / an SpO2 value). At a small
+pulse the networks take sensor noise for motion: at 0.08–0.15 % they flagged so much of a still
+window that about a fifth got nothing ("rule off"). Below a measured perfusion of 0.2 %, a window
+the network rejects for motion alone therefore gets the decision of the classical checks on the
+measured signals, if the network's own beats give the same rate within 5 bpm; its SpO2 then also
+has to agree with the network's within 2 points (`LOW_PERFUSION_PI` in `suguard_ml/pipeline.py`):
+
+| Pulse size (windows): heart rate / SpO2 given | Classical | Bracelet, rule off | Bracelet | Server, rule off | Server |
+|---|---|---|---|---|---|
+| 0.08–0.15 % (176) | 93 % / 80 % | 78 % / 77 % | 91 % / 80 % | 79 % / 78 % | 91 % / 81 % |
+| 0.15–0.3 % (166) | 97 % / 94 % | 93 % / 92 % | 95 % / 95 % | 94 % / 93 % | 95 % / 95 % |
+| 0.3–1 % (266) | 98 % / 98 % | 98 % / 98 % | 98 % / 98 % | 98 % / 98 % | 98 % / 98 % |
+| 1–5 % (392) | 95 % / 95 % | 95 % / 95 % | 95 % / 95 % | 95 % / 95 % | 95 % / 95 % |
+
+No heart-rate error above 10 bpm in any cell, one SpO2 value off by more than 4 points (classical
+path, smallest pulses); the classical checks decided 28 (bracelet) and 23 (server) of the windows.
+In the 600 gated windows above the rule adds 5 (bracelet) and 4 (server) heart rates, none wrong.
+Its price is where there is no pulse at all: under small motion, a pulse of 0.01 % gets a heart rate
+in 8 and 10 of 1,500 windows instead of 5 and 8 (no more SpO2 values; inputs that must not produce a
+value, below), and the server reports one more of the steady-periodic-motion windows (known hard
+cases) — the same ambiguity as there, a smooth periodic signal that looks like a pulse to a sensor
+without an accelerometer.
 
 **Pulse shapes generated outside the training simulator** (`shape_robustness`), clean windows,
 share that gets a heart rate. The harmonic and sinusoidal ones lie within the range of the
@@ -93,7 +118,7 @@ rate / an SpO2 value was reported anyway:
 | Pulse in infrared only, none in red ¹ (300) | 283 / 0 | 0 / 0 | 0 / 0 |
 | Red pulse at a fifth of its size, in noise ¹ (300) | 178 / 0 | 44 / 0 | 46 / 0 |
 | The two LED channels swapped ² (300) | 10 / 10 | 6 / 1 | 9 / 3 |
-| A pulse of 0.01 % (below the 0.03 % threshold), the usual motion mix ³ (1500) | 26 / 23 | 5 / 5 | 8 / 7 |
+| A pulse of 0.01 % (below the 0.03 % threshold), the usual motion mix ³ (1500) | 26 / 23 | 8 / 5 | 10 / 7 |
 | The same pulse, periodic motion as large as a pulse ⁴ (300) | 102 / 82 | 2 / 2 | 2 / 2 |
 
 ¹ A heart rate is legitimate here (the infrared pulse is real); an SpO2 value is not, and none was
@@ -132,20 +157,20 @@ blood could produce, unless stated):
 
 | Input (windows): heart rate reported / wrong, SpO2 reported / wrong | Classical | Bracelet v4 | Bracelet | Server v4 | Server |
 |---|---|---|---|---|---|
-| Steady periodic motion, no pulse (150) | 146 / 146, 146 / 146 | 145 / 145, 142 / 142 | 96 / 96, 94 / 94 | 147 / 147, 147 / 147 | 118 / 118, 118 / 118 |
+| Steady periodic motion, no pulse (150) | 146 / 146, 146 / 146 | 145 / 145, 142 / 142 | 96 / 96, 94 / 94 | 147 / 147, 147 / 147 | 119 / 119, 119 / 119 |
 | Pulse + steady motion 1.5–4× as large at another rate (150) | 92 / 92, 92 / 35 | 55 / 55, 55 / 15 | 19 / 19, 19 / 5 | 50 / 49, 50 / 15 | 20 / 20, 20 / 7 |
 | Pulse + motion at half its rate (arm swing) (150) | 37 / 34, 37 / 8 | 29 / 18, 29 / 2 | 28 / 17, 28 / 1 | 36 / 16, 35 / 1 | 34 / 16, 34 / 1 |
 | Motion locked to the pulse rate, venous red/IR ratio (150) | 108 / 0, 100 / 95 | 35 / 0, 29 / 25 | 17 / 0, 15 / 13 | 23 / 0, 19 / 17 | 18 / 0, 16 / 15 |
 | Fast breathing (27–45 /min) swinging the baseline (150) | 30 / 14, 30 / 14 | 7 / 0, 6 / 0 | 6 / 0, 6 / 0 | 9 / 0, 8 / 0 | 8 / 0, 7 / 0 |
 | Bigeminy with weak premature beats (150) | 11 / 6, 11 / 0 | 10 / 5, 10 / 0 | 12 / 6, 12 / 0 | 11 / 6, 11 / 0 | 12 / 6, 12 / 0 |
 | 35–45 bpm, double-humped pulse, no motion (150) | 37 / 3, 36 / 0 | 37 / 5, 37 / 0 | 36 / 2, 36 / 0 | 40 / 5, 40 / 0 | 37 / 2, 37 / 0 |
-| 150–210 bpm at SpO2 82–90 %, no motion (150) | 131 / 0, 129 / 0 | 130 / 0, 72 / 1 | 129 / 0, 105 / 1 | 125 / 0, 112 / 0 | 129 / 0, 126 / 2 |
+| 150–210 bpm at SpO2 82–90 %, no motion (150) | 131 / 0, 129 / 0 | 130 / 0, 72 / 1 | 129 / 0, 105 / 1 | 127 / 0, 112 / 0 | 130 / 0, 126 / 2 |
 | Venous pulsation locked to the beat (0.3–0.6×), no motion (150) | 148 / 0, 137 / 45 | 82 / 0, 75 / 22 | 76 / 0, 62 / 21 | 99 / 0, 71 / 21 | 92 / 0, 65 / 21 |
 | Cadence locked to the pulse (0.3–1×), the simulator's motion gains (150) | 107 / 0, 90 / 47 | 46 / 0, 41 / 8 | 40 / 0, 35 / 6 | 50 / 0, 42 / 9 | 43 / 0, 37 / 8 |
 
 * **Steady rhythmic motion without an accelerometer.** Motion of constant amplitude whose red/IR
   proportion lies in the arterial range is, for the sensor, a smooth pulse. Without any pulse
-  underneath it was reported — always wrongly — in 96 (bracelet) and 118 (server) of 150 windows
+  underneath it was reported — always wrongly — in 96 (bracelet) and 119 (server) of 150 windows
   (v4: 145 and 147), and next to a real pulse it often wins: a wrong heart rate in 19 and 20 windows
   (v4: 55 and 49). The v5 networks, trained over the whole rate band and with steady motion as well,
   report fewer of these windows than v4; it cannot be removed. The remedy is an

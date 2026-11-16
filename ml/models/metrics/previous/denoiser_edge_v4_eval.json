@@ -547,13 +547,13 @@
     },
     "denoiser": {
       "windows": 600,
-      "hr_coverage": 0.5283333333333333,
-      "hr_mae": 0.5069794299403474,
-      "hr_p95": 1.3430897088619413,
+      "hr_coverage": 0.5366666666666666,
+      "hr_mae": 0.50810675074504,
+      "hr_p95": 1.3673138008437202,
       "hr_errors_over_10bpm": 1,
-      "spo2_coverage": 0.49333333333333335,
-      "spo2_mae": 0.23190461119770575,
-      "spo2_p95": 0.744147549834139,
+      "spo2_coverage": 0.49666666666666665,
+      "spo2_mae": 0.25078184296633504,
+      "spo2_p95": 0.8117041537227708,
       "spo2_errors_over_4pts": 1,
       "clean_window_hr_coverage": 0.9424460431654677,
       "clean_window_hr_coverage_by_shape": {
@@ -585,16 +585,120 @@
         },
         "0.3-0.7": {
           "windows": 131,
-          "hr_coverage": 0.6946564885496184,
+          "hr_coverage": 0.7022900763358778,
           "hr_errors_over_10bpm": 1,
           "spo2_errors_over_4pts": 0
         },
         "0.7-1.01": {
           "windows": 240,
-          "hr_coverage": 0.04583333333333333,
+          "hr_coverage": 0.0625,
           "hr_errors_over_10bpm": 0,
           "spo2_errors_over_4pts": 1
         }
+      }
+    }
+  },
+  "rest_by_perfusion": {
+    "classical": {
+      "0.08-0.15%": {
+        "windows": 176,
+        "hr_coverage": 0.9318181818181818,
+        "hr_errors_over_10bpm": 0,
+        "spo2_coverage": 0.8011363636363636,
+        "spo2_errors_over_4pts": 1,
+        "classical_fallback": 0
+      },
+      "0.15-0.3%": {
+        "windows": 166,
+        "hr_coverage": 0.9698795180722891,
+        "hr_errors_over_10bpm": 0,
+        "spo2_coverage": 0.9397590361445783,
+        "spo2_errors_over_4pts": 0,
+        "classical_fallback": 0
+      },
+      "0.3-1%": {
+        "windows": 266,
+        "hr_coverage": 0.9774436090225563,
+        "hr_errors_over_10bpm": 0,
+        "spo2_coverage": 0.9774436090225563,
+        "spo2_errors_over_4pts": 0,
+        "classical_fallback": 0
+      },
+      "1-5%": {
+        "windows": 392,
+        "hr_coverage": 0.9489795918367347,
+        "hr_errors_over_10bpm": 0,
+        "spo2_coverage": 0.9489795918367347,
+        "spo2_errors_over_4pts": 0,
+        "classical_fallback": 0
+      }
+    },
+    "denoiser": {
+      "0.08-0.15%": {
+        "windows": 176,
+        "hr_coverage": 0.9090909090909091,
+        "hr_errors_over_10bpm": 0,
+        "spo2_coverage": 0.7954545454545454,
+        "spo2_errors_over_4pts": 0,
+        "classical_fallback": 21
+      },
+      "0.15-0.3%": {
+        "windows": 166,
+        "hr_coverage": 0.963855421686747,
+        "hr_errors_over_10bpm": 0,
+        "spo2_coverage": 0.9578313253012049,
+        "spo2_errors_over_4pts": 0,
+        "classical_fallback": 3
+      },
+      "0.3-1%": {
+        "windows": 266,
+        "hr_coverage": 0.9849624060150376,
+        "hr_errors_over_10bpm": 0,
+        "spo2_coverage": 0.9849624060150376,
+        "spo2_errors_over_4pts": 0,
+        "classical_fallback": 0
+      },
+      "1-5%": {
+        "windows": 392,
+        "hr_coverage": 0.9489795918367347,
+        "hr_errors_over_10bpm": 0,
+        "spo2_coverage": 0.9489795918367347,
+        "spo2_errors_over_4pts": 0,
+        "classical_fallback": 0
+      }
+    },
+    "denoiser_without_low_perfusion_fallback": {
+      "0.08-0.15%": {
+        "windows": 176,
+        "hr_coverage": 0.7897727272727273,
+        "hr_errors_over_10bpm": 0,
+        "spo2_coverage": 0.7784090909090909,
+        "spo2_errors_over_4pts": 0,
+        "classical_fallback": 0
+      },
+      "0.15-0.3%": {
+        "windows": 166,
+        "hr_coverage": 0.9457831325301205,
+        "hr_errors_over_10bpm": 0,
+        "spo2_coverage": 0.9397590361445783,
+        "spo2_errors_over_4pts": 0,
+        "classical_fallback": 0
+      },
+      "0.3-1%": {
+        "windows": 266,
+        "hr_coverage": 0.9849624060150376,
+        "hr_errors_over_10bpm": 0,
+        "spo2_coverage": 0.9849624060150376,
+        "spo2_errors_over_4pts": 0,
+        "classical_fallback": 0
+      },
+      "1-5%": {
+        "windows": 392,
+        "hr_coverage": 0.9489795918367347,
+        "hr_errors_over_10bpm": 0,
+        "spo2_coverage": 0.9489795918367347,
+        "spo2_errors_over_4pts": 0,
+        "classical_fallback": 0
       }
     }
   },
@@ -664,7 +768,7 @@
       },
       "no_pulse_with_motion": {
         "windows": 1500,
-        "heart_rate_reported": 8,
+        "heart_rate_reported": 9,
         "spo2_reported": 7
       },
       "periodic_motion_no_pulse": {

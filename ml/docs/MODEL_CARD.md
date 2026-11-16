@@ -21,7 +21,7 @@ networks shipped before, "v4" and "v2", are scored with the same code and data i
 | Input | (2, 512): IR and red blood-volume signals, 10.24 s at 50 Hz, both divided by the IR standard deviation (one common scale, so the red/IR ratio is preserved) | same |
 | Output | clean IR, clean red, artefact logit per sample | same |
 | Training | 16,000 steps of 128 windows, best at step 15,000; validation mask AUC 0.9956 (`denoiser_train.json`) | 16,000 steps, best at the last step; validation mask AUC 0.9934 (`denoiser_edge_train.json`) |
-| Cost | — | 9.19 million multiply-accumulates per window, 45,056 bytes of working memory, 94,216 bytes of weights; whole pipeline 146 million RV32IMC instructions per window (median; 176 million at most), counted under QEMU, not yet timed on the chip |
+| Cost | — | 9.19 million multiply-accumulates per window, 45,056 bytes of working memory, 94,216 bytes of weights; whole pipeline 147 million RV32IMC instructions per window (median; 216 million at most, when a weak pulse also goes through the classical checks), counted under QEMU, not yet timed on the chip |
 | Integer vs. float version of the same network | — | waveform SNR 41.4 dB, artefact decisions agree on 99.81 % of samples, no output saturation (`models/metrics/denoiser_edge_export.json`) |
 
 **Training data.** 200,000 windows from a simulator of the MAX30102 (`suguard_ml/synth/ppg.py`,
@@ -50,11 +50,11 @@ periodic motion that always wandered in amplitude by about 30 %. An independent 
 they took steady rhythmic motion with an arterial-like red/IR ratio for a pulse, and counted a
 slow (35–45 bpm), double-humped pulse at twice its rate. v5 is trained over the whole band and with
 steady motion as well. On the same evaluation data (v5 / v4; bracelet, then server): steady
-periodic motion without a pulse reported, always wrongly, in 96 / 145 and 118 / 147 of 150
+periodic motion without a pulse reported, always wrongly, in 96 / 145 and 119 / 147 of 150
 windows; a pulse with steady motion at another rate given a wrong heart rate in 19 / 55 and
 20 / 49; slow double-humped pulses in 2 / 5 and 2 / 5; heart-rate errors above 10 bpm 0 / 1 and
 0 / 2 in the 600 gated windows and 1 / 7 and 0 / 5 on the real recordings with motion — for 2.2
-and 1.8 points less heart-rate coverage in the gated set (50.7 / 52.8 % and 53.7 / 55.5 %;
+and 1.7 points less heart-rate coverage in the gated set (51.5 / 53.7 % and 54.3 / 56.0 %;
 README, "Known hard cases"; `previous/denoiser*_v4_eval.json`).
 
 **Loss.** L1 on the waveform + L1 on its derivative + cross-entropy on the artefact mask + error of
@@ -99,7 +99,7 @@ bracelet, 0.28 server): a clean signal has nothing to gain, which is one reason 
 network calls clean, the pipeline takes SpO2 from the measured signals.
 
 **Results with gates** are in [README.md](../README.md#results): of 600 simulated windows with
-motion of every strength, 51 % (bracelet) and 54 % (server) get a heart rate, with 0.39 / 0.33 bpm
+motion of every strength, 52 % (bracelet) and 54 % (server) get a heart rate, with 0.39 / 0.33 bpm
 mean error and no error above 10 bpm; windows that are mostly motion get no value.
 
 **Limits.**
@@ -109,7 +109,7 @@ mean error and no error above 10 bpm; windows that are mostly motion get no valu
   appearing on most windows of a real recording would mean the network does not fit the signal.
 * No accelerometer: motion is recognised only by the shape of the signal and the red/IR
   proportion. Rhythmic motion whose red/IR proportion lies in the arterial range cannot be told
-  from a pulse in principle: steady arm swing without a pulse is reported as one (96 / 118 of 150
+  from a pulse in principle: steady arm swing without a pulse is reported as one (96 / 119 of 150
   windows, bracelet / server), next to a real pulse it can win, swing at half the pulse rate looks
   like a slower double-humped pulse, and motion locked to the pulse rate shifts SpO2
   (README, "Known hard cases").
@@ -142,7 +142,7 @@ heart rate) only if all of this holds:
 | Input support | on the samples the network calls clean (≥ 10 of them), its IR output must correlate with the measured IR signal (≥ 0.7) and have a comparable size (0.7–1.4) | `denoiser_mismatch` |
 | Measured reference | where the network flags at most 20 % of the samples, the *measured* signals are the reference: SpO2 comes from the measured red/IR (weighted by the mask), so do the red/IR correlation and the arterial-ratio rule below (which withholds the heart rate too); the spectral rate the beats must agree with comes from the measured IR as it is, and the stability of the red/IR ratio from the measured signals with the flagged samples taken from the network's output. Elsewhere all of it comes from the network's output | `motion` (via the heart-rate agreement), `red_ir_inconsistent` |
 | Arterial ratio | where red and IR agree (correlation ≥ 0.9 in the cardiac band), the red/IR ratio R must be one that arterial blood can produce (0.30–1.1). With a lower correlation R is not checked: the window can still get a heart rate, but no SpO2 | `red_ir_inconsistent` |
-| Weak pulse flagged as motion | below a measured perfusion of 0.2 %, where the networks take sensor noise for motion, a window the network rejects for motion alone (and the input-support check, which fails when it flags nearly everything) gets the decision of the classical checks on the measured signals, if the network's own beats give the same rate within 5 bpm; its SpO2 then also has to agree with the network's within 2 points | the classical checks' reasons |
+| Exception: weak pulse flagged as motion | below a measured perfusion of 0.2 %, where the networks take sensor noise for motion, a window whose only reasons are `motion` (from the motion share, the motion component, the rate agreement or the amplitude spread) and `denoiser_mismatch` (the input-support check fails when the network flags nearly everything) gets the decision of the classical checks on the measured signals instead, if the network's own beats give the same rate within 5 bpm (`classical_fallback`); its SpO2 then also has to agree with the network's within 2 points | – (where it does not apply, the network's `motion` / `denoiser_mismatch` stay; SpO2 withheld as `red_denoiser_mismatch` where the two values differ) |
 
 **SpO2** additionally needs two more quality components — the stability of the red/IR ratio over
 the window and the red/IR correlation (`red_ir_inconsistent`) — a red/IR correlation of at least

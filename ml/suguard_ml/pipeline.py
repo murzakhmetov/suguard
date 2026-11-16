@@ -103,7 +103,15 @@ SPO2_AGREEMENT = 2.0
 # motion, above 0.5 % none). There a window the network rejects for motion alone (with the support
 # check that fails when it flags everything) gets the decision of the classical checks on the
 # measured signals, if the network's own beats give the same rate (FALLBACK_HR_AGREEMENT); SpO2,
-# from the measured signals, also needs the network's value to agree (SPO2_AGREEMENT).
+# from the measured signals, also needs the network's value to agree (SPO2_AGREEMENT). v5 networks,
+# bracelet and server, scripts/eval_denoiser.py with / without the rule: motion-free windows at
+# 0.08-0.15 % perfusion with a heart rate 91 / 78 % and 91 / 79 % (rest_by_perfusion), heart rates
+# in the 600 gated windows 309 / 304 and 326 / 322, no error above 10 bpm or 4 points either way;
+# the price, where there is no pulse: a pulse of 0.01 % under small motion reported in 8 / 5 and
+# 10 / 8 of 1500 windows, steady periodic motion in 96 / 96 and 119 / 118 of 150. Both agreements
+# were adopted after an A/B on separate and on these draws: without the rate agreement one more of
+# those no-pulse windows passed (server); without the SpO2 agreement two of them got an SpO2 value
+# and one value of the gated windows was 5.6 points off (bracelet).
 LOW_PERFUSION_PI = 0.2
 FALLBACK_HR_AGREEMENT = 5.0
 # Shorter windows go through the classical path (the denoiser saw 10.24 s).
@@ -332,5 +340,5 @@ class SuGuardPipeline:
             out["reason"] = v.reasons or ["unreliable"]
         if include_signals:
             out["signals"] = {"fs": FS, "ir_clean": c_ir.tolist(), "red_clean": c_red.tolist(),
-                              "artifact_prob": None if p_art is None else p_art.tolist()}
+                              "artifact_prob": None if p_feat is None else p_feat.tolist()}
         return out

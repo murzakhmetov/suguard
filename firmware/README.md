@@ -113,8 +113,11 @@ control lowers the current). `spo2_why` is filled only for an accepted window wi
 value: `no_common_pulse`, `spo2_low_red_ir_agreement`, `red_ir_inconsistent` (the two
 wavelengths do not agree well enough) or `red_denoiser_mismatch` (the cleaned-up red pulse is not
 supported by the measurement, or the SpO2 from the measured red/IR and from the network's output
-differ by more than 2 points). `fallback` is true when the classical checks decided a weak-pulse window
-the network had flagged as motion (above). `hr` is corrected for the sensor's clock error (`fs` is the measured
+differ by more than 2 points). `motion` is the share of the window the network flagged as motion (0
+without the network). `fallback` is true when the classical checks decided a weak-pulse window the
+network had flagged as motion (see "Behaviour worth knowing" below); `motion` and `sqi` are then
+those of the classical checks (0 and their quality index), and the record's `model` still names the
+configured path (`edge-nn`). `hr` is corrected for the sensor's clock error (`fs` is the measured
 sample rate). The rules behind each reason are listed in
 [../ml/docs/MODEL_CARD.md](../ml/docs/MODEL_CARD.md#2-the-decision-to-report-a-value).
 
@@ -208,7 +211,7 @@ packages from GitHub, about 370 MB); it needs `arm-none-eabi-g++`.
 | What | How | Result |
 |---|---|---|
 | Sources against the real Arduino API | `tools/typecheck_arduino.sh`: the sketch and every source file through a GCC front end with the headers, include paths and defines of Arduino core 2.0.17 (ESP-IDF 4.4, as C++17) and 3.3.12 (ESP-IDF 5.5, as C++20) | no error, no warning; **not a build** (generic 32-bit compiler, nothing generated or linked) |
-| Signal core = Python reference | C++ built for the host, compared on simulated windows: 300 classical, 200 denoised, 59 degenerate or constructed inputs (some with the measured signals given directly) | every decision identical; the tests allow 10⁻⁹ (relative) for double-precision values and 10⁻⁴ (absolute) for FFT-dependent ones; the largest differences measured are 1.7·10⁻¹⁴ and 5.4·10⁻⁷ |
+| Signal core = Python reference | C++ built for the host, compared on simulated windows: 300 classical, 200 denoised, 61 degenerate or constructed inputs (some with the measured signals given directly) | every decision identical; the tests allow 10⁻⁹ (relative) for double-precision values and 10⁻⁴ (absolute) for FFT-dependent ones; the largest differences measured are 1.7·10⁻¹⁴ and 5.4·10⁻⁷ |
 | Integer network = Python reference | the C++ engine against the NumPy integer reference, random models and the shipped one | bit-exact |
 | Whole pipeline per window | `sg_process_window` against the Python pipeline, 318 windows × 2 modes, incl. inputs where the network must be overruled and weak pulses it flags as motion | same decisions and reasons; heart rate and SpO2 within 10⁻⁶ |
 | Device layer | driver, sampler, record store, upload scheduler and battery guard against a register-level MAX30102 simulator, with ASan/UBSan | 24 scenarios pass |
